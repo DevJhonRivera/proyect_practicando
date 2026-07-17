@@ -5,7 +5,7 @@ const api = axios.create({
     import.meta.env.VITE_API_URL ||
     // "http://localhost:5001/api",
     // "http://192.168.1.29:5001/api",
-    "https://back-carros.onrender.com"
+    "https://back-carros.onrender.com/api"
 
 });
 
