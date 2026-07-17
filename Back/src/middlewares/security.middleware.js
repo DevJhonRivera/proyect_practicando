@@ -15,9 +15,6 @@ export const corsOptions = {
     if (allowed.includes(origin)) {
       return callback(null, true);
     }
-    if (!origin) {
-  return callback(null, true);
-}
 
     return callback(new Error("Origen no permitido por CORS"));
   },

@@ -22,7 +22,7 @@ import {
 
 const app = express();
 
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(securityHeaders);
 app.use(morgan("dev"));
 app.use(express.json({ limit: "1mb" }));
