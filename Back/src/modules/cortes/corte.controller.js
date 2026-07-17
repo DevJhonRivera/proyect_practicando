@@ -5,6 +5,45 @@ import {
   registrarCorte,
 } from "./corte.service.js";
 
+const rolesConCostos = [
+  "SUPERUSUARIO",
+  "ADMIN",
+  "INVENTARIO",
+];
+
+const limpiarCostosMaterial = (material = {}) => {
+  if (!material || typeof material !== "object") {
+    return material;
+  }
+
+  const data =
+    typeof material.toObject === "function"
+      ? material.toObject()
+      : { ...material };
+
+  delete data.costoUnitarioCop;
+  delete data.costoPorMetroCop;
+  delete data.costoTotalAsignadoCop;
+  delete data.costeoPedidoId;
+  delete data.costoAsignadoAt;
+
+  return data;
+};
+
+const ocultarCostosCorte = (corte) => {
+  const data =
+    typeof corte.toObject === "function"
+      ? corte.toObject()
+      : { ...corte };
+
+  delete data.costoMaterialCop;
+  delete data.utilidadCop;
+  data.rolloId = limpiarCostosMaterial(data.rolloId);
+  data.retazoId = limpiarCostosMaterial(data.retazoId);
+
+  return data;
+};
+
 export const createCorte =
   async (req, res) => {
     try {
@@ -27,7 +66,11 @@ export const getCortes =
       const cortes =
         await obtenerCortes();
 
-      res.json(cortes);
+      if (rolesConCostos.includes(req.user?.rol)) {
+        return res.json(cortes);
+      }
+
+      res.json(cortes.map(ocultarCostosCorte));
     } catch (error) {
       res.status(500).json({
         message: error.message,

@@ -1115,7 +1115,7 @@ function RecepcionDetalle({ recepcion }) {
                     {anchoLabel(rollo.ancho)}
                   </td>
                   <td className="p-3">
-                    {rollo.largoDisponible} m
+                    {Number(rollo.largoDisponible || 0).toFixed(2)} m
                   </td>
                 </tr>
               ))}

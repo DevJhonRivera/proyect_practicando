@@ -672,9 +672,7 @@ function ReservaPage() {
                   </td>
 
                   <td className="p-4">
-                    {
-                      rollo.largoDisponible
-                    }m
+                    {Number(rollo.largoDisponible || 0).toFixed(2)} m
                   </td>
 
                   <td className="p-4">

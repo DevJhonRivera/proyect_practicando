@@ -12,13 +12,19 @@ import {
   Scissors,
   ShoppingCart,
   Truck,
+  UserPlus,
 } from "lucide-react";
 
 import { NavLink, useNavigate } from "react-router-dom";
 import logo from "../../assets/polarizadosya.png";
+import {
+  obtenerUsuarioActual,
+  tienePermiso,
+} from "../../utils/permisos";
 
 function Sidebar() {
   const navigate = useNavigate();
+  const usuario = obtenerUsuarioActual();
 
   const menus = [
     {
@@ -28,6 +34,16 @@ function Sidebar() {
           icon: LayoutDashboard,
           text: "Inicio",
           url: "/dashboard",
+          modulo: "dashboard",
+          accion: "read",
+        },
+        {
+          icon: UserPlus,
+          text: "Usuarios y perfiles",
+          url: "/usuarios",
+          modulo: "usuarios",
+          accion: "write",
+          soloAdmin: true,
         },
       ],
     },
@@ -38,21 +54,29 @@ function Sidebar() {
           icon: ShoppingCart,
           text: "Pedidos de compra",
           url: "/pedidos",
+          modulo: "pedidos",
+          accion: "read",
         },
         {
           icon: ClipboardPlus,
           text: "Crear pedido",
           url: "/pedidos/nuevo",
+          modulo: "pedidos",
+          accion: "write",
         },
         {
           icon: Truck,
           text: "Entrada de mercancia",
           url: "/recepciones",
+          modulo: "recepciones",
+          accion: "write",
         },
         {
           icon: CircleDollarSign,
           text: "Costos por pedido",
           url: "/finanzas",
+          modulo: "finanzas",
+          accion: "read",
         },
       ],
     },
@@ -63,21 +87,29 @@ function Sidebar() {
           icon: Boxes,
           text: "Rollos en bodega",
           url: "/reserva",
+          modulo: "rollos",
+          accion: "read",
         },
         {
           icon: Activity,
           text: "Rollos en uso",
           url: "/uso",
+          modulo: "rollos",
+          accion: "read",
         },
         {
           icon: PackageOpen,
           text: "Retazos disponibles",
           url: "/retazos",
+          modulo: "retazos",
+          accion: "read",
         },
         {
           icon: Bell,
           text: "Alertas de stock",
           url: "/alertas",
+          modulo: "alertas",
+          accion: "read",
         },
       ],
     },
@@ -88,6 +120,8 @@ function Sidebar() {
           icon: Scissors,
           text: "Registrar cortes",
           url: "/cortes",
+          modulo: "cortes",
+          accion: "write",
         },
       ],
     },
@@ -98,19 +132,35 @@ function Sidebar() {
           icon: BadgeDollarSign,
           text: "Ventas",
           url: "/ventas",
+          modulo: "ventas",
+          accion: "write",
         },
         {
           icon: ClipboardList,
           text: "Auditoria comercial",
           url: "/auditoria",
+          modulo: "finanzas",
+          accion: "read",
         },
       ],
     },
   ];
 
+  const menusPermitidos = menus
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        item.soloAdmin
+          ? ["SUPERUSUARIO", "ADMIN"].includes(usuario?.rol)
+          : tienePermiso(usuario, item.modulo, item.accion)
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
   const cerrarSesion = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
+    localStorage.removeItem("permisosRolActual");
     navigate("/login");
   };
 
@@ -167,7 +217,7 @@ function Sidebar() {
         p-4
         space-y-6"
       >
-        {menus.map((group) => (
+        {menusPermitidos.map((group) => (
           <div key={group.section}>
             <p
               className="

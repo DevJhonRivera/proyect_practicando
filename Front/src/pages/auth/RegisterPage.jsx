@@ -4,6 +4,14 @@ import { registerUser } from "../../api/auth.api";
 import { useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
+import { obtenerUsuarioActual } from "../../utils/permisos";
+
+const rolesUsuario = [
+  ["SUPERUSUARIO", "Superusuario"],
+  ["ADMIN", "Administrador"],
+  ["INVENTARIO", "Inventario"],
+  ["VENTAS", "Ventas"],
+];
 
 function RegisterPage() {
   const {
@@ -14,6 +22,14 @@ function RegisterPage() {
   } = useForm();
 
   const navigate = useNavigate();
+  const usuarioActual = obtenerUsuarioActual();
+  const esSuperusuario = usuarioActual?.rol === "SUPERUSUARIO";
+  const esAdmin = ["SUPERUSUARIO", "ADMIN"].includes(
+    usuarioActual?.rol
+  );
+  const rolesDisponibles = esSuperusuario
+    ? rolesUsuario
+    : rolesUsuario.filter(([value]) => value !== "SUPERUSUARIO");
 
   const [loading, setLoading] = useState(false);
 
@@ -41,6 +57,11 @@ function RegisterPage() {
         nombre: data.nombre,
         correo: data.correo,
         password: data.password,
+        ...(esAdmin
+          ? {
+              rol: data.rol,
+            }
+          : {}),
       };
 
       await registerUser(payload);
@@ -183,6 +204,38 @@ function RegisterPage() {
               </p>
             )}
           </div>
+
+          {esAdmin && (
+            <div>
+              <select
+                {...register("rol", {
+                  required:
+                    "Seleccione el rol del usuario",
+                })}
+                defaultValue="INVENTARIO"
+                className="
+                w-full
+                border
+                rounded-lg
+                p-3
+                focus:ring-2
+                focus:ring-blue-500
+                outline-none"
+              >
+                {rolesDisponibles.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+
+              {errors.rol && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.rol.message}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Password */}
 

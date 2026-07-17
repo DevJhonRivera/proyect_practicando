@@ -87,7 +87,7 @@ function CorteForm({
                 key={rollo._id}
                 value={rollo._id}
               >
-                {rollo.codigoRollo} - {rollo.tipoPolarizado} {etiquetaDetalle(rollo)} - {Number(rollo.largoDisponible).toFixed(2)}m
+                {rollo.codigoRollo} - {rollo.tipoPolarizado} {etiquetaDetalle(rollo)} - {Number(rollo.largoDisponible).toFixed(2)} m
               </option>
             ))}
           </select>

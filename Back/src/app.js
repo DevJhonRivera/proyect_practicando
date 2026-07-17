@@ -1,7 +1,6 @@
 import express from "express"
 import morgan from "morgan";
 import cors from "cors"
-import "./config/db.js"
 import authRoutes from "./modules/auth/auth.routes.js";
 import {errorHandler, notFound} from './middlewares/error.middleware.js';
 import pedidoRoutes from "./modules/pedidos/pedido.routes.js";
@@ -14,14 +13,19 @@ import alertaRoutes from "./modules/alertas/alerta.routes.js";
 import retazoRoutes from "./modules/retazos/retazo.routes.js";
 import finanzaRoutes from "./modules/finanzas/finanza.routes.js";
 import ventaRoutes from "./modules/ventas/venta.routes.js";
+import userRoutes from "./modules/users/user.routes.js";
+import rolePermissionRoutes from "./modules/roles/rolePermission.routes.js";
+import {
+  corsOptions,
+  securityHeaders,
+} from "./middlewares/security.middleware.js";
 
 const app = express();
 
-app.use(cors({
-  origin:"*"
-}));
+app.use(cors(corsOptions));
+app.use(securityHeaders);
 app.use(morgan("dev"));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/api", (req, res) => {
   res.json({
@@ -39,6 +43,10 @@ app.get("/api/login", (req, res) => {
 });
 
 app.use("/api/auth",authRoutes);
+
+app.use("/api/usuarios", userRoutes);
+
+app.use("/api/roles", rolePermissionRoutes);
 
 app.use("/api/pedidos",pedidoRoutes);
 

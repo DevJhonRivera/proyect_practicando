@@ -21,7 +21,7 @@ function DashboardStats({ indicadores }) {
 
     {
       titulo: "Metros disponibles",
-      valor: `${Number(indicadores.metrosDisponibles || 0).toFixed(0)} m`,
+      valor: `${Number(indicadores.metrosDisponibles || 0).toFixed(2)} m`,
       icono: Ruler,
       color: "from-green-500 to-emerald-700",
       descripcion: "Inventario disponible"

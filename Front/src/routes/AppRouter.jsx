@@ -19,9 +19,28 @@ import RetazosPage from "../pages/retazos/RetazosPage";
 import FinanzasPage from "../pages/finanzas/FinanzasPage";
 import VentasPage from "../pages/ventas/VentasPage";
 import AuditoriaPage from "../pages/auditoria/AuditoriaPage";
+import UsuariosPage from "../pages/usuarios/UsuariosPage";
 
 import PrivateRoute from "./PrivateRoute";
 import MainLayout from "../layouts/MainLayout";
+import {
+  obtenerUsuarioActual,
+  tienePermiso,
+} from "../utils/permisos";
+
+function RutaPermitida({ modulo, accion = "read", children }) {
+  const usuario = obtenerUsuarioActual();
+
+  if (!tienePermiso(usuario, modulo, accion)) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuario");
+    localStorage.removeItem("permisosRolActual");
+
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 
 function AppRouter() {
   return (
@@ -61,58 +80,111 @@ function AppRouter() {
           />
 
           <Route
+            path="/usuarios"
+            element={
+              <RutaPermitida modulo="usuarios" accion="write">
+                <UsuariosPage />
+              </RutaPermitida>
+            }
+          />
+
+          <Route
             path="/pedidos"
-            element={<PedidoList />}
+            element={
+              <RutaPermitida modulo="pedidos">
+                <PedidoList />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/pedidos/nuevo"
-            element={<PedidoCreate />}
+            element={
+              <RutaPermitida modulo="pedidos" accion="write">
+                <PedidoCreate />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/recepciones"
-            element={<RecepcionList />}
+            element={
+              <RutaPermitida modulo="recepciones" accion="write">
+                <RecepcionList />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/reserva"
-            element={<ReservaPage />}
+            element={
+              <RutaPermitida modulo="rollos">
+                <ReservaPage />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/uso"
-            element={<UsoPage />}
+            element={
+              <RutaPermitida modulo="rollos">
+                <UsoPage />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/cortes"
-            element={<CortesPage />}
+            element={
+              <RutaPermitida modulo="cortes" accion="write">
+                <CortesPage />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/retazos"
-            element={<RetazosPage />}
+            element={
+              <RutaPermitida modulo="retazos">
+                <RetazosPage />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/alertas"
-            element={<AlertasPage />}
+            element={
+              <RutaPermitida modulo="alertas">
+                <AlertasPage />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/finanzas"
-            element={<FinanzasPage />}
+            element={
+              <RutaPermitida modulo="finanzas">
+                <FinanzasPage />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/ventas"
-            element={<VentasPage />}
+            element={
+              <RutaPermitida modulo="ventas" accion="write">
+                <VentasPage />
+              </RutaPermitida>
+            }
           />
 
           <Route
             path="/auditoria"
-            element={<AuditoriaPage />}
+            element={
+              <RutaPermitida modulo="finanzas">
+                <AuditoriaPage />
+              </RutaPermitida>
+            }
           />
 
         </Route>

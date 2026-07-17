@@ -14,10 +14,13 @@ import Swal from "sweetalert2";
 import {
   login
 } from "../../api/auth.api";
+import { getMisPermisos } from "../../api/roles.api";
+import {
+  guardarPermisosUsuarioActual
+} from "../../utils/permisos";
 
 import {
-  useNavigate,
-  Link
+  useNavigate
 } from "react-router-dom";
 
 function LoginPage() {
@@ -73,6 +76,24 @@ function LoginPage() {
             res.data.user
           )
         );
+
+        guardarPermisosUsuarioActual(
+          res.data.user.rol,
+          res.data.permisos || []
+        );
+
+        try {
+          const permisosRes = await getMisPermisos();
+          guardarPermisosUsuarioActual(
+            permisosRes.data.rol,
+            permisosRes.data.permisos || []
+          );
+        } catch {
+          guardarPermisosUsuarioActual(
+            res.data.user.rol,
+            res.data.permisos || []
+          );
+        }
 
         Swal.fire({
           icon: "success",
@@ -407,15 +428,14 @@ function LoginPage() {
               ¿No tienes cuenta?
             </span>
 
-            <Link
-              to="/register"
+            <span
               className="
               text-blue-600
               font-semibold
               ml-2"
             >
-              Registrarse
-            </Link>
+              Solicitalo al administrador
+            </span>
 
           </div>
 

@@ -7,15 +7,16 @@ import {
   updatePedido,
 } from "./pedido.controller.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
+import { requirePermission } from "../../middlewares/permission.middleware.js";
 
 const router = Router();
 
-router.post("/", authMiddleware, createPedido);
+router.post("/", authMiddleware, requirePermission("pedidos", "write"), createPedido);
 
-router.get("/", authMiddleware, getPedidos);
+router.get("/", authMiddleware, requirePermission("pedidos", "read"), getPedidos);
 
-router.put("/:id", authMiddleware, updatePedido);
+router.put("/:id", authMiddleware, requirePermission("pedidos", "write"), updatePedido);
 
-router.delete("/:id", authMiddleware, deletePedido);
+router.delete("/:id", authMiddleware, requirePermission("pedidos", "delete"), deletePedido);
 
 export default router;
