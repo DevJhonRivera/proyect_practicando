@@ -23,10 +23,10 @@ function CortesTable({
   onEdit,
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow overflow-hidden">
-      <div className="p-6 border-b flex items-center justify-between gap-4">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="p-6 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">
+          <h2 className="text-xl font-bold text-slate-800">
             Historial de cortes
           </h2>
 
@@ -50,8 +50,8 @@ function CortesTable({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100 text-slate-600">
+          <table className="w-full min-w-[1180px] text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="p-4 text-left">
                   Fecha y hora
@@ -96,25 +96,25 @@ function CortesTable({
               {cortes.map((corte) => (
                 <tr
                   key={corte._id}
-                  className="border-b hover:bg-slate-50"
+                  className="border-b border-slate-200 hover:bg-slate-50"
                 >
-                  <td className="p-4">
+                  <td className="p-4 text-slate-600">
                     {formatFechaHora(corte.createdAt)}
                   </td>
 
-                  <td className="p-4 font-semibold">
+                  <td className="p-4 font-semibold text-slate-800">
                     {corte.placa || "-"}
                   </td>
 
-                  <td className="p-4">
+                  <td className="p-4 text-slate-600">
                     {corte.marca || "-"}
                   </td>
 
-                  <td className="p-4">
+                  <td className="p-4 text-slate-600">
                     {corte.modelo || "-"}
                   </td>
 
-                  <td className="p-4">
+                  <td className="p-4 text-slate-600">
                     <MaterialUsado corte={corte} />
                   </td>
 

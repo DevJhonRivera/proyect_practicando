@@ -50,15 +50,21 @@ function CorteModal({
       bg-black/50
       flex
       items-center
-      justify-center"
+      justify-center
+      p-4
+      z-50"
     >
 
       <div
         className="
         bg-white
-        p-6
+        p-5
+        sm:p-6
         rounded-xl
-        w-[500px]"
+        w-full
+        max-w-[500px]
+        max-h-[90vh]
+        overflow-y-auto"
       >
 
         <h2 className="text-xl font-bold mb-5">

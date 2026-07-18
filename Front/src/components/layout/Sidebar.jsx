@@ -25,6 +25,16 @@ import {
 function Sidebar() {
   const navigate = useNavigate();
   const usuario = obtenerUsuarioActual();
+  const rolLabel =
+    usuario?.rol === "SUPERUSUARIO"
+      ? "Superusuario"
+      : usuario?.rol === "ADMIN"
+      ? "Administrador"
+      : usuario?.rol === "INVENTARIO"
+      ? "Inventario"
+      : usuario?.rol === "VENTAS"
+      ? "Ventas"
+      : "Usuario";
 
   const menus = [
     {
@@ -167,55 +177,78 @@ function Sidebar() {
   return (
     <aside
       className="
-      w-72
-      min-h-screen
-      bg-slate-950
+      w-full
+      lg:w-72
+      lg:min-h-screen
+      bg-[#07111f]
       text-white
       flex
       flex-col
+      shrink-0
       border-r
       border-slate-800"
     >
       <div
         className="
-        p-5
+        p-4
+        lg:p-5
         border-b
-        border-slate-800"
+        border-white/10"
       >
         <div
           className="
           bg-white
-          rounded-2xl
+          rounded-xl
           p-3
-          shadow"
+          shadow-lg
+          shadow-black/20"
         >
           <img
             src={logo}
             alt="Polarizados YA"
             className="
             w-full
-            h-20
+            h-14
+            lg:h-20
             object-contain"
           />
         </div>
 
-        <div className="mt-4">
-          <h2 className="text-lg font-bold">
+        <div className="mt-3 lg:mt-4">
+          <h2 className="text-lg font-bold leading-tight">
             Control operativo
           </h2>
 
           <p className="text-sm text-slate-400">
             Compras, inventario y cortes
           </p>
+
+          <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+            <p className="text-xs uppercase text-slate-500">
+              Sesion activa
+            </p>
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <span className="truncate text-sm font-semibold text-slate-100">
+                {usuario?.nombre || "Usuario"}
+              </span>
+              <span className="shrink-0 rounded-full bg-blue-500/15 px-2 py-1 text-[11px] font-bold text-blue-200">
+                {rolLabel}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
       <nav
         className="
-        flex-1
+        lg:flex-1
         overflow-y-auto
-        p-4
-        space-y-6"
+        max-h-[60vh]
+        lg:max-h-none
+        p-3
+        lg:p-4
+        space-y-4
+        lg:space-y-6"
       >
         {menusPermitidos.map((group) => (
           <div key={group.section}>
@@ -247,20 +280,22 @@ function Sidebar() {
                       gap-3
                       px-4
                       py-3
-                      rounded-xl
+                      rounded-lg
                       transition
                       text-sm
                       font-medium
+                      border
+                      border-transparent
 
                       ${
                         isActive
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          ? "bg-white text-slate-950 shadow-lg shadow-black/20"
+                          : "text-slate-300 hover:bg-white/[0.06] hover:text-white hover:border-white/10"
                       }
                     `
                     }
                   >
-                    <Icon size={20} />
+                    <Icon size={19} />
                     <span>{item.text}</span>
                   </NavLink>
                 );
@@ -272,9 +307,10 @@ function Sidebar() {
 
       <div
         className="
-        p-4
+        p-3
+        lg:p-4
         border-t
-        border-slate-800"
+        border-white/10"
       >
         <button
           onClick={cerrarSesion}
@@ -285,7 +321,7 @@ function Sidebar() {
           gap-3
           px-4
           py-3
-          rounded-xl
+          rounded-lg
           text-slate-300
           hover:bg-red-600
           hover:text-white

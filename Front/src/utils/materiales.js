@@ -41,6 +41,8 @@ export const materialesCatalogo = [
     ],
     materiales: [
       "PPF",
+      "PPF Road Guard",
+      "PPF Half",
     ],
   },
   {

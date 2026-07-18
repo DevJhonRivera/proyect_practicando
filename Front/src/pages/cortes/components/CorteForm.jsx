@@ -49,11 +49,13 @@ function CorteForm({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow p-6">
-      <div className="flex items-center gap-2 mb-5">
-        <Plus className="text-blue-600" />
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+          <Plus size={20} />
+        </div>
         <div>
-          <h2 className="text-xl font-bold">
+          <h2 className="text-xl font-bold text-slate-800">
             Registrar corte
           </h2>
           <p className="text-sm text-slate-500">
@@ -64,7 +66,7 @@ function CorteForm({
 
       <form
         onSubmit={onSubmit}
-        className="grid md:grid-cols-2 xl:grid-cols-4 gap-4"
+        className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
       >
         <CampoGuia
           label="Rollo / material"
@@ -76,7 +78,7 @@ function CorteForm({
               updateField("rolloId", e.target.value)
             }
             required
-            className="w-full border rounded-xl p-3 bg-white"
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           >
             <option value="">
               Seleccione rollo en uso
@@ -105,7 +107,7 @@ function CorteForm({
               updateField("marca", e.target.value)
             }
             required
-            className="w-full border rounded-xl p-3"
+            className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           />
         </CampoGuia>
 
@@ -123,7 +125,7 @@ function CorteForm({
             inputMode="numeric"
             pattern="[0-9]*"
             required
-            className="w-full border rounded-xl p-3"
+            className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           />
         </CampoGuia>
 
@@ -142,7 +144,7 @@ function CorteForm({
               )
             }
             required
-            className="w-full border rounded-xl p-3"
+            className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           />
         </CampoGuia>
 
@@ -155,7 +157,7 @@ function CorteForm({
             onChange={(e) =>
               updateField("tipoServicio", e.target.value)
             }
-            className="w-full border rounded-xl p-3 bg-white"
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           >
             {Object.entries(servicioLabels).map(
               ([value, label]) => (
@@ -180,7 +182,7 @@ function CorteForm({
                 updateField("instalador", e.target.value)
               }
               required
-              className="w-full border rounded-xl p-3"
+              className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
             />
           </CampoGuia>
         )}
@@ -194,7 +196,7 @@ function CorteForm({
             onChange={(e) =>
               updateField("tipoCorte", e.target.value)
             }
-            className="w-full border rounded-xl p-3 bg-white"
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           >
             {Object.entries(tipoCorteLabels).map(
               ([value, label]) => (
@@ -232,16 +234,16 @@ function CorteForm({
               )
             }
             required
-            className="w-full border rounded-xl p-3"
+            className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           />
         </CampoGuia>
 
-        <div className="md:col-span-2 xl:col-span-4 flex justify-between items-center bg-slate-50 rounded-xl p-4">
+        <div className="md:col-span-2 xl:col-span-4 flex flex-wrap justify-between items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <RolloSeleccionado rollo={rolloSeleccionado} />
 
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 sm:w-auto"
           >
             <Scissors size={18} />
             Registrar corte
@@ -255,7 +257,7 @@ function CorteForm({
 function CampoGuia({ label, ayuda, children }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-700">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </span>
       <div className="mt-1">

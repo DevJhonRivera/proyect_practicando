@@ -5,13 +5,27 @@ import {
   Pencil,
   PackageCheck,
   Save,
+  Trash2,
   X,
 } from "lucide-react";
 
 import { updatePedido } from "../../../api/pedidos.api";
 import ExcelButton from "../../../components/ui/ExcelButton";
-import { anchoLabel } from "../../../utils/anchos";
-import { etiquetaDetalle } from "../../../utils/materiales";
+import {
+  anchoLabel,
+  anchoValue,
+  anchosPulgadas,
+} from "../../../utils/anchos";
+import {
+  etiquetaClasificacion,
+  etiquetaDetalle,
+  etiquetaUnidad,
+  materialesCatalogo,
+  opcionesPorMaterial,
+  sufijoUnidad,
+  UNIDAD_NINGUNA,
+  unidadPorMaterial,
+} from "../../../utils/materiales";
 
 function PedidoTable({ pedidos, onRefresh }) {
   const [viewPedido, setViewPedido] =
@@ -25,6 +39,7 @@ function PedidoTable({ pedidos, onRefresh }) {
       codigoPedido: "",
       proveedor: "",
       observaciones: "",
+      detalles: [],
     });
 
   const badgeEstado = (estado) => {
@@ -97,7 +112,70 @@ function PedidoTable({ pedidos, onRefresh }) {
       codigoPedido: pedido.codigoPedido || "",
       proveedor: pedido.proveedor || "",
       observaciones: pedido.observaciones || "",
+      detalles: (pedido.detalles || []).map(
+        normalizarDetalleEdicion
+      ),
     });
+  };
+
+  const actualizarDetalleEdicion = (
+    index,
+    field,
+    value
+  ) => {
+    setEditForm((actual) => {
+      const detalles = [...actual.detalles];
+      const detalle = {
+        ...detalles[index],
+      };
+
+      if (field === "tipoPolarizado") {
+        const unidadMedida = unidadPorMaterial(value);
+
+        detalle.tipoPolarizado = value;
+        detalle.unidadMedida = unidadMedida;
+        detalle.porcentaje =
+          unidadMedida === UNIDAD_NINGUNA
+            ? 0
+            : "";
+      } else {
+        detalle[field] = value;
+      }
+
+      detalles[index] = detalle;
+
+      return {
+        ...actual,
+        detalles,
+      };
+    });
+  };
+
+  const agregarDetalleEdicion = () => {
+    setEditForm((actual) => ({
+      ...actual,
+      detalles: [
+        ...actual.detalles,
+        {
+          tipoPolarizado: "",
+          porcentaje: "",
+          unidadMedida: "PORCENTAJE",
+          ancho: "1.52",
+          cantidadRollos: "",
+          cantidadRecibida: 0,
+          nuevo: true,
+        },
+      ],
+    }));
+  };
+
+  const eliminarDetalleEdicion = (index) => {
+    setEditForm((actual) => ({
+      ...actual,
+      detalles: actual.detalles.filter(
+        (_, itemIndex) => itemIndex !== index
+      ),
+    }));
   };
 
   const verPendientes = (pedido) => {
@@ -152,9 +230,61 @@ function PedidoTable({ pedidos, onRefresh }) {
         });
       }
 
+      if (!editForm.detalles.length) {
+        return Swal.fire({
+          icon: "warning",
+          title: "Agregue al menos un material",
+        });
+      }
+
+      const detalleIncompleto =
+        editForm.detalles.find(
+          (detalle) =>
+            !detalle.tipoPolarizado ||
+            detalle.porcentaje === "" ||
+            detalle.porcentaje === null ||
+            detalle.porcentaje === undefined ||
+            !detalle.ancho ||
+            Number(detalle.cantidadRollos || 0) <= 0
+        );
+
+      if (detalleIncompleto) {
+        return Swal.fire({
+          icon: "warning",
+          title: "Complete los materiales",
+          text:
+            "Cada linea debe tener material, clasificacion, ancho y cantidad de rollos.",
+        });
+      }
+
+      const cantidadMenorRecibida =
+        editForm.detalles.find(
+          (detalle) =>
+            Number(detalle.cantidadRollos || 0) <
+            Number(detalle.cantidadRecibida || 0)
+        );
+
+      if (cantidadMenorRecibida) {
+        return Swal.fire({
+          icon: "warning",
+          title: "Cantidad no valida",
+          text:
+            "La cantidad pedida no puede ser menor a la cantidad ya recibida.",
+        });
+      }
+
       await updatePedido(
         editPedido._id,
-        editForm
+        {
+          ...editForm,
+          codigoPedido:
+            editForm.codigoPedido.toUpperCase(),
+          proveedor:
+            editForm.proveedor.toUpperCase(),
+          detalles: editForm.detalles.map(
+            prepararDetalleEdicion
+          ),
+        }
       );
 
       setEditPedido(null);
@@ -408,6 +538,216 @@ function PedidoTable({ pedidos, onRefresh }) {
               />
             </Field>
 
+            <div className="border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b flex items-center justify-between gap-3 bg-slate-50">
+                <div>
+                  <h3 className="font-bold text-slate-800">
+                    Materiales del pedido
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Las lineas con rollos recibidos solo permiten cambiar la cantidad.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={agregarDetalleEdicion}
+                  className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
+                >
+                  Agregar material
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-100 text-slate-600">
+                    <tr>
+                      <th className="p-3 text-left">
+                        Material
+                      </th>
+                      <th className="p-3 text-left">
+                        Clasificacion
+                      </th>
+                      <th className="p-3 text-left">
+                        Ancho
+                      </th>
+                      <th className="p-3 text-left">
+                        Pedidos
+                      </th>
+                      <th className="p-3 text-left">
+                        Recibidos
+                      </th>
+                      <th className="p-3 text-center">
+                        Accion
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {editForm.detalles.map((detalle, index) => {
+                      const tieneRecibidos =
+                        Number(detalle.cantidadRecibida || 0) > 0;
+                      const unidadMedida =
+                        detalle.unidadMedida ||
+                        unidadPorMaterial(
+                          detalle.tipoPolarizado
+                        );
+                      const opcionesClasificacion =
+                        opcionesPorMaterial(
+                          detalle.tipoPolarizado
+                        );
+
+                      return (
+                        <tr
+                          key={detalle._id || `nuevo-${index}`}
+                          className="border-t"
+                        >
+                          <td className="p-3 min-w-48">
+                            <select
+                              value={detalle.tipoPolarizado}
+                              disabled={tieneRecibidos}
+                              onChange={(event) =>
+                                actualizarDetalleEdicion(
+                                  index,
+                                  "tipoPolarizado",
+                                  event.target.value
+                                )
+                              }
+                              className="w-full border rounded-lg p-2 disabled:bg-slate-100"
+                            >
+                              <option value="">
+                                Seleccione...
+                              </option>
+
+                              {materialesCatalogo.map((grupo) => (
+                                <optgroup
+                                  key={grupo.categoria}
+                                  label={grupo.categoria}
+                                >
+                                  {grupo.materiales.map((item) => (
+                                    <option
+                                      key={item}
+                                      value={item}
+                                    >
+                                      {item}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </select>
+                          </td>
+
+                          <td className="p-3 min-w-40">
+                            {unidadMedida === UNIDAD_NINGUNA ? (
+                              <div className="border rounded-lg p-2 bg-slate-100 text-slate-500">
+                                Sin clasificacion
+                              </div>
+                            ) : (
+                              <select
+                                value={detalle.porcentaje}
+                                disabled={tieneRecibidos}
+                                onChange={(event) =>
+                                  actualizarDetalleEdicion(
+                                    index,
+                                    "porcentaje",
+                                    event.target.value
+                                  )
+                                }
+                                className="w-full border rounded-lg p-2 disabled:bg-slate-100"
+                              >
+                                <option value="">
+                                  {etiquetaUnidad(unidadMedida)}
+                                </option>
+
+                                {opcionesClasificacion.map(
+                                  (item) => (
+                                    <option
+                                      key={item}
+                                      value={item}
+                                    >
+                                      {etiquetaClasificacion(
+                                        item,
+                                        unidadMedida
+                                      ) || sufijoUnidad(unidadMedida)}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            )}
+                          </td>
+
+                          <td className="p-3 min-w-28">
+                            <select
+                              value={String(detalle.ancho)}
+                              disabled={tieneRecibidos}
+                              onChange={(event) =>
+                                actualizarDetalleEdicion(
+                                  index,
+                                  "ancho",
+                                  event.target.value
+                                )
+                              }
+                              className="w-full border rounded-lg p-2 disabled:bg-slate-100"
+                            >
+                              {anchosPulgadas.map((item) => (
+                                <option
+                                  key={item.value}
+                                  value={anchoValue(item.value)}
+                                >
+                                  {item.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          <td className="p-3 min-w-28">
+                            <input
+                              type="number"
+                              min={Math.max(
+                                Number(detalle.cantidadRecibida || 0),
+                                1
+                              )}
+                              value={detalle.cantidadRollos}
+                              onChange={(event) =>
+                                actualizarDetalleEdicion(
+                                  index,
+                                  "cantidadRollos",
+                                  event.target.value
+                                )
+                              }
+                              className="w-full border rounded-lg p-2"
+                            />
+                          </td>
+
+                          <td className="p-3 font-semibold text-slate-700">
+                            {detalle.cantidadRecibida || 0}
+                          </td>
+
+                          <td className="p-3 text-center">
+                            <button
+                              type="button"
+                              disabled={tieneRecibidos}
+                              onClick={() =>
+                                eliminarDetalleEdicion(index)
+                              }
+                              className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={
+                                tieneRecibidos
+                                  ? "No se puede eliminar porque ya tiene rollos recibidos"
+                                  : "Eliminar material"
+                              }
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <ModalActions
               onCancel={() => setEditPedido(null)}
               onSave={guardarEdicion}
@@ -419,6 +759,46 @@ function PedidoTable({ pedidos, onRefresh }) {
 
     </>
   );
+}
+
+function normalizarDetalleEdicion(detalle) {
+  const unidadMedida =
+    detalle.unidadMedida ||
+    unidadPorMaterial(detalle.tipoPolarizado);
+
+  return {
+    _id: detalle._id,
+    tipoPolarizado: detalle.tipoPolarizado || "",
+    porcentaje:
+      unidadMedida === UNIDAD_NINGUNA
+        ? 0
+        : String(detalle.porcentaje ?? ""),
+    unidadMedida,
+    ancho: anchoValue(detalle.ancho || 1.52),
+    cantidadRollos: String(
+      detalle.cantidadRollos || ""
+    ),
+    cantidadRecibida: Number(
+      detalle.cantidadRecibida || 0
+    ),
+  };
+}
+
+function prepararDetalleEdicion(detalle) {
+  return {
+    ...(detalle._id
+      ? {
+          _id: detalle._id,
+        }
+      : {}),
+    tipoPolarizado: detalle.tipoPolarizado,
+    porcentaje: Number(detalle.porcentaje),
+    unidadMedida:
+      detalle.unidadMedida ||
+      unidadPorMaterial(detalle.tipoPolarizado),
+    ancho: Number(detalle.ancho),
+    cantidadRollos: Number(detalle.cantidadRollos),
+  };
 }
 
 function PedidoDetalle({ pedido }) {

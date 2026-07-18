@@ -93,6 +93,8 @@ function VentasPage() {
   const [valorCorte, setValorCorte] = useState("");
   const [itemManual, setItemManual] =
     useState(itemManualInicial);
+  const [vistaVentas, setVistaVentas] =
+    useState("cortes");
 
   const cargar = async () => {
     try {
@@ -257,6 +259,7 @@ function VentasPage() {
         ? String(grupo.valorVenta)
         : ""
     );
+    setVistaVentas("nueva");
   };
 
   const actualizarCliente = (field, value) => {
@@ -630,42 +633,66 @@ function VentasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">
-            Ventas
-          </h1>
-          <p className="text-slate-500">
-            Registra cliente, vehiculo, cortes vendidos y servicios adicionales.
-          </p>
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white">
+              <BadgeDollarSign size={24} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">
+                Ventas
+              </h1>
+              <p className="text-sm text-slate-500">
+                Registra cliente, vehiculo, cortes vendidos y servicios adicionales.
+              </p>
+            </div>
+          </div>
 
-        <ExcelButton
-          title="Ventas"
-          fileName="ventas"
-          sheetName="Ventas"
-          columns={excelColumns}
-          rows={ventasFiltradas}
-        />
+          <ExcelButton
+            title="Ventas"
+            fileName="ventas"
+            sheetName="Ventas"
+            columns={excelColumns}
+            rows={ventasFiltradas}
+          />
+        </div>
       </div>
 
-      <VerificacionCortesAgrupada
-        grupos={gruposVerificacion}
-        totalGrupos={gruposCortes.length}
-        gruposSinVenta={gruposSinVenta.length}
-        gruposConVenta={gruposConVenta.length}
-        filtro={filtroVerificacion}
-        setFiltro={setFiltroVerificacion}
-        onSelectCorte={cargarCorteEnVenta}
+      <VentasTabs
+        vista={vistaVentas}
+        onChange={setVistaVentas}
+        pendientes={gruposSinVenta.length}
+        ventas={ventas.length}
       />
 
-      <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-6">
-        <section className="bg-white rounded-2xl shadow overflow-hidden">
-          <div className="p-5 border-b flex items-center gap-3">
-            <BadgeDollarSign className="text-blue-600" />
-            <h2 className="text-lg font-bold">
-              Nueva venta
-            </h2>
+      {vistaVentas === "cortes" && (
+        <VerificacionCortesAgrupada
+          grupos={gruposVerificacion}
+          totalGrupos={gruposCortes.length}
+          gruposSinVenta={gruposSinVenta.length}
+          gruposConVenta={gruposConVenta.length}
+          filtro={filtroVerificacion}
+          setFiltro={setFiltroVerificacion}
+          onSelectCorte={cargarCorteEnVenta}
+        />
+      )}
+
+      {vistaVentas === "nueva" && (
+      <div className="grid items-start gap-6">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50/80 p-5 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+              <BadgeDollarSign size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">
+                Nueva venta
+              </h2>
+              <p className="text-xs text-slate-500">
+                Datos del cliente, carro y valores que se van a cobrar.
+              </p>
+            </div>
           </div>
 
           <div className="p-5 space-y-5">
@@ -720,12 +747,17 @@ function VentasPage() {
               </Field>
             </div>
 
-            <div className="border rounded-xl overflow-hidden">
-              <div className="p-4 bg-slate-50 border-b flex items-center gap-2">
+            <div className="overflow-hidden rounded-xl border border-slate-200">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
                 <Car size={20} className="text-blue-600" />
-                <h3 className="font-bold">
-                  Cortes registrados del carro
-                </h3>
+                <div>
+                  <h3 className="font-bold text-slate-800">
+                    Cortes registrados del carro
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Al escribir la placa solo aparecen los cortes pendientes de ese carro.
+                  </p>
+                </div>
               </div>
 
               <div className="p-4 grid lg:grid-cols-[minmax(0,1fr)_180px] gap-3">
@@ -734,7 +766,7 @@ function VentasPage() {
                   onChange={(event) =>
                     seleccionarCorte(event.target.value)
                   }
-                  className="border rounded-lg p-3 bg-white min-w-0 text-xs leading-tight"
+                  className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 text-xs leading-tight outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
                 >
                   <option value="">
                     {placaVenta
@@ -759,7 +791,7 @@ function VentasPage() {
                     setValorCorte(event.target.value)
                   }
                   placeholder="Valor"
-                  className="border rounded-lg p-3"
+                  className="rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
                 />
 
                 {grupoActual && (
@@ -798,24 +830,29 @@ function VentasPage() {
                 )}
 
                 <div className="lg:col-span-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={agregarCorte}
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg flex items-center justify-center gap-2"
-                >
-                  <Plus size={18} />
-                  Agregar
-                </button>
+                  <button
+                    type="button"
+                    onClick={agregarCorte}
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold shadow-sm"
+                  >
+                    <Plus size={18} />
+                    Agregar corte
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="border rounded-xl overflow-hidden">
-              <div className="p-4 bg-slate-50 border-b flex items-center gap-2">
+            <div className="overflow-hidden rounded-xl border border-slate-200">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
                 <ClipboardList size={20} className="text-green-600" />
-                <h3 className="font-bold">
-                  Servicios adicionales
-                </h3>
+                <div>
+                  <h3 className="font-bold text-slate-800">
+                    Servicios adicionales
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Lavado, polichada, PDR, asegurada u otro servicio del mismo carro.
+                  </p>
+                </div>
               </div>
 
               <div className="p-4 grid md:grid-cols-2 xl:grid-cols-[180px_minmax(0,1fr)_120px_160px] gap-3">
@@ -827,7 +864,7 @@ function VentasPage() {
                       tipoServicio: event.target.value,
                     })
                   }
-                  className="border rounded-lg p-3 bg-white"
+                  className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-green-400 focus:ring-4 focus:ring-green-50"
                 >
                   {serviciosAdicionales.map((servicio) => (
                     <option
@@ -848,7 +885,7 @@ function VentasPage() {
                     })
                   }
                   placeholder="Descripcion"
-                  className="border rounded-lg p-3 min-w-0"
+                  className="min-w-0 rounded-xl border border-slate-200 p-3 outline-none focus:border-green-400 focus:ring-4 focus:ring-green-50"
                 />
 
                 <input
@@ -861,7 +898,7 @@ function VentasPage() {
                       cantidad: event.target.value,
                     })
                   }
-                  className="border rounded-lg p-3"
+                  className="rounded-xl border border-slate-200 p-3 outline-none focus:border-green-400 focus:ring-4 focus:ring-green-50"
                 />
 
                 <input
@@ -875,18 +912,18 @@ function VentasPage() {
                     })
                   }
                   placeholder="Valor"
-                  className="border rounded-lg p-3"
+                  className="rounded-xl border border-slate-200 p-3 outline-none focus:border-green-400 focus:ring-4 focus:ring-green-50"
                 />
 
                 <div className="md:col-span-2 xl:col-span-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={agregarServicioManual}
-                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg flex items-center justify-center gap-2"
-                >
-                  <Plus size={18} />
-                  Agregar
-                </button>
+                  <button
+                    type="button"
+                    onClick={agregarServicioManual}
+                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold shadow-sm"
+                  >
+                    <Plus size={18} />
+                    Agregar servicio
+                  </button>
                 </div>
               </div>
             </div>
@@ -922,7 +959,7 @@ function VentasPage() {
               </Field>
             </div>
 
-            <div className="border-t pt-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="border-t border-slate-200 pt-4 flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-slate-500">
                   Subtotal: <strong>{formatoCop.format(subtotal)}</strong>
@@ -935,7 +972,7 @@ function VentasPage() {
               <button
                 type="button"
                 onClick={guardarVenta}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl flex items-center gap-2"
+                className="w-full justify-center bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl flex items-center gap-2 font-semibold shadow-sm sm:w-auto"
               >
                 <Save size={18} />
                 Guardar venta
@@ -943,9 +980,25 @@ function VentasPage() {
             </div>
           </div>
         </section>
+      </div>
+      )}
 
-        <section className="bg-white rounded-2xl shadow overflow-hidden">
-          <div className="p-5 border-b">
+      {vistaVentas === "historial" && (
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50/80 p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <ClipboardList size={19} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">
+                  Historial de ventas
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Busca por cliente, placa o codigo de venta.
+                </p>
+              </div>
+            </div>
             <div className="relative">
               <Search
                 size={18}
@@ -957,7 +1010,7 @@ function VentasPage() {
                   setSearch(event.target.value)
                 }
                 placeholder="Buscar cliente, placa o venta..."
-                className="w-full border rounded-xl p-3 pl-10"
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
               />
             </div>
           </div>
@@ -979,6 +1032,65 @@ function VentasPage() {
             )}
           </div>
         </section>
+      )}
+    </div>
+  );
+}
+
+function VentasTabs({
+  vista,
+  onChange,
+  pendientes,
+  ventas,
+}) {
+  const tabs = [
+    {
+      id: "cortes",
+      label: "Cortes por costear",
+      detail: `${pendientes} pendientes`,
+    },
+    {
+      id: "nueva",
+      label: "Nueva venta",
+      detail: "Cliente y servicios",
+    },
+    {
+      id: "historial",
+      label: "Historial",
+      detail: `${ventas} ventas`,
+    },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+      <div className="grid gap-2 md:grid-cols-3">
+        {tabs.map((tab) => {
+          const activo = vista === tab.id;
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={`rounded-xl px-4 py-3 text-left transition ${
+                activo
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="block text-sm font-bold">
+                {tab.label}
+              </span>
+              <span
+                className={`block text-xs ${
+                  activo ? "text-slate-300" : "text-slate-400"
+                }`}
+              >
+                {tab.detail}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -1038,15 +1150,20 @@ function VerificacionCortesAgrupada({
   ];
 
   return (
-    <section className="bg-white rounded-2xl shadow overflow-hidden">
-      <div className="p-5 border-b flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-800">
-            Verificacion de cortes
-          </h2>
-          <p className="text-sm text-slate-500">
-            Una fila comercial por carro/material, con los cortes detallados debajo.
-          </p>
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+            <ClipboardList size={20} />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">
+              Verificacion de cortes
+            </h2>
+            <p className="text-sm text-slate-500">
+              Una fila comercial por carro/material, con los cortes detallados debajo.
+            </p>
+          </div>
         </div>
 
         <ExcelButton
@@ -1058,7 +1175,7 @@ function VerificacionCortesAgrupada({
         />
       </div>
 
-      <div className="p-5 grid md:grid-cols-3 gap-4">
+      <div className="p-5 grid gap-4 md:grid-cols-3">
         <ResumenVenta
           label="Total carros/material"
           value={totalGrupos}
@@ -1086,7 +1203,7 @@ function VerificacionCortesAgrupada({
             key={value}
             type="button"
             onClick={() => setFiltro(value)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
+            className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${
               filtro === value
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white text-slate-600 hover:bg-slate-50"
@@ -1097,9 +1214,9 @@ function VerificacionCortesAgrupada({
         ))}
       </div>
 
-      <div className="overflow-x-auto border-t">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-100 text-slate-600">
+      <div className="overflow-x-auto border-t border-slate-200">
+        <table className="w-full min-w-[980px] text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
               <th className="p-3 text-left">Placa</th>
               <th className="p-3 text-left">Vehiculo</th>
@@ -1128,19 +1245,19 @@ function VerificacionCortesAgrupada({
                 grupo.cortes.map((corte, index) => (
                   <tr
                     key={`${grupo.key}-${corte._id}`}
-                    className="border-t hover:bg-slate-50"
+                    className="border-t border-slate-200 hover:bg-slate-50"
                   >
                     {index === 0 && (
                       <>
                         <td
                           rowSpan={grupo.cortes.length}
-                          className="p-3 font-semibold align-top bg-white"
+                          className="p-3 font-semibold align-top bg-white text-slate-800"
                         >
                           {grupo.placa}
                         </td>
                         <td
                           rowSpan={grupo.cortes.length}
-                          className="p-3 align-top bg-white"
+                          className="p-3 align-top bg-white text-slate-600"
                         >
                           {grupo.marca} {grupo.modelo}
                         </td>
@@ -1169,13 +1286,13 @@ function VerificacionCortesAgrupada({
                       <>
                         <td
                           rowSpan={grupo.cortes.length}
-                          className="p-3 text-right font-bold align-top bg-white"
+                          className="p-3 text-right font-bold align-top bg-white text-slate-800"
                         >
                           {formatoCop.format(grupo.costoMaterial)}
                         </td>
                         <td
                           rowSpan={grupo.cortes.length}
-                          className="p-3 text-right font-bold align-top bg-white"
+                          className="p-3 text-right font-bold align-top bg-white text-slate-800"
                         >
                           {grupoTieneVenta(grupo)
                             ? formatoCop.format(grupo.valorVenta)
@@ -1234,215 +1351,9 @@ function VerificacionCortesAgrupada({
   );
 }
 
-function VerificacionCortes({
-  cortes,
-  totalCortes,
-  cortesSinVenta,
-  cortesConVenta,
-  filtro,
-  setFiltro,
-  onSelectCorte,
-}) {
-  const excelColumns = [
-    {
-      header: "Placa",
-      value: (corte) => corte.placa,
-    },
-    {
-      header: "Vehiculo",
-      value: (corte) =>
-        `${corte.marca || ""} ${corte.modelo || ""}`.trim(),
-      width: 24,
-    },
-    {
-      header: "Corte",
-      value: (corte) => corte.tipoCorte || "",
-    },
-    {
-      header: "Material",
-      value: descripcionMaterialCorte,
-      width: 24,
-    },
-    {
-      header: "Costo material",
-      value: (corte) => Number(corte.costoMaterialCop || 0),
-    },
-    {
-      header: "Valor venta",
-      value: (corte) => Number(corte.valorVenta || 0),
-    },
-    {
-      header: "Utilidad",
-      value: utilidadCorte,
-    },
-    {
-      header: "Estado",
-      value: (corte) =>
-        corteTieneVenta(corte)
-          ? "Con valor"
-          : "Falta valor",
-    },
-  ];
-
-  return (
-    <section className="bg-white rounded-2xl shadow overflow-hidden">
-      <div className="p-5 border-b flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-800">
-            Verificacion de cortes
-          </h2>
-          <p className="text-sm text-slate-500">
-            Revisa que cada carro tenga registrado su valor de venta.
-          </p>
-        </div>
-
-        <ExcelButton
-          title="Verificacion de Cortes"
-          fileName="verificacion-cortes-venta"
-          sheetName="Cortes"
-          columns={excelColumns}
-          rows={cortes}
-        />
-      </div>
-
-      <div className="p-5 grid md:grid-cols-3 gap-4">
-        <ResumenVenta
-          label="Total cortes"
-          value={totalCortes}
-          color="text-blue-700"
-        />
-        <ResumenVenta
-          label="Con valor de venta"
-          value={cortesConVenta}
-          color="text-green-700"
-        />
-        <ResumenVenta
-          label="Faltan por venta"
-          value={cortesSinVenta}
-          color="text-red-700"
-        />
-      </div>
-
-      <div className="px-5 pb-4 flex flex-wrap gap-2">
-        {[
-          ["PENDIENTES", "Faltan por venta"],
-          ["VENDIDOS", "Con valor"],
-          ["TODOS", "Todos"],
-        ].map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFiltro(value)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
-              filtro === value
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="overflow-x-auto border-t">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-100 text-slate-600">
-            <tr>
-              <th className="p-3 text-left">Placa</th>
-              <th className="p-3 text-left">Vehiculo</th>
-              <th className="p-3 text-left">Corte</th>
-              <th className="p-3 text-left">Material</th>
-              <th className="p-3 text-right">Costo material</th>
-              <th className="p-3 text-right">Valor venta</th>
-              <th className="p-3 text-right">Utilidad</th>
-              <th className="p-3 text-center">Estado</th>
-              <th className="p-3 text-center">Accion</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cortes.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={9}
-                  className="p-8 text-center text-slate-500"
-                >
-                  No hay cortes en esta vista.
-                </td>
-              </tr>
-            ) : (
-              cortes.map((corte) => (
-                <tr
-                  key={corte._id}
-                  className="border-t hover:bg-slate-50"
-                >
-                  <td className="p-3 font-semibold">
-                    {corte.placa}
-                  </td>
-                  <td className="p-3">
-                    {corte.marca} {corte.modelo}
-                  </td>
-                  <td className="p-3">
-                    {corte.tipoCorte || "-"}
-                  </td>
-                  <td className="p-3">
-                    {descripcionMaterialCorte(corte)}
-                  </td>
-                  <td className="p-3 text-right font-semibold text-slate-700">
-                    {formatoCop.format(
-                      costoMaterialCorte(corte)
-                    )}
-                  </td>
-                  <td className="p-3 text-right font-semibold">
-                    {corteTieneVenta(corte)
-                      ? formatoCop.format(corte.valorVenta)
-                      : "-"}
-                  </td>
-                  <td
-                    className={`p-3 text-right font-semibold ${
-                      utilidadCorte(corte) < 0
-                        ? "text-red-700"
-                        : "text-green-700"
-                    }`}
-                  >
-                    {corteTieneVenta(corte)
-                      ? formatoCop.format(utilidadCorte(corte))
-                      : "-"}
-                  </td>
-                  <td className="p-3 text-center">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        corteTieneVenta(corte)
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {corteTieneVenta(corte)
-                        ? "Con valor"
-                        : "Falta valor"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <button
-                      type="button"
-                      onClick={() => onSelectCorte(corte)}
-                      className="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold"
-                    >
-                      Cargar
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
 function ResumenVenta({ label, value, color }) {
   return (
-    <div className="border rounded-xl p-4">
+    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
       <p className="text-sm text-slate-500">
         {label}
       </p>
@@ -1456,16 +1367,16 @@ function ResumenVenta({ label, value, color }) {
 function ItemsVenta({ items, onDelete }) {
   if (items.length === 0) {
     return (
-      <div className="border rounded-xl p-6 text-center text-slate-500">
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
         Agregue cortes o servicios adicionales.
       </div>
     );
   }
 
   return (
-    <div className="border rounded-xl overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-100 text-slate-600">
+    <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <table className="w-full min-w-[720px] text-sm">
+        <thead className="bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
             <th className="p-3 text-left">Servicio</th>
             <th className="p-3 text-left">Descripcion</th>
@@ -1477,17 +1388,17 @@ function ItemsVenta({ items, onDelete }) {
         </thead>
         <tbody>
           {items.map((item, index) => (
-            <tr key={`${item.descripcion}-${index}`} className="border-t">
-              <td className="p-3 font-semibold">
+            <tr key={`${item.descripcion}-${index}`} className="border-t border-slate-200 hover:bg-slate-50">
+              <td className="p-3 font-semibold text-slate-800">
                 {servicioLabels[item.tipoServicio] || item.tipoServicio}
               </td>
-              <td className="p-3">
+              <td className="p-3 text-slate-600">
                 {item.descripcion}
               </td>
-              <td className="p-3 text-center">
+              <td className="p-3 text-center text-slate-600">
                 {item.cantidad}
               </td>
-              <td className="p-3 text-right">
+              <td className="p-3 text-right text-slate-600">
                 {formatoCop.format(item.valorUnitario || 0)}
               </td>
               <td className="p-3 text-right font-bold">
@@ -1512,9 +1423,9 @@ function ItemsVenta({ items, onDelete }) {
 
 function VentaCard({ venta, onMarkPaid, onEdit }) {
   return (
-    <article className="p-5 space-y-3">
-      <div className="flex justify-between gap-3">
-        <div>
+    <article className="p-5 space-y-4 hover:bg-slate-50/70">
+      <div className="flex flex-wrap justify-between gap-3">
+        <div className="min-w-0">
           <p className="font-bold text-slate-800">
             {venta.codigoVenta}
           </p>
@@ -1541,11 +1452,11 @@ function VentaCard({ venta, onMarkPaid, onEdit }) {
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-2 rounded-xl bg-slate-50 p-3">
         {venta.items?.map((item, index) => (
           <div
             key={`${venta._id}-${index}`}
-            className="flex justify-between gap-3 text-sm"
+            className="flex flex-wrap justify-between gap-3 text-sm"
           >
             <span className="text-slate-600">
               {servicioLabels[item.tipoServicio] || item.tipoServicio}: {item.descripcion}
@@ -1558,7 +1469,7 @@ function VentaCard({ venta, onMarkPaid, onEdit }) {
         ))}
       </div>
 
-      <div className="flex justify-between items-center border-t pt-3">
+      <div className="flex flex-wrap justify-between items-center gap-3 border-t border-slate-200 pt-3">
         <p className="text-xl font-bold text-blue-700">
           {formatoCop.format(venta.total || 0)}
         </p>
@@ -1566,7 +1477,7 @@ function VentaCard({ venta, onMarkPaid, onEdit }) {
           <button
             type="button"
             onClick={() => onMarkPaid(venta)}
-            className="px-3 py-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-2 text-sm"
+            className="px-3 py-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-2 text-sm font-semibold"
           >
             <CheckCircle2 size={16} />
             Marcar pagada
@@ -1620,7 +1531,7 @@ function EstadoBadge({ estado }) {
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="text-sm text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </span>
       <div className="mt-1">
@@ -1644,7 +1555,7 @@ function Input({
       onChange={(event) =>
         onChange(event.target.value)
       }
-      className="w-full border rounded-lg p-3"
+      className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
     />
   );
 }
@@ -1721,19 +1632,8 @@ function tipoServicioDesdeCorte(corte) {
   return "POLARIZADO";
 }
 
-function corteTieneVenta(corte) {
-  return Number(corte?.valorVenta || 0) > 0;
-}
-
 function costoMaterialCorte(corte) {
   return Number(corte?.costoMaterialCop || 0);
-}
-
-function utilidadCorte(corte) {
-  return (
-    Number(corte?.valorVenta || 0) -
-    costoMaterialCorte(corte)
-  );
 }
 
 function agruparCortesPorCarroMaterial(cortes) {

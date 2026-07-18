@@ -47,11 +47,11 @@ function MainLayout() {
   }, []);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col lg:flex-row">
 
       <Sidebar />
 
-      <main className="flex-1 p-6 bg-slate-100">
+      <main className="min-w-0 flex-1 p-4 lg:p-6 bg-slate-100">
         <Outlet />
       </main>
 

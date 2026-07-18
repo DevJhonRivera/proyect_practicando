@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Swal from "sweetalert2";
 
 import { updateCorte } from "../../api/cortes.api";
@@ -28,6 +29,9 @@ function escapeHtml(value) {
 }
 
 function CortesPage() {
+  const [vistaCortes, setVistaCortes] =
+    useState("registrar");
+
   const {
     aplicarSugerencia,
     cortesFiltrados,
@@ -176,32 +180,93 @@ function CortesPage() {
 
       <CortesStats indicadores={indicadores} />
 
-      <CorteForm
-        form={form}
-        loadingSugerencias={loadingSugerencias}
-        onApplySuggestion={aplicarSugerencia}
-        onChange={setForm}
-        onSubmit={guardar}
-        rolloSeleccionado={rolloSeleccionado}
-        rollosEnUso={rollosEnUso}
-        sugerencias={sugerencias}
-        sugerenciasKey={sugerenciasKey}
+      <CortesTabs
+        vista={vistaCortes}
+        onChange={setVistaCortes}
+        total={cortesFiltrados.length}
       />
 
-      <CortesSearch
-        value={search}
-        onChange={setSearch}
-        fechaDesde={fechaDesde}
-        fechaHasta={fechaHasta}
-        onFechaDesdeChange={setFechaDesde}
-        onFechaHastaChange={setFechaHasta}
-      />
+      {vistaCortes === "registrar" && (
+        <CorteForm
+          form={form}
+          loadingSugerencias={loadingSugerencias}
+          onApplySuggestion={aplicarSugerencia}
+          onChange={setForm}
+          onSubmit={guardar}
+          rolloSeleccionado={rolloSeleccionado}
+          rollosEnUso={rollosEnUso}
+          sugerencias={sugerencias}
+          sugerenciasKey={sugerenciasKey}
+        />
+      )}
 
-      <CortesTable
-        cortes={cortesFiltrados}
-        excelColumns={excelColumns}
-        onEdit={editarCorte}
-      />
+      {vistaCortes === "historial" && (
+        <>
+          <CortesSearch
+            value={search}
+            onChange={setSearch}
+            fechaDesde={fechaDesde}
+            fechaHasta={fechaHasta}
+            onFechaDesdeChange={setFechaDesde}
+            onFechaHastaChange={setFechaHasta}
+          />
+
+          <CortesTable
+            cortes={cortesFiltrados}
+            excelColumns={excelColumns}
+            onEdit={editarCorte}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function CortesTabs({ vista, onChange, total }) {
+  const tabs = [
+    {
+      id: "registrar",
+      label: "Registrar corte",
+      detail: "Formulario de trabajo",
+    },
+    {
+      id: "historial",
+      label: "Historial",
+      detail: `${total} cortes filtrados`,
+    },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+      <div className="grid gap-2 md:grid-cols-2">
+        {tabs.map((tab) => {
+          const activo = vista === tab.id;
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={`rounded-xl px-4 py-3 text-left transition ${
+                activo
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="block text-sm font-bold">
+                {tab.label}
+              </span>
+              <span
+                className={`block text-xs ${
+                  activo ? "text-slate-300" : "text-slate-400"
+                }`}
+              >
+                {tab.detail}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

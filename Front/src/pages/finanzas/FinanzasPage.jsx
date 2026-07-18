@@ -33,6 +33,8 @@ function FinanzasPage() {
   const [resumen, setResumen] = useState(null);
   const [selectedPedidoId, setSelectedPedidoId] = useState("");
   const [selectedCosteo, setSelectedCosteo] = useState(null);
+  const [vistaFinanzas, setVistaFinanzas] =
+    useState("costear");
   const [form, setForm] = useState(formularioInicial);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -348,8 +350,18 @@ function FinanzasPage() {
 
       <FinanzasStats resumen={resumen} />
 
-      <ReporteRentabilidad reporte={reporte} />
+      <FinanzasTabs
+        vista={vistaFinanzas}
+        onChange={setVistaFinanzas}
+        pendientes={pedidosParaNuevoCosteo.length}
+        costeos={costeos.length}
+      />
 
+      {vistaFinanzas === "rentabilidad" && (
+        <ReporteRentabilidad reporte={reporte} />
+      )}
+
+      {vistaFinanzas === "costear" && (
       <div className="grid xl:grid-cols-[minmax(0,1fr)_380px] gap-6">
         <CosteoPedidoForm
           pedidos={pedidosDisponiblesFormulario}
@@ -369,11 +381,76 @@ function FinanzasPage() {
 
         <CosteoResultado costeo={selectedCosteo} />
       </div>
+      )}
 
+      {vistaFinanzas === "historial" && (
       <CosteosTable
         costeos={costeos}
-        onSelectPedido={setSelectedPedidoId}
+        onSelectPedido={(pedidoId) => {
+          setSelectedPedidoId(pedidoId);
+          setVistaFinanzas("costear");
+        }}
       />
+      )}
+    </div>
+  );
+}
+
+function FinanzasTabs({
+  vista,
+  onChange,
+  pendientes,
+  costeos,
+}) {
+  const tabs = [
+    {
+      id: "costear",
+      label: "Costear pedido",
+      detail: `${pendientes} pendientes`,
+    },
+    {
+      id: "historial",
+      label: "Historial",
+      detail: `${costeos} costeos`,
+    },
+    {
+      id: "rentabilidad",
+      label: "Rentabilidad",
+      detail: "Resumen comercial",
+    },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+      <div className="grid gap-2 md:grid-cols-3">
+        {tabs.map((tab) => {
+          const activo = vista === tab.id;
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={`rounded-xl px-4 py-3 text-left transition ${
+                activo
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="block text-sm font-bold">
+                {tab.label}
+              </span>
+              <span
+                className={`block text-xs ${
+                  activo ? "text-slate-300" : "text-slate-400"
+                }`}
+              >
+                {tab.detail}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

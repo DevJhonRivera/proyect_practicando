@@ -1,185 +1,96 @@
-﻿import {
+import {
+  Archive,
   Package,
   Ruler,
-  Wrench,
-  Archive,
   Truck,
-  XCircle
+  Wrench,
+  XCircle,
 } from "lucide-react";
 
 function DashboardStats({ indicadores }) {
-
   const cards = [
-
     {
       titulo: "Total rollos",
       valor: indicadores.totalRollos || 0,
       icono: Package,
-      color: "from-blue-600 to-blue-800",
-      descripcion: "Rollos registrados"
+      color: "bg-blue-600 text-white",
+      borde: "border-blue-100",
+      descripcion: "Rollos registrados",
     },
-
     {
       titulo: "Metros disponibles",
       valor: `${Number(indicadores.metrosDisponibles || 0).toFixed(2)} m`,
       icono: Ruler,
-      color: "from-green-500 to-emerald-700",
-      descripcion: "Inventario disponible"
+      color: "bg-emerald-600 text-white",
+      borde: "border-emerald-100",
+      descripcion: "Inventario disponible",
     },
-
     {
-      titulo: "En Uso",
+      titulo: "En uso",
       valor: indicadores.enUso || 0,
       icono: Wrench,
-      color: "from-orange-500 to-red-500",
-      descripcion: "Rollos activos para cortes"
+      color: "bg-amber-500 text-white",
+      borde: "border-amber-100",
+      descripcion: "Rollos activos para cortes",
     },
-
     {
       titulo: "Bodega",
       valor: indicadores.reserva || 0,
       icono: Archive,
-      color: "from-purple-600 to-indigo-700",
-      descripcion: "Rollos guardados"
+      color: "bg-indigo-600 text-white",
+      borde: "border-indigo-100",
+      descripcion: "Rollos guardados",
     },
-
     {
       titulo: "Entrada",
       valor: indicadores.recepcion || 0,
       icono: Truck,
-      color: "from-cyan-500 to-sky-700",
-      descripcion: "Pendientes de clasificar"
+      color: "bg-cyan-600 text-white",
+      borde: "border-cyan-100",
+      descripcion: "Pendientes de clasificar",
     },
-
     {
       titulo: "Agotados",
       valor: indicadores.agotados || 0,
       icono: XCircle,
-      color: "from-red-600 to-red-800",
-      descripcion: "Sin metros disponibles"
-    }
-
+      color: "bg-red-600 text-white",
+      borde: "border-red-100",
+      descripcion: "Sin metros disponibles",
+    },
   ];
 
   return (
-
-    <div
-      className="
-      grid
-      gap-6
-      sm:grid-cols-2
-      xl:grid-cols-4"
-    >
-
-      {cards.map((card, index) => {
-
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      {cards.map((card) => {
         const Icon = card.icono;
 
         return (
-
-          <div
-
-            key={index}
-
-            className="
-            relative
-            overflow-hidden
-            rounded-2xl
-            shadow-lg
-            hover:shadow-2xl
-            transition-all
-            duration-300
-            hover:-translate-y-1"
-
+          <article
+            key={card.titulo}
+            className={`rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${card.borde}`}
           >
-
-            <div
-
-              className={`
-                bg-gradient-to-br
-                ${card.color}
-                p-6
-                text-white
-                h-full
-              `}
-
-            >
-
-              <div className="flex justify-between items-start">
-
-                <div>
-
-                  <p
-                    className="
-                    text-sm
-                    opacity-90"
-                  >
-
-                    {card.titulo}
-
-                  </p>
-
-                  <h2
-                    className="
-                    text-4xl
-                    font-bold
-                    mt-3"
-                  >
-
-                    {card.valor}
-
-                  </h2>
-
-                  <p
-                    className="
-                    text-sm
-                    mt-4
-                    opacity-90"
-                  >
-
-                    {card.descripcion}
-
-                  </p>
-
-                </div>
-
-                <div
-                  className="
-                  bg-white/20
-                  p-3
-                  rounded-xl"
-                >
-
-                  <Icon size={34} />
-
-                </div>
-
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-500">
+                  {card.titulo}
+                </p>
+                <p className="mt-2 break-words text-3xl font-bold text-slate-950">
+                  {card.valor}
+                </p>
+                <p className="mt-3 text-sm text-slate-500">
+                  {card.descripcion}
+                </p>
               </div>
 
-              <div
-                className="
-                absolute
-                -right-8
-                -bottom-8
-                opacity-10"
-              >
-
-                <Icon size={120} />
-
+              <div className={`shrink-0 rounded-xl p-3 shadow-sm ${card.color}`}>
+                <Icon size={24} />
               </div>
-
             </div>
-
-          </div>
-
+          </article>
         );
-
       })}
-
     </div>
-
   );
-
 }
 
 export default DashboardStats;

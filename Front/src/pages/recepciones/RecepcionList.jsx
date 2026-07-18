@@ -27,6 +27,7 @@ import {
 import {
   etiquetaDetalle,
   etiquetaUnidad,
+  UNIDAD_NINGUNA,
   unidadDetalle,
 } from "../../utils/materiales";
 
@@ -223,7 +224,7 @@ function RecepcionList() {
       tipoPolarizado:
         primerDetalle?.tipoPolarizado || "",
       porcentaje:
-        primerDetalle?.porcentaje || "",
+        primerDetalle?.porcentaje ?? "",
       unidadMedida:
         unidadDetalle(primerDetalle),
       ancho:
@@ -257,7 +258,7 @@ function RecepcionList() {
       tipoPolarizado:
         primerDetalle?.tipoPolarizado || "",
       porcentaje:
-        primerDetalle?.porcentaje || "",
+        primerDetalle?.porcentaje ?? "",
       unidadMedida:
         unidadDetalle(primerDetalle),
       ancho:
@@ -287,7 +288,7 @@ function RecepcionList() {
       tipoPolarizado:
         detalle?.tipoPolarizado || "",
       porcentaje:
-        detalle?.porcentaje || "",
+        detalle?.porcentaje ?? "",
       unidadMedida:
         unidadDetalle(detalle),
       ancho:
@@ -337,7 +338,7 @@ function RecepcionList() {
         detalle?.tipoPolarizado ||
         rolloForm.tipoPolarizado,
       porcentaje:
-        detalle?.porcentaje ||
+        detalle?.porcentaje ??
         rolloForm.porcentaje,
       unidadMedida:
         unidadDetalle(detalle || rolloForm),
@@ -347,15 +348,19 @@ function RecepcionList() {
   const guardarClasificacion =
     async () => {
       try {
+        const unidadActual = unidadDetalle(rolloForm);
         const requerido = [
           "codigoPedido",
           "detalleKey",
           "codigoRollo",
           "tipoPolarizado",
-          "porcentaje",
           "ancho",
           "largoOriginal",
         ];
+
+        if (unidadActual !== UNIDAD_NINGUNA) {
+          requerido.push("porcentaje");
+        }
 
         const incompleto =
           requerido.some(
@@ -378,11 +383,13 @@ function RecepcionList() {
           {
             ...rolloForm,
             porcentaje:
-              Number(
-                rolloForm.porcentaje
-              ),
+              unidadActual === UNIDAD_NINGUNA
+                ? 0
+                : Number(
+                    rolloForm.porcentaje
+                  ),
             unidadMedida:
-              unidadDetalle(rolloForm),
+              unidadActual,
             ancho:
               Number(rolloForm.ancho),
             largoOriginal:
@@ -862,13 +869,19 @@ function RecepcionList() {
               </Field>
 
               <Field label={etiquetaUnidad(unidadDetalle(rolloForm))}>
-                <input
-                  type="number"
-                  min="0"
-                  value={rolloForm.porcentaje}
-                  readOnly
-                  className="w-full border rounded-lg p-3"
-                />
+                {unidadDetalle(rolloForm) === UNIDAD_NINGUNA ? (
+                  <div className="w-full border rounded-lg p-3 bg-slate-100 text-slate-500">
+                    Sin clasificacion
+                  </div>
+                ) : (
+                  <input
+                    type="number"
+                    min="0"
+                    value={rolloForm.porcentaje}
+                    readOnly
+                    className="w-full border rounded-lg p-3"
+                  />
+                )}
               </Field>
 
               <Field label="Ancho">

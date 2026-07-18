@@ -22,6 +22,7 @@ import {
 import {
   useNavigate
 } from "react-router-dom";
+import logo from "../../assets/polarizadosya.png";
 
 function LoginPage() {
 
@@ -133,7 +134,8 @@ function LoginPage() {
       className="
       min-h-screen
       flex
-      bg-slate-100"
+      bg-slate-100
+      text-slate-900"
     >
 
       {/* Panel izquierdo */}
@@ -143,15 +145,32 @@ function LoginPage() {
         hidden
         lg:flex
         lg:w-1/2
-        bg-gradient-to-br
-        from-blue-700
-        via-blue-800
-        to-slate-900
+        bg-[#07111f]
         text-white
         p-16
         flex-col
         justify-center"
       >
+
+        <div
+          className="
+          bg-white
+          rounded-3xl
+          p-5
+          shadow-2xl
+          shadow-slate-950/30
+          mb-10
+          max-w-md"
+        >
+          <img
+            src={logo}
+            alt="Polarizados YA"
+            className="
+            w-full
+            h-28
+            object-contain"
+          />
+        </div>
 
         <h1
           className="
@@ -165,7 +184,7 @@ function LoginPage() {
         <p
           className="
           text-xl
-          text-slate-200
+          text-slate-300
           mb-12"
         >
           Sistema de Inventario
@@ -249,7 +268,8 @@ function LoginPage() {
         flex
         items-center
         justify-center
-        p-5"
+        p-5
+        lg:bg-white"
       >
 
         <form
@@ -262,16 +282,44 @@ function LoginPage() {
           bg-white
           rounded-3xl
           shadow-2xl
-          p-10
+          shadow-slate-200
+          border
+          border-slate-200
+          p-6
+          sm:p-10
           w-full
           max-w-md"
         >
+
+          <div className="mb-7">
+            <div
+              className="
+              mx-auto
+              w-full
+              max-w-xs
+              rounded-2xl
+              border
+              border-slate-200
+              bg-white
+              p-3
+              shadow-sm"
+            >
+              <img
+                src={logo}
+                alt="Polarizados YA"
+                className="
+                h-20
+                w-full
+                object-contain"
+              />
+            </div>
+          </div>
 
           <h2
             className="
             text-3xl
             font-bold
-            text-slate-800"
+            text-slate-900"
           >
             Bienvenido
           </h2>
@@ -307,10 +355,13 @@ function LoginPage() {
               className="
               w-full
               border
-              rounded-lg
+              rounded-xl
               p-3
+              bg-slate-50
+              border-slate-200
               focus:ring-2
               focus:ring-blue-500
+              focus:bg-white
               outline-none"
             />
 
@@ -355,11 +406,14 @@ function LoginPage() {
               className="
               w-full
               border
-              rounded-lg
+              rounded-xl
               p-3
               pr-12
+              bg-slate-50
+              border-slate-200
               focus:ring-2
               focus:ring-blue-500
+              focus:bg-white
               outline-none"
             />
 
@@ -405,9 +459,11 @@ function LoginPage() {
             hover:bg-blue-700
             text-white
             p-3
-            rounded-lg
+            rounded-xl
             font-semibold
             transition
+            shadow-lg
+            shadow-blue-600/20
             disabled:opacity-50"
           >
             {loading

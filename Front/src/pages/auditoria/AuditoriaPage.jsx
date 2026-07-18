@@ -319,26 +319,33 @@ function AuditoriaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">
-            Auditoria comercial
-          </h1>
-          <p className="text-slate-500">
-            Costos de material, venta y utilidad por material, agrupando datos repetidos del carro.
-          </p>
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
+              <Filter size={24} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">
+                Auditoria comercial
+              </h1>
+              <p className="text-sm text-slate-500">
+                Costos de material, venta y utilidad por material, agrupando datos repetidos del carro.
+              </p>
+            </div>
+          </div>
 
-        <ExcelButton
-          title="Auditoria comercial"
-          fileName="auditoria-comercial"
-          sheetName="Auditoria"
-          columns={excelColumns}
-          rows={filasFiltradas}
-        />
+          <ExcelButton
+            title="Auditoria comercial"
+            fileName="auditoria-comercial"
+            sheetName="Auditoria"
+            columns={excelColumns}
+            rows={filasFiltradas}
+          />
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <Resumen
           icon={ClipboardList}
           label="Cortes auditados"
@@ -371,7 +378,7 @@ function AuditoriaPage() {
         />
       </div>
 
-      <section className="bg-white rounded-2xl shadow overflow-hidden">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <PanelFiltrosAuditoria
           fechaDesde={fechaDesde}
           fechaHasta={fechaHasta}
@@ -392,7 +399,7 @@ function AuditoriaPage() {
 
         <ResumenMateriales materiales={resumenMateriales} />
 
-        <div className="divide-y divide-slate-200">
+        <div className="divide-y divide-slate-200 bg-slate-50/60">
           {gruposTabla.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               No hay informacion para este filtro.
@@ -421,7 +428,7 @@ function AuditoriaPage() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
                     <DatoGrupo
                       label="Costo material"
                       value={formatoCop.format(grupo.costoMaterial)}
@@ -449,7 +456,7 @@ function AuditoriaPage() {
                     />
                   </div>
 
-                  <div className="flex flex-col items-start gap-1 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500 lg:items-end lg:text-right">
+                  <div className="flex flex-col items-start gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 lg:items-end lg:text-right">
                     <p className="font-semibold text-slate-700">
                       {grupo.codigoVenta || "Sin venta"}
                     </p>
@@ -466,7 +473,7 @@ function AuditoriaPage() {
 
                 <div className="px-5 pb-5">
                   <div className="overflow-x-auto rounded-xl border border-slate-200">
-                    <table className="w-full text-sm">
+                    <table className="w-full min-w-[780px] text-sm">
                       <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                         <tr>
                           <th className="p-3 text-left">Corte</th>
@@ -481,7 +488,7 @@ function AuditoriaPage() {
                         {grupo.filas.map((fila) => (
                           <tr
                             key={fila.id}
-                            className="border-t hover:bg-slate-50"
+                          className="border-t border-slate-200 hover:bg-slate-50"
                           >
                             <td className="p-3 font-medium text-slate-700">
                               {fila.corte}
@@ -515,7 +522,7 @@ function AuditoriaPage() {
         </div>
 
         {gruposTabla.length > 0 && (
-          <div className="p-4 border-t flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="p-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white text-sm">
             <p className="text-slate-500">
               Mostrando {gruposPaginados.length} de {gruposTabla.length} grupos
             </p>
@@ -556,9 +563,11 @@ function AuditoriaPage() {
 
 function Resumen({ icon: Icon, label, value, color }) {
   return (
-    <div className="bg-white rounded-2xl shadow p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-3">
-        <Icon className={color} size={22} />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50">
+          <Icon className={color} size={22} />
+        </div>
         <p className="text-sm text-slate-500">
           {label}
         </p>
@@ -576,7 +585,7 @@ function DatoGrupo({
   color = "text-slate-800",
 }) {
   return (
-    <div>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
       <p className="text-slate-500">
         {label}
       </p>
@@ -605,7 +614,7 @@ function PanelFiltrosAuditoria({
   onTipoTrabajo,
 }) {
   return (
-    <div className="border-b bg-slate-50/70">
+    <div className="border-b border-slate-200 bg-white">
       <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
@@ -631,7 +640,7 @@ function PanelFiltrosAuditoria({
         </button>
       </div>
 
-      <div className="p-5 space-y-5">
+      <div className="p-5 space-y-5 bg-slate-50/70">
         <div className="grid xl:grid-cols-[minmax(280px,1fr)_180px_180px_minmax(240px,360px)] gap-4">
           <BuscadorAuditoria
             value={search}
@@ -682,7 +691,7 @@ function PanelFiltrosAuditoria({
 function BuscadorAuditoria({ value, onChange }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         Busqueda
       </span>
       <div className="relative mt-1">
@@ -694,7 +703,7 @@ function BuscadorAuditoria({ value, onChange }) {
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Placa, cliente, material, venta..."
-          className="w-full border rounded-xl p-3 pl-10 bg-white"
+          className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
         />
       </div>
     </label>
@@ -704,13 +713,13 @@ function BuscadorAuditoria({ value, onChange }) {
 function MaterialSelect({ value, options, onChange }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         Material
       </span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 w-full border rounded-xl p-3 bg-white"
+        className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
       >
         {options.map((material) => (
           <option key={material} value={material}>
@@ -733,7 +742,7 @@ function FiltroSegmentado({
   activeClass,
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
         <Icon size={17} className="text-slate-400" />
         {label}
@@ -761,7 +770,7 @@ function FiltroSegmentado({
 function FechaInput({ label, value, onChange }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </span>
       <div className="relative mt-1">
@@ -773,7 +782,7 @@ function FechaInput({ label, value, onChange }) {
           type="date"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full border rounded-xl py-3 pl-10 pr-3 bg-white"
+          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
         />
       </div>
     </label>
@@ -805,7 +814,7 @@ function ResumenMateriales({ materiales }) {
   }
 
   return (
-    <div className="border-t bg-slate-50 px-5 py-4">
+    <div className="border-t border-slate-200 bg-white px-5 py-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-bold text-slate-800">
@@ -818,8 +827,8 @@ function ResumenMateriales({ materiales }) {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-white text-slate-500">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
               <th className="p-3 text-left">Material</th>
               <th className="p-3 text-right">Cortes</th>
@@ -833,7 +842,7 @@ function ResumenMateriales({ materiales }) {
             {materiales.map((material) => (
               <tr
                 key={material.material}
-                className="border-t border-slate-200 bg-white"
+                className="border-t border-slate-200 bg-white hover:bg-slate-50"
               >
                 <td className="p-3 font-semibold text-slate-700">
                   {material.material}
