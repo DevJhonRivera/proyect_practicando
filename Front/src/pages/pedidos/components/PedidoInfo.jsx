@@ -1,24 +1,21 @@
 import { useEffect, useState } from "react";
 import {
   FileText,
+  MessageSquare,
   Truck,
-  MessageSquare
 } from "lucide-react";
 
 const proveedoresBase = ["AUTOBAHN", "IMPACTO SOLAR"];
 
-function PedidoInfo({
-  pedido,
-  setPedido
-}) {
+function PedidoInfo({ pedido, setPedido }) {
   const [modoProveedor, setModoProveedor] = useState("");
   const proveedorSeleccionado =
     modoProveedor ||
     (proveedoresBase.includes(pedido.proveedor)
       ? pedido.proveedor
       : pedido.proveedor
-        ? "OTRO"
-        : "");
+      ? "OTRO"
+      : "");
 
   useEffect(() => {
     if (!pedido.proveedor && modoProveedor !== "OTRO") {
@@ -27,74 +24,54 @@ function PedidoInfo({
   }, [modoProveedor, pedido.proveedor]);
 
   return (
-
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-
-      <div className="border-b px-6 py-4">
-
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 bg-slate-50/80 px-6 py-4">
         <h2 className="text-xl font-bold text-slate-800">
-          Información General
+          Informacion general
         </h2>
-
         <p className="text-sm text-slate-500">
           Datos principales del pedido al proveedor.
         </p>
-
       </div>
 
-      <div className="p-6 grid lg:grid-cols-2 gap-6">
-
-        {/* Código */}
-
+      <div className="grid gap-6 p-6 lg:grid-cols-2">
         <div>
-
-          <label className="text-sm font-medium text-slate-600 mb-2 block">
-            Código del Pedido
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Codigo del pedido
           </label>
-
           <div className="relative">
-
             <FileText
               size={18}
               className="absolute left-3 top-3.5 text-slate-400"
             />
-
             <input
               type="text"
               placeholder="Ej: PED-2026-001"
               value={pedido.codigoPedido}
-              onChange={(e) =>
+              onChange={(event) =>
                 setPedido({
                   ...pedido,
-                  codigoPedido: e.target.value,
+                  codigoPedido: event.target.value.toUpperCase(),
                 })
               }
-              className="w-full border rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
             />
-
           </div>
-
         </div>
 
-        {/* Proveedor */}
-
         <div>
-
-          <label className="text-sm font-medium text-slate-600 mb-2 block">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Proveedor
           </label>
-
           <div className="relative">
-
             <Truck
               size={18}
               className="absolute left-3 top-3.5 text-slate-400"
             />
-
             <select
               value={proveedorSeleccionado}
-              onChange={(e) => {
-                const value = e.target.value;
+              onChange={(event) => {
+                const value = event.target.value;
 
                 setModoProveedor(value);
                 setPedido({
@@ -102,7 +79,7 @@ function PedidoInfo({
                   proveedor: value === "OTRO" ? "" : value,
                 });
               }}
-              className="w-full border rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
             >
               <option value="">Seleccione proveedor</option>
               {proveedoresBase.map((proveedor) => (
@@ -112,7 +89,6 @@ function PedidoInfo({
               ))}
               <option value="OTRO">Crear otro proveedor</option>
             </select>
-
           </div>
 
           {proveedorSeleccionado === "OTRO" && (
@@ -120,56 +96,43 @@ function PedidoInfo({
               type="text"
               placeholder="Nombre del nuevo proveedor"
               value={pedido.proveedor}
-              onChange={(e) =>
+              onChange={(event) =>
                 setPedido({
                   ...pedido,
-                  proveedor: e.target.value.toUpperCase(),
+                  proveedor: event.target.value.toUpperCase(),
                 })
               }
-              className="mt-3 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="mt-3 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
             />
           )}
-
         </div>
 
-        {/* Observaciones */}
-
         <div className="lg:col-span-2">
-
-          <label className="text-sm font-medium text-slate-600 mb-2 block">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Observaciones
           </label>
-
           <div className="relative">
-
             <MessageSquare
               size={18}
               className="absolute left-3 top-4 text-slate-400"
             />
-
             <textarea
               rows={4}
-              placeholder="Escriba alguna observación del pedido..."
+              placeholder="Escriba alguna observacion del pedido..."
               value={pedido.observaciones}
-              onChange={(e) =>
+              onChange={(event) =>
                 setPedido({
                   ...pedido,
-                  observaciones: e.target.value,
+                  observaciones: event.target.value.toUpperCase(),
                 })
               }
-              className="w-full border rounded-xl pl-10 pr-4 py-3 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full resize-none rounded-xl border border-slate-200 py-3 pl-10 pr-4 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
             />
-
           </div>
-
         </div>
-
       </div>
-
     </div>
-
   );
-
 }
 
 export default PedidoInfo;

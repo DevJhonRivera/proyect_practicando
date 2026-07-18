@@ -15,10 +15,10 @@ function AlertasTable({
   pendientes,
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow overflow-hidden">
-      <div className="p-6 border-b flex items-center justify-between gap-4">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/80 p-6">
         <div>
-          <h2 className="text-xl font-bold">
+          <h2 className="text-xl font-bold text-slate-800">
             Historial de alertas
           </h2>
 
@@ -55,8 +55,8 @@ function AlertasTable({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100 text-slate-600">
+          <table className="w-full min-w-[820px] text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="p-4 text-left">
                   Tipo
@@ -83,9 +83,9 @@ function AlertasTable({
               {alertas.map((alerta) => (
                 <tr
                   key={alerta._id}
-                  className="border-b hover:bg-slate-50"
+                  className="border-b border-slate-200 hover:bg-slate-50"
                 >
-                  <td className="p-4">
+                  <td className="p-4 text-slate-600">
                     <TipoBadge tipo={alerta.tipo} />
                   </td>
 

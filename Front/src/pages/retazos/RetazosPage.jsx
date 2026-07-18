@@ -234,26 +234,34 @@ function RetazosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">
-            Retazos disponibles
-          </h1>
-          <p className="text-slate-500">
-            Sobrantes utiles para reutilizar en proximos cortes.
-          </p>
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
+              <PackageOpen size={24} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">
+                Retazos disponibles
+              </h1>
+              <p className="text-sm text-slate-500">
+                Sobrantes utiles para reutilizar en proximos cortes.
+              </p>
+            </div>
+          </div>
 
-        <button
-          onClick={() => setOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Nuevo retazo
-        </button>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 sm:w-auto"
+          >
+            <Plus size={18} />
+            Nuevo retazo
+          </button>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-5">
+      <div className="grid gap-5 md:grid-cols-2">
         <Stat
           label="Retazos disponibles"
           value={disponibles}
@@ -264,11 +272,11 @@ function RetazosPage() {
         />
       </div>
 
-      <div className="bg-white rounded-2xl shadow overflow-hidden">
-        <div className="p-6 border-b flex items-center justify-between gap-4">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/80 p-6">
           <div className="flex items-center gap-2">
             <PackageOpen className="text-blue-600" />
-            <h2 className="text-lg font-bold">
+            <h2 className="text-lg font-bold text-slate-800">
               Inventario de retazos
             </h2>
           </div>
@@ -288,8 +296,8 @@ function RetazosPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100 text-slate-600">
+            <table className="w-full min-w-[820px] text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="p-4 text-left">Codigo</th>
                   <th className="p-4 text-left">Material</th>
@@ -304,24 +312,24 @@ function RetazosPage() {
                 {retazos.map((retazo) => (
                   <tr
                     key={retazo._id}
-                    className="border-t hover:bg-slate-50"
+                    className="border-t border-slate-200 hover:bg-slate-50"
                   >
-                    <td className="p-4 font-semibold">
+                    <td className="p-4 font-semibold text-slate-800">
                       {retazo.codigoRetazo}
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 text-slate-600">
                       {retazo.tipoPolarizado}
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 text-slate-600">
                       {etiquetaDetalle(retazo)}
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 text-slate-600">
                       {anchoLabel(retazo.ancho)}
                     </td>
                     <td className="p-4 font-semibold text-blue-700">
                       {Number(retazo.largoDisponible || 0).toFixed(2)} m
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 text-slate-600">
                       {retazo.estado}
                     </td>
                     <td className="p-4 text-center">
@@ -534,7 +542,7 @@ function RetazosPage() {
 
 function Stat({ label, value }) {
   return (
-    <div className="bg-white rounded-2xl shadow p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <p className="text-slate-500 text-sm">
         {label}
       </p>
@@ -553,7 +561,7 @@ function Input({
 }) {
   return (
     <label className="block">
-      <span className="text-sm text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </span>
       <input
@@ -562,7 +570,7 @@ function Input({
         onChange={(event) =>
           onChange(event.target.value)
         }
-        className="w-full border rounded-lg p-3 mt-1"
+        className="mt-1 w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
       />
     </label>
   );

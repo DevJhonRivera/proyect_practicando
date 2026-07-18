@@ -26,10 +26,10 @@ function PedidoDetalleForm({
     opcionesPorMaterial(detalle.tipoPolarizado);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-      <div className="border-b px-6 py-4">
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 bg-slate-50/80 px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-100 p-3 rounded-xl">
+          <div className="rounded-xl bg-blue-100 p-3">
             <Boxes
               size={22}
               className="text-blue-600"
@@ -38,7 +38,7 @@ function PedidoDetalleForm({
 
           <div>
             <h2 className="text-xl font-bold text-slate-800">
-              Agregar Material
+              Agregar material
             </h2>
 
             <p className="text-sm text-slate-500">
@@ -48,9 +48,9 @@ function PedidoDetalleForm({
         </div>
       </div>
 
-      <div className="p-6 grid lg:grid-cols-5 gap-5">
+      <div className="grid gap-5 p-6 lg:grid-cols-5">
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-2">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Material
           </label>
 
@@ -72,7 +72,7 @@ function PedidoDetalleForm({
                     : "",
               });
             }}
-            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           >
             <option value="">
               Seleccione...
@@ -97,12 +97,12 @@ function PedidoDetalleForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-2">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             {etiquetaUnidad(unidadMedida)}
           </label>
 
           {unidadMedida === UNIDAD_NINGUNA ? (
-            <div className="w-full border rounded-xl p-3 bg-slate-100 text-slate-500">
+            <div className="w-full rounded-xl border border-slate-200 bg-slate-100 p-3 text-slate-500">
               Sin clasificacion
             </div>
           ) : (
@@ -115,7 +115,7 @@ function PedidoDetalleForm({
                   unidadMedida,
                 })
               }
-              className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
             >
               <option value="">
                 {sufijoUnidad(unidadMedida)}
@@ -137,7 +137,7 @@ function PedidoDetalleForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-2">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Ancho
           </label>
 
@@ -149,7 +149,7 @@ function PedidoDetalleForm({
                 ancho: event.target.value,
               })
             }
-            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           >
             {anchosPulgadas.map((item) => (
               <option
@@ -163,8 +163,8 @@ function PedidoDetalleForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-2">
-            Cantidad Rollos
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Cantidad rollos
           </label>
 
           <input
@@ -178,14 +178,14 @@ function PedidoDetalleForm({
               })
             }
             placeholder="0"
-            className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           />
         </div>
 
         <div className="flex items-end">
           <button
             onClick={agregarDetalle}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 flex justify-center items-center gap-2 font-semibold transition"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700"
           >
             <Plus size={20} />
             Agregar

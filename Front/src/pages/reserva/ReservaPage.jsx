@@ -285,23 +285,23 @@ function ReservaPage() {
 
       {/* Header */}
 
-      <div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
-        <h1
-          className="
-          text-3xl
-          font-bold
-          text-slate-800"
-        >
-          Rollos en bodega
-        </h1>
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
+            <Package size={24} />
+          </div>
 
-        <p
-          className="
-          text-slate-500"
-        >
-          Material guardado y listo para pasar a uso.
-        </p>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800">
+              Rollos en bodega
+            </h1>
+
+            <p className="text-sm text-slate-500">
+              Material guardado y listo para pasar a uso.
+            </p>
+          </div>
+        </div>
 
       </div>
 
@@ -316,9 +316,11 @@ function ReservaPage() {
 
         <div
           className="
+          rounded-2xl
+          border
+          border-slate-200
           bg-white
-          rounded-xl
-          shadow
+          shadow-sm
           p-5"
         >
 
@@ -352,9 +354,11 @@ function ReservaPage() {
 
         <div
           className="
+          rounded-2xl
+          border
+          border-slate-200
           bg-white
-          rounded-xl
-          shadow
+          shadow-sm
           p-5"
         >
 
@@ -388,9 +392,11 @@ function ReservaPage() {
 
         <div
           className="
+          rounded-2xl
+          border
+          border-slate-200
           bg-white
-          rounded-xl
-          shadow
+          shadow-sm
           p-5"
         >
 
@@ -430,9 +436,11 @@ function ReservaPage() {
 
       <div
         className="
+        rounded-2xl
+        border
+        border-slate-200
         bg-white
-        rounded-xl
-        shadow
+        shadow-sm
         p-5"
       >
 
@@ -469,7 +477,8 @@ function ReservaPage() {
               className="
               w-full
               border
-              rounded-lg
+              rounded-xl
+              border-slate-200
               p-3
               pl-10"
             />
@@ -485,7 +494,8 @@ function ReservaPage() {
             }
             className="
             border
-            rounded-lg
+            rounded-xl
+            border-slate-200
             p-3"
           >
 
@@ -512,7 +522,8 @@ function ReservaPage() {
             }
             className="
             border
-            rounded-lg
+            rounded-xl
+            border-slate-200
             p-3"
           >
 
@@ -545,13 +556,15 @@ function ReservaPage() {
 
       <div
         className="
+        rounded-2xl
+        border
+        border-slate-200
         bg-white
-        rounded-xl
-        shadow
+        shadow-sm
         overflow-hidden"
       >
 
-        <div className="p-5 border-b flex items-center justify-between gap-4">
+        <div className="p-5 border-b border-slate-200 bg-slate-50/80 flex flex-wrap items-center justify-between gap-4">
 
           <h2
             className="
@@ -596,11 +609,15 @@ function ReservaPage() {
 
         ) : (
 
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-sm">
 
             <thead
               className="
-              bg-slate-100"
+              bg-slate-50
+              text-xs
+              uppercase
+              text-slate-500"
             >
 
               <tr>
@@ -646,7 +663,8 @@ function ReservaPage() {
                   key={rollo._id}
                   className="
                   border-b
-                  hover:bg-slate-50"
+                   border-slate-200
+                   hover:bg-slate-50"
                 >
 
                   <td className="p-4 font-medium">
@@ -719,6 +737,7 @@ function ReservaPage() {
             </tbody>
 
           </table>
+          </div>
 
         )}
 

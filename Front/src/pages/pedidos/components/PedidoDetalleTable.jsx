@@ -1,7 +1,8 @@
 import {
   Package,
-  Trash2
+  Trash2,
 } from "lucide-react";
+
 import ExcelButton from "../../../components/ui/ExcelButton";
 import { anchoLabel } from "../../../utils/anchos";
 import { etiquetaDetalle } from "../../../utils/materiales";
@@ -35,198 +36,98 @@ function PedidoDetalleTable({
   ];
 
   return (
-
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-
-      {/* Header */}
-
-      <div className="flex justify-between items-center px-6 py-4 border-b">
-
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-4">
         <div>
-
           <h2 className="text-xl font-bold text-slate-800">
-            Materiales Agregados
+            Materiales agregados
           </h2>
-
           <p className="text-sm text-slate-500">
             Revise antes de guardar el pedido.
           </p>
-
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <ExcelButton
-            title="Materiales Agregados"
+            title="Materiales agregados"
             fileName="materiales-pedido"
             sheetName="Materiales"
             columns={excelColumns}
             rows={detalles}
           />
-
-          <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold">
-
-            {detalles.length} Referencias
-
+          <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
+            {detalles.length} referencias
           </span>
         </div>
-
       </div>
 
-      {
-
-        detalles.length === 0 ?
-
-        (
-
-          <div className="py-16 text-center">
-
-            <Package
-              size={70}
-              className="mx-auto text-slate-300"
-            />
-
-            <h3 className="mt-4 text-lg font-semibold text-slate-600">
-              No hay materiales agregados
-            </h3>
-
-            <p className="text-slate-500">
-              Agregue el primer material para este pedido.
-            </p>
-
-          </div>
-
-        )
-
-        :
-
-        (
-
-          <div className="overflow-x-auto">
-
-            <table className="w-full">
-
-              <thead className="bg-slate-100">
-
-                <tr>
-
-                  <th className="p-4 text-left">
-                    Material
-                  </th>
-
-                  <th className="p-4 text-center">
-                    Clasificacion
-                  </th>
-
-                  <th className="p-4 text-center">
-                    Ancho
-                  </th>
-
-                  <th className="p-4 text-center">
-                    Rollos
-                  </th>
-
-                  <th className="p-4 text-center">
-                    Estado
-                  </th>
-
-                  <th className="p-4 text-center">
-                    Acción
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {
-
-                  detalles.map((item, index) => (
-
-                    <tr
-                      key={index}
-                      className="border-b hover:bg-slate-50 transition"
+      {detalles.length === 0 ? (
+        <div className="py-16 text-center">
+          <Package
+            size={70}
+            className="mx-auto text-slate-300"
+          />
+          <h3 className="mt-4 text-lg font-semibold text-slate-600">
+            No hay materiales agregados
+          </h3>
+          <p className="text-slate-500">
+            Agregue el primer material para este pedido.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="p-4 text-left">Material</th>
+                <th className="p-4 text-center">Clasificacion</th>
+                <th className="p-4 text-center">Ancho</th>
+                <th className="p-4 text-center">Rollos</th>
+                <th className="p-4 text-center">Estado</th>
+                <th className="p-4 text-center">Accion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detalles.map((item, index) => (
+                <tr
+                  key={`${item.tipoPolarizado}-${index}`}
+                  className="border-b border-slate-200 transition hover:bg-slate-50"
+                >
+                  <td className="p-4 font-semibold text-slate-800">
+                    {item.tipoPolarizado}
+                  </td>
+                  <td className="p-4 text-center text-slate-600">
+                    {etiquetaDetalle(item)}
+                  </td>
+                  <td className="p-4 text-center text-slate-600">
+                    {anchoLabel(item.ancho)}
+                  </td>
+                  <td className="p-4 text-center font-bold text-blue-600">
+                    {item.cantidadRollos}
+                  </td>
+                  <td className="p-4 text-center">
+                    <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                      Pendiente
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() => eliminarDetalle(index)}
+                      className="rounded-lg bg-red-100 p-2 text-red-700 transition hover:bg-red-200"
+                      title="Eliminar material"
                     >
-
-                      <td className="p-4 font-semibold">
-
-                        {item.tipoPolarizado}
-
-                      </td>
-
-                      <td className="text-center">
-
-                        {etiquetaDetalle(item)}
-
-                      </td>
-
-                      <td className="text-center">
-
-                        {anchoLabel(item.ancho)}
-
-                      </td>
-
-                      <td className="text-center font-bold text-blue-600">
-
-                        {item.cantidadRollos}
-
-                      </td>
-
-                      <td className="text-center">
-
-                        <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">
-
-                          Pendiente
-
-                        </span>
-
-                      </td>
-
-                      <td className="text-center">
-
-                        <button
-
-                          onClick={() =>
-                            eliminarDetalle(index)
-                          }
-
-                          className="
-                            bg-red-500
-                            hover:bg-red-600
-                            text-white
-                            p-2
-                            rounded-lg
-                            transition
-                          "
-
-                        >
-
-                          <Trash2 size={18} />
-
-                        </button>
-
-                      </td>
-
-                    </tr>
-
-                  ))
-
-                }
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        )
-
-      }
-
+                      <Trash2 size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
-
   );
-
 }
 
 export default PedidoDetalleTable;

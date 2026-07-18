@@ -327,10 +327,10 @@ function PedidoTable({ pedidos, onRefresh }) {
 
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-5 border-b flex items-center justify-between gap-4">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5">
           <h2 className="text-xl font-bold text-slate-800">
-            Listado de Pedidos
+            Listado de pedidos
           </h2>
 
           <ExcelButton
@@ -343,8 +343,8 @@ function PedidoTable({ pedidos, onRefresh }) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-100">
+          <table className="w-full min-w-[880px] text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="p-4 text-left">
                   Codigo
@@ -374,25 +374,25 @@ function PedidoTable({ pedidos, onRefresh }) {
               {pedidos.map((pedido) => (
                 <tr
                   key={pedido._id}
-                  className="border-t hover:bg-slate-50 transition"
+                  className="border-t border-slate-200 transition hover:bg-slate-50"
                 >
-                  <td className="p-4 font-semibold">
+                  <td className="p-4 font-semibold text-slate-800">
                     {pedido.codigoPedido}
                   </td>
 
-                  <td className="p-4">
+                  <td className="p-4 text-slate-600">
                     {pedido.proveedor}
                   </td>
 
-                  <td className="text-center">
+                  <td className="p-4 text-center text-slate-600">
                     {pedido.detalles?.length || 0}
                   </td>
 
-                  <td className="text-center font-semibold text-blue-600">
+                  <td className="p-4 text-center font-semibold text-blue-600">
                     {totalRollos(pedido)}
                   </td>
 
-                  <td className="text-center">
+                  <td className="p-4 text-center">
                     <span
                       className={`
                         px-3
@@ -407,13 +407,13 @@ function PedidoTable({ pedidos, onRefresh }) {
                     </span>
                   </td>
 
-                  <td className="text-center">
+                  <td className="p-4 text-center text-slate-600">
                     {new Date(
                       pedido.createdAt
                     ).toLocaleDateString()}
                   </td>
 
-                  <td>
+                  <td className="p-4">
                     <div className="flex justify-center gap-2">
                       <button
                         type="button"

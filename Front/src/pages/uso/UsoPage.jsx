@@ -239,21 +239,27 @@ function UsoPage() {
     <div className="space-y-6">
 
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800 rounded-2xl p-7 text-white shadow-xl">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">
-              Rollos en uso
-            </h1>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
+              <Package size={24} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">
+                Rollos en uso
+              </h1>
 
-            <p className="text-slate-300 mt-1">
-              Material activo para cortes y control de consumo
-            </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Material activo para cortes y control de consumo.
+              </p>
+            </div>
           </div>
 
           <button
+            type="button"
             onClick={cargar}
-            className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl flex items-center gap-2"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
           >
             <RefreshCcw size={18} />
             Actualizar
@@ -262,7 +268,7 @@ function UsoPage() {
       </div>
 
       {/* INDICADORES */}
-      <div className="grid md:grid-cols-4 gap-5">
+      <div className="grid gap-5 md:grid-cols-4">
         <KpiCard
           title="Rollos"
           value={totalRollos}
@@ -293,9 +299,9 @@ function UsoPage() {
       </div>
 
       {/* ANALISIS */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
 
-        <div className="bg-white rounded-2xl shadow p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
             <BarChart3 className="text-blue-600" />
             <h2 className="text-lg font-bold">
@@ -338,7 +344,7 @@ function UsoPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
             <AlertTriangle className="text-red-600" />
             <h2 className="text-lg font-bold">
@@ -379,7 +385,7 @@ function UsoPage() {
       </div>
 
       {/* FILTROS */}
-      <div className="bg-white rounded-2xl shadow p-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="text-slate-600" />
           <h2 className="text-lg font-bold">
@@ -387,7 +393,7 @@ function UsoPage() {
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-6 gap-4">
+        <div className="grid gap-4 md:grid-cols-6">
           <div className="relative md:col-span-2">
             <Search
               size={18}
@@ -399,7 +405,7 @@ function UsoPage() {
               placeholder="Buscar código o material..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full border rounded-xl p-3 pl-10 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full rounded-xl border border-slate-200 p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
             />
           </div>
 
@@ -430,7 +436,7 @@ function UsoPage() {
           />
         </div>
 
-        <div className="flex justify-between items-center mt-5">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-500">
             Mostrando <strong>{filtrados.length}</strong> de{" "}
             <strong>{rollos.length}</strong> rollos
@@ -438,7 +444,7 @@ function UsoPage() {
 
           <button
             onClick={limpiarFiltros}
-            className="text-sm border px-4 py-2 rounded-lg hover:bg-slate-100 flex items-center gap-2"
+            className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
           >
             <X size={16} />
             Limpiar filtros
@@ -447,10 +453,10 @@ function UsoPage() {
       </div>
 
       {/* TABLA */}
-      <div className="bg-white rounded-2xl shadow overflow-hidden">
-        <div className="p-6 border-b flex items-center justify-between gap-4">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/80 p-6">
           <div>
-          <h2 className="text-lg font-bold">
+          <h2 className="text-lg font-bold text-slate-800">
             Detalle de rollos
           </h2>
 
@@ -474,8 +480,8 @@ function UsoPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100 text-slate-600">
+            <table className="w-full min-w-[1020px] text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="p-4 text-left">Código</th>
                   <th className="p-4 text-left">Material</th>
@@ -501,29 +507,29 @@ function UsoPage() {
                   return (
                     <tr
                       key={rollo._id}
-                      className="border-b hover:bg-slate-50"
+                      className="border-b border-slate-200 hover:bg-slate-50"
                     >
-                      <td className="p-4 font-semibold">
+                      <td className="p-4 font-semibold text-slate-800">
                         {rollo.codigoRollo}
                       </td>
 
-                      <td className="p-4">
+                      <td className="p-4 text-slate-600">
                         {rollo.tipoPolarizado}
                       </td>
 
-                      <td className="p-4">
+                      <td className="p-4 text-slate-600">
                         {etiquetaDetalle(rollo)}
                       </td>
 
-                      <td className="p-4">
+                      <td className="p-4 text-slate-600">
                         {anchoLabel(rollo.ancho)}
                       </td>
 
-                      <td className="p-4">
+                      <td className="p-4 text-slate-600">
                         <EstadoBadge estado={rollo.estado} />
                       </td>
 
-                      <td className="p-4">
+                      <td className="p-4 text-slate-600">
                         {formatMetros(original)}
                       </td>
 
@@ -567,34 +573,34 @@ function UsoPage() {
       </div>
 
       {/* RESUMEN */}
-      <div className="bg-slate-900 text-white rounded-2xl p-6 shadow">
-        <div className="grid md:grid-cols-3 gap-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="grid gap-4 md:grid-cols-3">
           <div>
-            <p className="text-slate-400">
+            <p className="text-sm text-slate-500">
               Promedio consumido por rollo
             </p>
 
-            <h3 className="text-2xl font-bold">
+            <h3 className="text-2xl font-bold text-slate-800">
               {formatMetros(promedioConsumo)}
             </h3>
           </div>
 
           <div>
-            <p className="text-slate-400">
+            <p className="text-sm text-slate-500">
               Metros disponibles filtrados
             </p>
 
-            <h3 className="text-2xl font-bold">
+            <h3 className="text-2xl font-bold text-slate-800">
               {formatMetros(metrosDisponibles)}
             </h3>
           </div>
 
           <div>
-            <p className="text-slate-400">
+            <p className="text-sm text-slate-500">
               Estado del inventario
             </p>
 
-            <h3 className="text-2xl font-bold">
+            <h3 className="text-2xl font-bold text-slate-800">
               {alertas.length > 0 ? "Revisar alertas" : "Estable"}
             </h3>
           </div>
@@ -614,7 +620,7 @@ function KpiCard({ title, value, icon, color }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex justify-between items-center">
         <div>
           <p className="text-slate-500 text-sm">
@@ -645,7 +651,7 @@ function SelectFiltro({
     <select
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      className="border rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+      className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
     >
       {options.map((item) => (
         <option key={item} value={item}>

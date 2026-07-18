@@ -4,17 +4,16 @@ function PedidoHeader() {
 
   return (
 
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-4">
 
         <div className="flex items-center gap-4">
 
-          <div className="bg-blue-100 p-4 rounded-2xl">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
 
             <Package
-              size={32}
-              className="text-blue-600"
+              size={24}
             />
 
           </div>
@@ -33,9 +32,9 @@ function PedidoHeader() {
 
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
 
-          <div className="bg-slate-100 rounded-xl px-5 py-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
 
             <p className="text-xs text-slate-500">
               Estado
@@ -47,7 +46,7 @@ function PedidoHeader() {
 
           </div>
 
-          <div className="bg-slate-100 rounded-xl px-5 py-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
 
             <p className="text-xs text-slate-500">
               Fecha
