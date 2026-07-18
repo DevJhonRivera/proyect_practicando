@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
 import { getCortes } from "../../../api/cortes.api";
+import { getRetazosDisponibles } from "../../../api/retazos.api";
 import { getRollos } from "../../../api/rollos.api";
 
 const getCortesData = (res) =>
@@ -10,8 +11,12 @@ const getCortesData = (res) =>
 const getRollosData = (res) =>
   res.data.data || [];
 
+const getRetazosData = (res) =>
+  res.data.data || res.data || [];
+
 export function useCortesData() {
   const [cortes, setCortes] = useState([]);
+  const [retazos, setRetazos] = useState([]);
   const [rollos, setRollos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,14 +24,16 @@ export function useCortesData() {
     try {
       setLoading(true);
 
-      const [cortesRes, rollosRes] =
+      const [cortesRes, rollosRes, retazosRes] =
         await Promise.all([
           getCortes(),
           getRollos(),
+          getRetazosDisponibles(),
         ]);
 
       setCortes(getCortesData(cortesRes));
       setRollos(getRollosData(rollosRes));
+      setRetazos(getRetazosData(retazosRes));
     } catch (error) {
       console.error(error);
 
@@ -45,15 +52,17 @@ export function useCortesData() {
 
     const cargarInicial = async () => {
       try {
-        const [cortesRes, rollosRes] =
+        const [cortesRes, rollosRes, retazosRes] =
           await Promise.all([
             getCortes(),
             getRollos(),
+            getRetazosDisponibles(),
           ]);
 
         if (active) {
           setCortes(getCortesData(cortesRes));
           setRollos(getRollosData(rollosRes));
+          setRetazos(getRetazosData(retazosRes));
         }
       } catch (error) {
         console.error(error);
@@ -81,6 +90,7 @@ export function useCortesData() {
     cargar,
     cortes,
     loading,
+    retazos,
     rollos,
   };
 }

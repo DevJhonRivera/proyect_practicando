@@ -7,6 +7,7 @@ import {
   servicioLabels,
   tipoCorteLabels,
 } from "../cortes.constants";
+import { anchoLabel } from "../../../utils/anchos";
 import { etiquetaDetalle } from "../../../utils/materiales";
 import CorteSuggestions from "./CorteSuggestions";
 
@@ -22,6 +23,8 @@ function CorteForm({
   onApplySuggestion,
   onChange,
   onSubmit,
+  retazoSeleccionado,
+  retazosDisponibles,
   rolloSeleccionado,
   rollosEnUso,
   sugerencias,
@@ -33,13 +36,30 @@ function CorteForm({
       placa: mayusculas,
       modelo: soloNumeros,
       instalador: mayusculas,
+      tipoCorteDetalle: mayusculas,
     };
     const normalizar =
       normalizers[field] || ((input) => input);
 
+    const extra =
+      field === "tipoCorte" && value !== "OTROS"
+        ? {
+            tipoCorteDetalle: "",
+          }
+        : field === "origenMaterial"
+        ? value === "RETAZO"
+          ? {
+              rolloId: "",
+            }
+          : {
+              retazoId: "",
+            }
+        : {};
+
     onChange({
       ...form,
       [field]: normalizar(value),
+      ...extra,
       ...(field === "tipoServicio" && value !== "GARANTIA_INSTALADOR"
         ? {
             instalador: "",
@@ -69,31 +89,76 @@ function CorteForm({
         className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
       >
         <CampoGuia
-          label="Rollo / material"
-          ayuda="Elige el rollo que corresponde al material usado. Revisa codigo, material y metros disponibles."
+          label="Origen del material"
+          ayuda="Elige si el corte sale de un rollo en uso o de un retazo disponible."
         >
           <select
-            value={form.rolloId}
+            value={form.origenMaterial || "ROLLO"}
             onChange={(e) =>
-              updateField("rolloId", e.target.value)
+              updateField("origenMaterial", e.target.value)
             }
-            required
             className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           >
-            <option value="">
-              Seleccione rollo en uso
-            </option>
-
-            {rollosEnUso.map((rollo) => (
-              <option
-                key={rollo._id}
-                value={rollo._id}
-              >
-                {rollo.codigoRollo} - {rollo.tipoPolarizado} {etiquetaDetalle(rollo)} - {Number(rollo.largoDisponible).toFixed(2)} m
-              </option>
-            ))}
+            <option value="ROLLO">Rollo en uso</option>
+            <option value="RETAZO">Retazo disponible</option>
           </select>
         </CampoGuia>
+
+        {(form.origenMaterial || "ROLLO") === "RETAZO" ? (
+          <CampoGuia
+            label="Retazo disponible"
+            ayuda="Puedes usar un retazo aunque sea hasta 10 cm menor en ancho o largo."
+          >
+            <select
+              value={form.retazoId}
+              onChange={(e) =>
+                updateField("retazoId", e.target.value)
+              }
+              required
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs leading-tight outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            >
+              <option value="">
+                Seleccione retazo disponible
+              </option>
+
+              {retazosDisponibles.map((retazo) => (
+                <option
+                  key={retazo._id}
+                  value={retazo._id}
+                >
+                  {textoRetazo(retazo)}
+                </option>
+              ))}
+            </select>
+          </CampoGuia>
+        ) : (
+          <CampoGuia
+            label="Rollo / material"
+            ayuda="Elige el rollo que corresponde al material usado. Revisa codigo, material y metros disponibles."
+          >
+            <select
+              value={form.rolloId}
+              onChange={(e) =>
+                updateField("rolloId", e.target.value)
+              }
+              required
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs leading-tight outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            >
+              <option value="">
+                Seleccione rollo en uso
+              </option>
+
+              {rollosEnUso.map((rollo) => (
+                <option
+                  key={rollo._id}
+                  value={rollo._id}
+                >
+                  {rollo.codigoRollo} - {rollo.tipoPolarizado} {etiquetaDetalle(rollo)} - {Number(rollo.largoDisponible).toFixed(2)} m
+                </option>
+              ))}
+            </select>
+          </CampoGuia>
+        )}
 
         <CampoGuia
           label="Marca"
@@ -208,6 +273,24 @@ function CorteForm({
           </select>
         </CampoGuia>
 
+        {form.tipoCorte === "OTROS" && (
+          <CampoGuia
+            label="Detalle del corte"
+            ayuda="Escribe exactamente que parte del carro se corto. Ej: ALETA DERECHA, VIDRIO CUSTODIA IZQUIERDO."
+          >
+            <input
+              type="text"
+              placeholder="Ej: ALETA DERECHA"
+              value={form.tipoCorteDetalle}
+              onChange={(e) =>
+                updateField("tipoCorteDetalle", e.target.value)
+              }
+              required
+              className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            />
+          </CampoGuia>
+        )}
+
         <CorteSuggestions
           sugerencias={sugerencias}
           sugerenciasKey={sugerenciasKey}
@@ -239,7 +322,11 @@ function CorteForm({
         </CampoGuia>
 
         <div className="md:col-span-2 xl:col-span-4 flex flex-wrap justify-between items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <RolloSeleccionado rollo={rolloSeleccionado} />
+          <MaterialSeleccionado
+            origenMaterial={form.origenMaterial || "ROLLO"}
+            retazo={retazoSeleccionado}
+            rollo={rolloSeleccionado}
+          />
 
           <button
             type="submit"
@@ -270,7 +357,32 @@ function CampoGuia({ label, ayuda, children }) {
   );
 }
 
-function RolloSeleccionado({ rollo }) {
+function MaterialSeleccionado({
+  origenMaterial,
+  retazo,
+  rollo,
+}) {
+  if (origenMaterial === "RETAZO") {
+    if (!retazo) {
+      return (
+        <p className="text-sm text-slate-500">
+          Seleccione un retazo para ver su disponibilidad.
+        </p>
+      );
+    }
+
+    return (
+      <p className="text-sm text-slate-600">
+        Retazo seleccionado:{" "}
+        <strong>{retazo.codigoRetazo}</strong> - {retazo.tipoPolarizado}{" "}
+        {etiquetaDetalle(retazo)} - {anchoLabel(retazo.ancho)} - Disponible:{" "}
+        <strong>
+          {Number(retazo.largoDisponible).toFixed(2)} m
+        </strong>
+      </p>
+    );
+  }
+
   if (!rollo) {
     return (
       <p className="text-sm text-slate-500">
@@ -288,6 +400,14 @@ function RolloSeleccionado({ rollo }) {
       </strong>
     </p>
   );
+}
+
+function textoRetazo(retazo) {
+  return `${retazo.codigoRetazo} - ${retazo.tipoPolarizado} ${etiquetaDetalle(
+    retazo
+  )} - ${anchoLabel(retazo.ancho)} - ${Number(
+    retazo.largoDisponible || 0
+  ).toFixed(2)} m`;
 }
 
 export default CorteForm;

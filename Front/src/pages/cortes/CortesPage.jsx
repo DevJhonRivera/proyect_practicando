@@ -42,6 +42,8 @@ function CortesPage() {
     loading,
     loadingSugerencias,
     recargar,
+    retazoSeleccionado,
+    retazosDisponibles,
     rolloSeleccionado,
     rollosEnUso,
     search,
@@ -95,13 +97,27 @@ function CortesPage() {
               )
               .join("")}
           </select>
-          <input id="corte-venta" class="swal2-input" type="number" min="0" placeholder="Valor venta" value="${Number(corte.valorVenta || 0)}" />
+          <input id="corte-tipo-detalle" class="swal2-input" placeholder="Detalle del corte" value="${escapeHtml(corte.tipoCorteDetalle || "")}" />
         </div>
       `,
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Guardar",
       cancelButtonText: "Cancelar",
+      didOpen: () => {
+        const popup = Swal.getPopup();
+        const tipo = popup.querySelector("#corte-tipo");
+        const detalle = popup.querySelector("#corte-tipo-detalle");
+        const actualizarDetalle = () => {
+          detalle.style.display = tipo.value === "OTROS" ? "block" : "none";
+          if (tipo.value !== "OTROS") {
+            detalle.value = "";
+          }
+        };
+
+        tipo.addEventListener("change", actualizarDetalle);
+        actualizarDetalle();
+      },
       preConfirm: () => {
         const popup = Swal.getPopup();
         const valueOf = (id) =>
@@ -113,7 +129,7 @@ function CortesPage() {
           tipoServicio: valueOf("#corte-servicio"),
           instalador: mayusculas(valueOf("#corte-instalador")),
           tipoCorte: valueOf("#corte-tipo"),
-          valorVenta: Number(valueOf("#corte-venta") || 0),
+          tipoCorteDetalle: mayusculas(valueOf("#corte-tipo-detalle")),
         };
 
         if (!payload.placa || !payload.marca || !payload.modelo) {
@@ -133,9 +149,12 @@ function CortesPage() {
           return false;
         }
 
-        if (payload.valorVenta < 0) {
+        if (
+          payload.tipoCorte === "OTROS" &&
+          !payload.tipoCorteDetalle
+        ) {
           Swal.showValidationMessage(
-            "El valor de venta no puede ser negativo"
+            "Ingrese el detalle del corte"
           );
           return false;
         }
@@ -193,6 +212,8 @@ function CortesPage() {
           onApplySuggestion={aplicarSugerencia}
           onChange={setForm}
           onSubmit={guardar}
+          retazoSeleccionado={retazoSeleccionado}
+          retazosDisponibles={retazosDisponibles}
           rolloSeleccionado={rolloSeleccionado}
           rollosEnUso={rollosEnUso}
           sugerencias={sugerencias}

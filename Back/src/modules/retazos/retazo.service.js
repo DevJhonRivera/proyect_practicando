@@ -3,6 +3,10 @@ import Retazo from "./retazo.model.js";
 export const REMANENTE_MINIMO_UTIL =
   0.4;
 
+const TOLERANCIA_RETAZO_METROS = 0.1;
+const TOLERANCIA_RETAZO_PULGADAS =
+  10 / 2.54;
+
 const roundMeters = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
@@ -98,17 +102,31 @@ export const buscarRetazoCompatible =
             unidadMedida,
           };
 
+    const anchoMinimo =
+      Math.max(
+        0,
+        Number(ancho || 0) - TOLERANCIA_RETAZO_PULGADAS
+      );
+    const largoMinimo =
+      Math.max(
+        0,
+        Number(metrosUtilizados || 0) - TOLERANCIA_RETAZO_METROS
+      );
+
     return await Retazo.findOne({
       estado: "DISPONIBLE",
       tipoPolarizado,
       porcentaje: Number(porcentaje),
       ...filtroUnidad,
-      ancho: Number(ancho),
+      ancho: {
+        $gte: anchoMinimo,
+      },
       largoDisponible: {
-        $gte: Number(metrosUtilizados),
+        $gte: largoMinimo,
       },
     }).sort({
       largoDisponible: 1,
+      ancho: 1,
     });
   };
 
@@ -125,19 +143,26 @@ export const consumirRetazo =
       throw new Error("El retazo no esta disponible");
     }
 
+    const metrosSolicitados =
+      Number(metrosUtilizados || 0);
+    const largoDisponible =
+      Number(retazo.largoDisponible || 0);
+
     if (
-      retazo.largoDisponible <
-      Number(metrosUtilizados)
+      largoDisponible + TOLERANCIA_RETAZO_METROS <
+      metrosSolicitados
     ) {
       throw new Error(
-        "El retazo no tiene medida suficiente"
+        "El retazo no tiene medida suficiente, ni con la tolerancia de 10 cm"
       );
     }
 
     retazo.largoDisponible =
       roundMeters(
-        Number(retazo.largoDisponible || 0) -
-          Number(metrosUtilizados || 0)
+        Math.max(
+          largoDisponible - metrosSolicitados,
+          0
+        )
       );
 
     if (

@@ -24,6 +24,7 @@ export function useCortesPage() {
     cargar,
     cortes,
     loading,
+    retazos,
     rollos,
   } = useCortesData();
   const [search, setSearch] = useState("");
@@ -40,6 +41,12 @@ export function useCortesPage() {
     () =>
       rollos.find((rollo) => rollo._id === form.rolloId),
     [rollos, form.rolloId]
+  );
+
+  const retazoSeleccionado = useMemo(
+    () =>
+      retazos.find((retazo) => retazo._id === form.retazoId),
+    [retazos, form.retazoId]
   );
 
   const {
@@ -81,6 +88,7 @@ export function useCortesPage() {
           corte.instalador?.toLowerCase().includes(texto) ||
           corte.tipoServicio?.toLowerCase().includes(texto) ||
           corte.tipoCorte?.toLowerCase().includes(texto) ||
+          corte.tipoCorteDetalle?.toLowerCase().includes(texto) ||
           codigoMaterial.toLowerCase().includes(texto))
       );
     });
@@ -148,7 +156,27 @@ export function useCortesPage() {
       return false;
     }
 
-    if (!form.rolloId) {
+    if (
+      form.tipoCorte === "OTROS" &&
+      !form.tipoCorteDetalle.trim()
+    ) {
+      Swal.fire({
+        icon: "warning",
+        title: "Ingrese el detalle del corte",
+      });
+      return false;
+    }
+
+    if (form.origenMaterial === "RETAZO") {
+      if (!form.retazoId) {
+        Swal.fire({
+          icon: "warning",
+          title: "Seleccione un retazo",
+        });
+        return false;
+      }
+
+    } else if (!form.rolloId) {
       Swal.fire({
         icon: "warning",
         title: "Seleccione un rollo",
@@ -172,6 +200,10 @@ export function useCortesPage() {
 
   const seleccionarMaterial = async () => {
     let usarRetazo = null;
+
+    if (form.origenMaterial === "RETAZO") {
+      return retazoSeleccionado || null;
+    }
 
     if (rolloSeleccionado) {
       const retazoRes = await getRetazoCompatible({
@@ -244,6 +276,7 @@ export function useCortesPage() {
     setForm((actual) => ({
       ...actual,
       rolloId: "",
+      retazoId: "",
     }));
 
     await cargar();
@@ -318,8 +351,14 @@ export function useCortesPage() {
 
       await createCorte({
         ...form,
-        rolloId: usarRetazo ? undefined : form.rolloId,
-        retazoId: usarRetazo?._id,
+        rolloId:
+          form.origenMaterial === "RETAZO" || usarRetazo
+            ? undefined
+            : form.rolloId,
+        retazoId:
+          form.origenMaterial === "RETAZO"
+            ? form.retazoId
+            : usarRetazo?._id,
         agotarRemanente,
         metrosUtilizados: Number(form.metrosUtilizados),
       });
@@ -362,6 +401,8 @@ export function useCortesPage() {
     indicadores,
     loading,
     loadingSugerencias,
+    retazoSeleccionado,
+    retazosDisponibles: retazos,
     recargar: cargar,
     rolloSeleccionado,
     rollosEnUso,

@@ -110,6 +110,13 @@ const corteSchema = new mongoose.Schema(
                 "OTROS"
             ]
         },
+
+        tipoCorteDetalle: {
+            type: String,
+            trim: true,
+            default: ""
+        },
+
         metrosUtilizados: {
             type: Number,
             required: true,

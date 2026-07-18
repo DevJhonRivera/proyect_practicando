@@ -4,11 +4,11 @@ import ExcelButton from "../../../components/ui/ExcelButton";
 import { etiquetaDetalle } from "../../../utils/materiales";
 import {
   servicioLabels,
-  tipoCorteLabels,
 } from "../cortes.constants";
 import {
   formatFechaHora,
   getMaterialCodigo,
+  getTipoCorteTexto,
 } from "../cortes.utils";
 
 const formatoCop = new Intl.NumberFormat("es-CO", {
@@ -128,8 +128,7 @@ function CortesTable({
                   </td>
 
                   <td className="p-4">
-                    {tipoCorteLabels[corte.tipoCorte] ||
-                      corte.tipoCorte}
+                    {getTipoCorteTexto(corte)}
                   </td>
 
                   <td className="p-4 font-bold text-blue-700">

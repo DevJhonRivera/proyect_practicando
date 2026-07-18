@@ -14,22 +14,22 @@ export function TipoBadge({ tipo }) {
     tipo === TIPO_STOCK_RESERVA_UN_ROLLO ||
     upper.includes("CRITICO") ||
     upper.includes("AGOTADO")
-      ? "bg-red-100 text-red-700"
+      ? "border-red-200 bg-red-50 text-red-700"
       : tipo === TIPO_STOCK_RESERVA_DOS_ROLLOS ||
         upper.includes("BAJO")
-      ? "bg-yellow-100 text-yellow-700"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
       : tipo === TIPO_RECEPCION_NUEVA ||
         upper.includes("RECEPCION")
-      ? "bg-blue-100 text-blue-700"
+      ? "border-blue-200 bg-blue-50 text-blue-700"
       : tipo === TIPO_VENTA_REVISION_CORTES
-      ? "bg-red-100 text-red-700"
+      ? "border-red-200 bg-red-50 text-red-700"
       : tipo === TIPO_VENTA_PENDIENTE ||
         upper.includes("VENTA")
-      ? "bg-emerald-100 text-emerald-700"
-      : "bg-yellow-100 text-yellow-700";
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : "border-amber-200 bg-amber-50 text-amber-700";
 
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${style}`}>
+    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${style}`}>
       {tipo}
     </span>
   );
@@ -40,13 +40,13 @@ export function NivelBadge({ tipo }) {
 
   const style =
     nivel === "CRITICO"
-      ? "bg-red-500 text-white"
+      ? "border-red-600 bg-red-600 text-white"
       : nivel === "INFORMATIVO"
-      ? "bg-blue-100 text-blue-700"
-      : "bg-yellow-100 text-yellow-700";
+      ? "border-blue-200 bg-blue-50 text-blue-700"
+      : "border-amber-200 bg-amber-50 text-amber-700";
 
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${style}`}>
+    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${style}`}>
       {nivel}
     </span>
   );
@@ -55,10 +55,10 @@ export function NivelBadge({ tipo }) {
 export function EstadoBadge({ atendida }) {
   return (
     <span
-      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${
         atendida
-          ? "bg-green-100 text-green-700"
-          : "bg-red-100 text-red-700"
+          ? "border-green-200 bg-green-50 text-green-700"
+          : "border-red-200 bg-red-50 text-red-700"
       }`}
     >
       {atendida ? "ATENDIDA" : "PENDIENTE"}

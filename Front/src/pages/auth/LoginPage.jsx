@@ -1,8 +1,9 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   Eye,
   EyeOff,
+  LockKeyhole,
   ShieldCheck,
   Package,
   Warehouse,
@@ -53,11 +54,25 @@ function LoginPage() {
 
         Swal.fire({
           title:
-            "Iniciando sesión...",
+            "Iniciando sesion...",
           text:
             "Validando credenciales",
+          background:
+            "#ffffff",
+          color:
+            "#0f172a",
+          showConfirmButton:
+            false,
           allowOutsideClick:
             false,
+          customClass: {
+            popup:
+              "rounded-2xl border border-blue-100 shadow-2xl",
+            title:
+              "text-lg font-black text-slate-900",
+            htmlContainer:
+              "text-sm text-slate-500"
+          },
           didOpen: () => {
             Swal.showLoading();
           }
@@ -97,11 +112,37 @@ function LoginPage() {
         }
 
         Swal.fire({
+          toast:
+            true,
+          position:
+            "top-end",
           icon: "success",
+          iconColor:
+            "#16a34a",
           title:
             "Bienvenido",
           text:
-            res.data.user.nombre
+            `${res.data.user.nombre || "Usuario"} ingreso correctamente`,
+          timer:
+            2600,
+          timerProgressBar:
+            true,
+          showConfirmButton:
+            false,
+          background:
+            "#ffffff",
+          color:
+            "#0f172a",
+          customClass: {
+            popup:
+              "rounded-2xl border border-emerald-100 shadow-2xl",
+            title:
+              "text-base font-black text-slate-900",
+            htmlContainer:
+              "text-sm text-slate-500",
+            timerProgressBar:
+              "bg-emerald-500"
+          }
         });
 
         navigate(
@@ -206,7 +247,7 @@ function LoginPage() {
             <Package />
 
             <span>
-              Gestión de Pedidos
+              Gestion de Pedidos
             </span>
 
           </div>
@@ -236,7 +277,7 @@ function LoginPage() {
             <AlertTriangle />
 
             <span>
-              Alertas Automáticas
+              Alertas Automaticas
             </span>
 
           </div>
@@ -315,22 +356,32 @@ function LoginPage() {
             </div>
           </div>
 
-          <h2
-            className="
-            text-3xl
-            font-bold
-            text-slate-900"
-          >
-            Bienvenido
-          </h2>
+          <div className="mb-8 text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+              <LockKeyhole size={14} />
+              Acceso seguro
+            </div>
 
-          <p
-            className="
-            text-slate-500
-            mb-8"
-          >
-            Ingrese sus credenciales
-          </p>
+            <h2
+              className="
+              text-4xl
+              font-black
+              text-slate-950"
+            >
+              Bienvenido
+            </h2>
+
+            <div className="mx-auto mt-3 h-1 w-16 rounded-full bg-blue-600" />
+
+            <p
+              className="
+              mt-4
+              text-sm
+              text-slate-500"
+            >
+              Ingresa tus credenciales para continuar.
+            </p>
+          </div>
 
           {/* Correo */}
 
@@ -348,7 +399,7 @@ function LoginPage() {
                     value:
                       /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
                     message:
-                      "Correo inválido"
+                      "Correo invalido"
                   }
                 }
               )}
@@ -395,12 +446,12 @@ function LoginPage() {
                   ? "text"
                   : "password"
               }
-              placeholder="Contraseña"
+              placeholder="Contrasena"
               {...register(
                 "password",
                 {
                   required:
-                    "Contraseña requerida"
+                    "Contrasena requerida"
                 }
               )}
               className="
@@ -481,7 +532,7 @@ function LoginPage() {
               className="
               text-slate-500"
             >
-              ¿No tienes cuenta?
+              No tienes cuenta?
             </span>
 
             <span
@@ -495,6 +546,10 @@ function LoginPage() {
 
           </div>
 
+          <p className="mt-5 text-center text-[11px] text-slate-300">
+            Proyecto por Jhon R
+          </p>
+
         </form>
 
       </div>
@@ -505,3 +560,4 @@ function LoginPage() {
 }
 
 export default LoginPage;
+

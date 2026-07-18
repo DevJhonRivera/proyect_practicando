@@ -17,12 +17,15 @@ export const tipoCorteLabels = {
 };
 
 export const initialCorteForm = {
+  origenMaterial: "ROLLO",
   rolloId: "",
+  retazoId: "",
   marca: "",
   placa: "",
   modelo: "",
   tipoServicio: "VENTA",
   instalador: "",
   tipoCorte: "PANORAMICO",
+  tipoCorteDetalle: "",
   metrosUtilizados: "",
 };

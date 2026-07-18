@@ -3,6 +3,19 @@ import {
   tipoCorteLabels,
 } from "./cortes.constants";
 
+export const getTipoCorteTexto = (corte) => {
+  const label =
+    tipoCorteLabels[corte.tipoCorte] ||
+    corte.tipoCorte ||
+    "";
+
+  if (corte.tipoCorte === "OTROS" && corte.tipoCorteDetalle) {
+    return `${label}: ${corte.tipoCorteDetalle}`;
+  }
+
+  return label;
+};
+
 export const getMaterialCodigo = (corte) =>
   corte.origenMaterial === "RETAZO"
     ? corte.retazoId?.codigoRetazo || "Retazo"
@@ -69,9 +82,7 @@ export const getCortesExcelColumns = () => [
   },
   {
     header: "Tipo corte",
-    value: (corte) =>
-      tipoCorteLabels[corte.tipoCorte] ||
-      corte.tipoCorte,
+    value: getTipoCorteTexto,
   },
   {
     header: "Metros utilizados",

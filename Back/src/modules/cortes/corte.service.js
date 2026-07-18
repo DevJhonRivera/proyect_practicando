@@ -28,6 +28,19 @@ const normalizarPlaca = (value) =>
 const requiereInstalador = (tipoServicio) =>
   tipoServicio === "GARANTIA_INSTALADOR";
 
+const prepararDetalleTipoCorte = (data = {}) => {
+  const tipoCorte =
+    data.tipoCorte || "";
+  const detalle =
+    normalizarMayusculas(data.tipoCorteDetalle);
+
+  if (tipoCorte === "OTROS" && !detalle) {
+    throw new Error("Ingrese el detalle del corte");
+  }
+
+  return tipoCorte === "OTROS" ? detalle : "";
+};
+
 const usuarioAuditoria = (user) => ({
   usuarioId:
     user?._id,
@@ -140,6 +153,8 @@ export const registrarCorte =
         requiereInstalador(data.tipoServicio)
           ? normalizarMayusculas(data.instalador)
           : "",
+      tipoCorteDetalle:
+        prepararDetalleTipoCorte(data),
       metrosUtilizados:
         roundMeters(data.metrosUtilizados),
     };
@@ -374,37 +389,37 @@ export const actualizarCorte = async (id, data, user) => {
 
   if (data.tipoCorte) {
     update.tipoCorte = data.tipoCorte;
+    update.tipoCorteDetalle =
+      prepararDetalleTipoCorte({
+        tipoCorte: data.tipoCorte,
+        tipoCorteDetalle:
+          data.tipoCorteDetalle ??
+          corteActual.tipoCorteDetalle,
+      });
+
     agregarCambio(
       cambios,
       "tipoCorte",
       corteActual.tipoCorte,
       data.tipoCorte
     );
-  }
-
-  if (
-    data.valorVenta !== undefined &&
-    data.valorVenta !== null &&
-    data.valorVenta !== ""
-  ) {
-    const rentabilidad =
-      calcularRentabilidad({
-        valorVenta:
-          data.valorVenta,
-        costoMaterialCop:
-          corteActual.costoMaterialCop,
-      });
-
     agregarCambio(
       cambios,
-      "valorVenta",
-      corteActual.valorVenta,
-      rentabilidad.valorVenta
+      "tipoCorteDetalle",
+      corteActual.tipoCorteDetalle,
+      update.tipoCorteDetalle
     );
-
-    Object.assign(
-      update,
-      rentabilidad
+  } else if (data.tipoCorteDetalle !== undefined) {
+    update.tipoCorteDetalle =
+      prepararDetalleTipoCorte({
+        tipoCorte: corteActual.tipoCorte,
+        tipoCorteDetalle: data.tipoCorteDetalle,
+      });
+    agregarCambio(
+      cambios,
+      "tipoCorteDetalle",
+      corteActual.tipoCorteDetalle,
+      update.tipoCorteDetalle
     );
   }
 
