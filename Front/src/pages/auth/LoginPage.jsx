@@ -19,6 +19,7 @@ import { getMisPermisos } from "../../api/roles.api";
 import {
   guardarPermisosUsuarioActual
 } from "../../utils/permisos";
+import { notificarSesionActualizada } from "../../utils/session";
 
 import {
   useNavigate
@@ -92,6 +93,8 @@ function LoginPage() {
             res.data.user
           )
         );
+
+        notificarSesionActualizada();
 
         guardarPermisosUsuarioActual(
           res.data.user.rol,

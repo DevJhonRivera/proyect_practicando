@@ -31,6 +31,8 @@ export function useCortesPage() {
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [form, setForm] = useState(initialCorteForm);
+  const [mantenerDatosCarro, setMantenerDatosCarro] =
+    useState(false);
 
   const rollosEnUso = useMemo(
     () => rollos.filter((rollo) => rollo.estado === "USO"),
@@ -48,6 +50,67 @@ export function useCortesPage() {
       retazos.find((retazo) => retazo._id === form.retazoId),
     [retazos, form.retazoId]
   );
+
+  const vehiculosSugeridos = useMemo(() => {
+    const textoPlaca =
+      String(form.placa || "").trim().toUpperCase();
+
+    if (textoPlaca.length < 2) {
+      return [];
+    }
+
+    const vehiculos = new Map();
+
+    cortes.forEach((corte) => {
+      const placa =
+        String(corte.placa || "").trim().toUpperCase();
+
+      if (!placa) {
+        return;
+      }
+
+      const fecha =
+        new Date(
+          corte.createdAt || corte.fecha || 0
+        ).getTime();
+      const actual =
+        vehiculos.get(placa);
+
+      vehiculos.set(placa, {
+        placa,
+        marca:
+          !actual || fecha >= actual.fecha
+            ? corte.marca || ""
+            : actual.marca,
+        modelo:
+          !actual || fecha >= actual.fecha
+            ? corte.modelo || ""
+            : actual.modelo,
+        fecha:
+          Math.max(fecha, actual?.fecha || 0),
+        cortes:
+          (actual?.cortes || 0) + 1,
+      });
+    });
+
+    return Array.from(vehiculos.values())
+      .filter((vehiculo) =>
+        vehiculo.placa.includes(textoPlaca)
+      )
+      .sort((a, b) => {
+        const aExacta =
+          a.placa === textoPlaca ? 1 : 0;
+        const bExacta =
+          b.placa === textoPlaca ? 1 : 0;
+
+        if (aExacta !== bExacta) {
+          return bExacta - aExacta;
+        }
+
+        return b.fecha - a.fecha;
+      })
+      .slice(0, 6);
+  }, [cortes, form.placa]);
 
   const {
     marca: marcaForm,
@@ -118,6 +181,18 @@ export function useCortesPage() {
 
   const limpiarForm = () => {
     setForm(initialCorteForm);
+  };
+
+  const limpiarParaMismoCarro = () => {
+    setForm((actual) => ({
+      ...initialCorteForm,
+      marca:
+        actual.marca,
+      placa:
+        actual.placa,
+      modelo:
+        actual.modelo,
+    }));
   };
 
   const validarFormulario = () => {
@@ -366,10 +441,22 @@ export function useCortesPage() {
       Swal.fire({
         icon: "success",
         title: "Corte registrado",
+        text: mantenerDatosCarro
+          ? "Los datos del carro quedan listos para registrar otro corte."
+          : undefined,
+        timer:
+          1800,
+        showConfirmButton:
+          false,
       });
 
-      limpiarForm();
-      cargar();
+      if (mantenerDatosCarro) {
+        limpiarParaMismoCarro();
+      } else {
+        limpiarForm();
+      }
+
+      await cargar();
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -393,6 +480,18 @@ export function useCortesPage() {
     }));
   };
 
+  const aplicarVehiculo = (vehiculo) => {
+    setForm((actual) => ({
+      ...actual,
+      placa:
+        vehiculo.placa || actual.placa,
+      marca:
+        vehiculo.marca || actual.marca,
+      modelo:
+        vehiculo.modelo || actual.modelo,
+    }));
+  };
+
   return {
     cortesFiltrados,
     excelColumns: getCortesExcelColumns(),
@@ -401,6 +500,7 @@ export function useCortesPage() {
     indicadores,
     loading,
     loadingSugerencias,
+    mantenerDatosCarro,
     retazoSeleccionado,
     retazosDisponibles: retazos,
     recargar: cargar,
@@ -412,10 +512,13 @@ export function useCortesPage() {
     setFechaDesde,
     setFechaHasta,
     setForm,
+    setMantenerDatosCarro,
     setSearch,
     sugerencias,
     sugerenciasKey,
     aplicarSugerencia,
+    aplicarVehiculo,
+    vehiculosSugeridos,
   };
 }
 

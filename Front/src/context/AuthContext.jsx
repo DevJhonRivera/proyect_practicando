@@ -3,6 +3,10 @@ import {
 } from "react";
 
 import { AuthContext } from "./auth-context";
+import {
+  cerrarSesion as cerrarSesionUsuario,
+  notificarSesionActualizada,
+} from "../utils/session";
 
 export const AuthProvider = ({
   children,
@@ -21,14 +25,20 @@ export const AuthProvider = ({
       token
     );
 
+    localStorage.setItem(
+      "usuario",
+      JSON.stringify(userData)
+    );
+
     setUser(userData);
+    notificarSesionActualizada();
   };
 
   const logout = () => {
 
-    localStorage.removeItem(
-      "token"
-    );
+    cerrarSesionUsuario({
+      redirect: false,
+    });
 
     setUser(null);
   };

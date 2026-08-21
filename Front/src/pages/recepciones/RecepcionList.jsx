@@ -31,6 +31,21 @@ import {
   unidadDetalle,
 } from "../../utils/materiales";
 
+const largosRolloOpciones = [
+  {
+    value: "30",
+    label: "30 m",
+  },
+  {
+    value: "30.48",
+    label: "30.48 m",
+  },
+  {
+    value: "60",
+    label: "60 m",
+  },
+];
+
 function RecepcionList() {
   const [data, setData] =
     useState([]);
@@ -46,6 +61,9 @@ function RecepcionList() {
 
   const [clasificarRecepcion, setClasificarRecepcion] =
     useState(null);
+
+  const [largoPersonalizado, setLargoPersonalizado] =
+    useState(false);
 
   const [pedidos, setPedidos] =
     useState([]);
@@ -203,6 +221,7 @@ function RecepcionList() {
       return;
     }
 
+    setLargoPersonalizado(false);
     setClasificarRecepcion(recepcion);
 
     const primerPedido =
@@ -912,20 +931,69 @@ function RecepcionList() {
               </Field>
 
               <Field label="Largo">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={rolloForm.largoOriginal}
-                  onChange={(e) =>
-                    setRolloForm({
-                      ...rolloForm,
-                      largoOriginal:
-                        e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-lg p-3"
-                />
+                <div className="space-y-3">
+                  <select
+                    value={
+                      largoPersonalizado
+                        ? "OTRO"
+                        : rolloForm.largoOriginal
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      if (value === "OTRO") {
+                        setLargoPersonalizado(true);
+                        setRolloForm({
+                          ...rolloForm,
+                          largoOriginal: "",
+                        });
+                        return;
+                      }
+
+                      setLargoPersonalizado(false);
+                      setRolloForm({
+                        ...rolloForm,
+                        largoOriginal: value,
+                      });
+                    }}
+                    className="w-full border rounded-lg p-3"
+                  >
+                    <option value="">
+                      Seleccione largo del rollo
+                    </option>
+
+                    {largosRolloOpciones.map((item) => (
+                      <option
+                        key={item.value}
+                        value={item.value}
+                      >
+                        {item.label}
+                      </option>
+                    ))}
+
+                    <option value="OTRO">
+                      Otro largo
+                    </option>
+                  </select>
+
+                  {largoPersonalizado && (
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Escriba el largo en metros"
+                      value={rolloForm.largoOriginal}
+                      onChange={(e) =>
+                        setRolloForm({
+                          ...rolloForm,
+                          largoOriginal:
+                            e.target.value,
+                        })
+                      }
+                      className="w-full border rounded-lg p-3"
+                    />
+                  )}
+                </div>
               </Field>
             </div>
 

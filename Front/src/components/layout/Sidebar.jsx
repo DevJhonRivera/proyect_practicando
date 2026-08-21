@@ -2,6 +2,7 @@ import {
   Activity,
   BadgeDollarSign,
   Bell,
+  Car,
   ClipboardList,
   Boxes,
   CircleDollarSign,
@@ -21,6 +22,7 @@ import {
   obtenerUsuarioActual,
   tienePermiso,
 } from "../../utils/permisos";
+import { cerrarSesion as cerrarSesionUsuario } from "../../utils/session";
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -133,6 +135,13 @@ function Sidebar() {
           modulo: "cortes",
           accion: "write",
         },
+        {
+          icon: Car,
+          text: "Piezas PPF",
+          url: "/piezas-ppf",
+          modulo: "cortes",
+          accion: "read",
+        },
       ],
     },
     {
@@ -168,9 +177,9 @@ function Sidebar() {
     .filter((group) => group.items.length > 0);
 
   const cerrarSesion = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
-    localStorage.removeItem("permisosRolActual");
+    cerrarSesionUsuario({
+      redirect: false,
+    });
     navigate("/login");
   };
 

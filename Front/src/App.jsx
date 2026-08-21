@@ -1,7 +1,13 @@
 import AppRouter from "./routes/AppRouter";
+import SessionWatcher from "./components/auth/SessionWatcher";
 
 function App() {
-  return <AppRouter />;
+  return (
+    <>
+      <SessionWatcher />
+      <AppRouter />
+    </>
+  );
 }
 
 export default App;

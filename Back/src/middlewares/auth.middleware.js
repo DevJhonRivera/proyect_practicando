@@ -1,6 +1,17 @@
 import jwt from "jsonwebtoken";
 import User from "../modules/users/user.model.js";
 
+const MAX_SESSION_MS =
+  8 * 60 * 60 * 1000;
+
+const tokenSuperaDuracionPermitida = (decoded) => {
+  if (!decoded?.iat) {
+    return true;
+  }
+
+  return Date.now() - decoded.iat * 1000 > MAX_SESSION_MS;
+};
+
 export const authMiddleware = async (
   req,
   res,
@@ -33,6 +44,13 @@ export const authMiddleware = async (
       token,
       process.env.JWT_SECRET
     );
+
+    if (tokenSuperaDuracionPermitida(decoded)) {
+      return res.status(401).json({
+        success: false,
+        message: "Token expirado",
+      });
+    }
 
     const user = await User.findById(
       decoded.id
@@ -74,6 +92,11 @@ export const optionalAuthMiddleware = async (
       token,
       process.env.JWT_SECRET
     );
+
+    if (tokenSuperaDuracionPermitida(decoded)) {
+      return next();
+    }
+
     const user = await User.findById(
       decoded.id
     ).select("-password");

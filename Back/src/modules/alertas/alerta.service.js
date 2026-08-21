@@ -17,6 +17,53 @@ const TIPOS_STOCK_RESERVA = [
   TIPO_STOCK_RESERVA_DOS_ROLLOS
 ];
 
+const TIPOS_INVENTARIO = [
+  TIPO_STOCK_RESERVA_UN_ROLLO,
+  TIPO_STOCK_RESERVA_DOS_ROLLOS,
+  TIPO_RECEPCION_NUEVA
+];
+
+const TIPOS_VENTAS = [
+  TIPO_VENTA_PENDIENTE,
+  TIPO_VENTA_REVISION_CORTES
+];
+
+const rolesConTodasLasAlertas = [
+  "SUPERUSUARIO",
+  "ADMIN"
+];
+
+const tiposPermitidosPorRol = (rol) => {
+  if (rolesConTodasLasAlertas.includes(rol)) {
+    return null;
+  }
+
+  if (rol === "INVENTARIO") {
+    return TIPOS_INVENTARIO;
+  }
+
+  if (rol === "VENTAS") {
+    return TIPOS_VENTAS;
+  }
+
+  return [];
+};
+
+const filtroAlertasPorRol = (user) => {
+  const tiposPermitidos =
+    tiposPermitidosPorRol(user?.rol);
+
+  if (tiposPermitidos === null) {
+    return {};
+  }
+
+  return {
+    tipo: {
+      $in: tiposPermitidos
+    }
+  };
+};
+
 const claveMaterialReserva = ({
   tipo,
   porcentaje,
@@ -292,16 +339,21 @@ export const crearAlertaRevisionVenta =
   };
 
 export const obtenerAlertas =
-  async () => {
-    return await Alerta.find().sort({
+  async (user) => {
+    return await Alerta.find(
+      filtroAlertasPorRol(user)
+    ).sort({
       createdAt: -1,
     });
   };
 
 export const atenderAlerta =
-  async (id) => {
-    return await Alerta.findByIdAndUpdate(
-      id,
+  async (id, user) => {
+    return await Alerta.findOneAndUpdate(
+      {
+        _id: id,
+        ...filtroAlertasPorRol(user)
+      },
       {
         atendida: true,
       },

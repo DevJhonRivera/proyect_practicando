@@ -10,7 +10,7 @@ export const getAlertas =
       await verificarStockReserva();
 
       const alertas =
-        await obtenerAlertas();
+        await obtenerAlertas(req.user);
 
       res.json(alertas);
     } catch (error) {
@@ -25,8 +25,16 @@ export const updateAlerta =
     try {
       const alerta =
         await atenderAlerta(
-          req.params.id
+          req.params.id,
+          req.user
         );
+
+      if (!alerta) {
+        return res.status(404).json({
+          message:
+            "Alerta no encontrada o no permitida para este perfil",
+        });
+      }
 
       res.json(alerta);
     } catch (error) {

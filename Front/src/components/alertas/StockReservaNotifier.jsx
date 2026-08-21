@@ -12,6 +12,7 @@ import {
   atenderAlerta,
   getAlertas
 } from "../../api/alertas";
+import { obtenerUsuarioActual } from "../../utils/permisos";
 
 const TIPO_STOCK_RESERVA_UN_ROLLO =
   "STOCK_RESERVA_UN_ROLLO";
@@ -19,19 +20,14 @@ const TIPO_STOCK_RESERVA_DOS_ROLLOS =
   "STOCK_RESERVA_DOS_ROLLOS";
 const TIPO_RECEPCION_NUEVA =
   "RECEPCION_NUEVA";
-const TIPO_VENTA_PENDIENTE =
-  "VENTA_PENDIENTE";
-const TIPO_VENTA_REVISION_CORTES =
-  "VENTA_REVISION_CORTES";
 const TIPOS_NOTIFICABLES = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
   TIPO_STOCK_RESERVA_DOS_ROLLOS,
-  TIPO_RECEPCION_NUEVA,
-  TIPO_VENTA_PENDIENTE,
-  TIPO_VENTA_REVISION_CORTES
+  TIPO_RECEPCION_NUEVA
 ];
 
 function StockReservaNotifier() {
+  const usuario = obtenerUsuarioActual();
   const [alertas, setAlertas] = useState([]);
   const notificadasRef = useRef(
     new Set(
@@ -53,6 +49,11 @@ function StockReservaNotifier() {
   );
 
   useEffect(() => {
+    if (usuario?.rol !== "INVENTARIO") {
+      setAlertas([]);
+      return undefined;
+    }
+
     let active = true;
     let intervalId;
 
@@ -100,10 +101,6 @@ function StockReservaNotifier() {
             title:
               nueva.tipo === TIPO_RECEPCION_NUEVA
                 ? "Nueva recepcion"
-                : nueva.tipo === TIPO_VENTA_REVISION_CORTES
-                ? "Revisar venta"
-                : nueva.tipo === TIPO_VENTA_PENDIENTE
-                ? "Venta pendiente"
                 : "Alerta de bodega",
             text: nueva.mensaje,
             showConfirmButton: false,
@@ -128,9 +125,12 @@ function StockReservaNotifier() {
       active = false;
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [usuario?.rol]);
 
-  if (alertas.length === 0) {
+  if (
+    usuario?.rol !== "INVENTARIO" ||
+    alertas.length === 0
+  ) {
     return null;
   }
 

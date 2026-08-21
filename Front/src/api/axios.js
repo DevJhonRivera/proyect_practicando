@@ -1,4 +1,8 @@
 import axios from "axios";
+import {
+  cerrarSesion,
+  tokenExpirado,
+} from "../utils/session";
 
 const api = axios.create({
   baseURL:
@@ -17,6 +21,14 @@ api.interceptors.request.use(  (config) => {
       );
 
     if (token) {
+      if (tokenExpirado(token)) {
+        cerrarSesion();
+
+        return Promise.reject(
+          new Error("Sesion expirada")
+        );
+      }
+
       config.headers.Authorization =
         `Bearer ${token}`;
     }
@@ -28,13 +40,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("usuario");
-      localStorage.removeItem("permisosRolActual");
-
-      if (window.location.pathname !== "/login") {
-        window.location.replace("/login");
-      }
+      cerrarSesion();
     }
 
     return Promise.reject(error);

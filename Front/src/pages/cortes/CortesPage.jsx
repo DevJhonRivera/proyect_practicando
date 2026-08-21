@@ -34,6 +34,7 @@ function CortesPage() {
 
   const {
     aplicarSugerencia,
+    aplicarVehiculo,
     cortesFiltrados,
     excelColumns,
     form,
@@ -41,6 +42,7 @@ function CortesPage() {
     indicadores,
     loading,
     loadingSugerencias,
+    mantenerDatosCarro,
     recargar,
     retazoSeleccionado,
     retazosDisponibles,
@@ -52,9 +54,11 @@ function CortesPage() {
     setForm,
     setFechaDesde,
     setFechaHasta,
+    setMantenerDatosCarro,
     setSearch,
     sugerencias,
     sugerenciasKey,
+    vehiculosSugeridos,
   } = useCortesPage();
 
   const editarCorte = async (corte) => {
@@ -209,8 +213,11 @@ function CortesPage() {
         <CorteForm
           form={form}
           loadingSugerencias={loadingSugerencias}
+          mantenerDatosCarro={mantenerDatosCarro}
           onApplySuggestion={aplicarSugerencia}
+          onApplyVehicle={aplicarVehiculo}
           onChange={setForm}
+          onMantenerDatosCarroChange={setMantenerDatosCarro}
           onSubmit={guardar}
           retazoSeleccionado={retazoSeleccionado}
           retazosDisponibles={retazosDisponibles}
@@ -218,6 +225,7 @@ function CortesPage() {
           rollosEnUso={rollosEnUso}
           sugerencias={sugerencias}
           sugerenciasKey={sugerenciasKey}
+          vehiculosSugeridos={vehiculosSugeridos}
         />
       )}
 

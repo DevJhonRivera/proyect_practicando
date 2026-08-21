@@ -15,6 +15,7 @@ import finanzaRoutes from "./modules/finanzas/finanza.routes.js";
 import ventaRoutes from "./modules/ventas/venta.routes.js";
 import userRoutes from "./modules/users/user.routes.js";
 import rolePermissionRoutes from "./modules/roles/rolePermission.routes.js";
+import piezaPpfRoutes from "./modules/piezasPpf/piezaPpf.routes.js";
 import {
   corsOptions,
   securityHeaders,
@@ -65,6 +66,8 @@ app.use("/api/retazos",retazoRoutes);
 app.use("/api/finanzas",finanzaRoutes);
 
 app.use("/api/ventas",ventaRoutes);
+
+app.use("/api/piezas-ppf", piezaPpfRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

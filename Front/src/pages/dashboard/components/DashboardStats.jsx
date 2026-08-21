@@ -74,7 +74,7 @@ function DashboardStats({ indicadores }) {
                 <p className="text-sm font-semibold text-slate-500">
                   {card.titulo}
                 </p>
-                <p className="mt-2 break-words text-3xl font-bold text-slate-950">
+                <p className="mt-2 max-w-full break-all text-2xl font-bold leading-tight text-slate-950 sm:text-[1.65rem] xl:text-2xl 2xl:text-xl">
                   {card.valor}
                 </p>
                 <p className="mt-3 text-sm text-slate-500">

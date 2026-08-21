@@ -14,6 +14,7 @@ import RecepcionList from "../pages/recepciones/RecepcionList";
 import ReservaPage from "../pages/reserva/ReservaPage";
 import UsoPage from "../pages/uso/UsoPage";
 import CortesPage from "../pages/cortes/CortesPage";
+import PiezasPpfPage from "../pages/piezasPpf/PiezasPpfPage";
 import AlertasPage from "../pages/alertas/AlertasPage";
 import RetazosPage from "../pages/retazos/RetazosPage";
 import FinanzasPage from "../pages/finanzas/FinanzasPage";
@@ -27,14 +28,15 @@ import {
   obtenerUsuarioActual,
   tienePermiso,
 } from "../utils/permisos";
+import { cerrarSesion } from "../utils/session";
 
 function RutaPermitida({ modulo, accion = "read", children }) {
   const usuario = obtenerUsuarioActual();
 
   if (!tienePermiso(usuario, modulo, accion)) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
-    localStorage.removeItem("permisosRolActual");
+    cerrarSesion({
+      redirect: false,
+    });
 
     return <Navigate to="/login" replace />;
   }
@@ -138,6 +140,15 @@ function AppRouter() {
             element={
               <RutaPermitida modulo="cortes" accion="write">
                 <CortesPage />
+              </RutaPermitida>
+            }
+          />
+
+          <Route
+            path="/piezas-ppf"
+            element={
+              <RutaPermitida modulo="cortes" accion="read">
+                <PiezasPpfPage />
               </RutaPermitida>
             }
           />
