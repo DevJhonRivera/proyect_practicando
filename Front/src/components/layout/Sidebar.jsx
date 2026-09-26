@@ -1,6 +1,7 @@
 import {
   Activity,
   BadgeDollarSign,
+  BookOpen,
   Bell,
   Car,
   ClipboardList,
@@ -43,6 +44,8 @@ function Sidebar() {
       ? "Inventario"
       : usuario?.rol === "VENTAS"
       ? "Ventas"
+      : usuario?.rol === "ASESOR"
+      ? "Asesor"
       : "Usuario";
 
   const menus = [
@@ -154,6 +157,13 @@ function Sidebar() {
     {
       section: "Comercial",
       items: [
+        {
+          icon: BookOpen,
+          text: "Catálogo para asesores",
+          url: "/asesores",
+          modulo: "asesores",
+          accion: "read",
+        },
         {
           icon: BadgeDollarSign,
           text: "Ventas",

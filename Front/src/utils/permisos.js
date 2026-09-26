@@ -16,6 +16,12 @@ export const permisosPorRolBase = {
     "ventas:*",
     "cortes:read",
   ],
+  ASESOR: [
+    "dashboard:read",
+    "asesores:read",
+    "ventas:*",
+    "cortes:read",
+  ],
 };
 
 export const guardarPermisosUsuarioActual = (rol, permisos) => {

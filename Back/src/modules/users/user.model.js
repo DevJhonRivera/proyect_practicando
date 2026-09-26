@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
         "ADMIN",
         "INVENTARIO",
         "VENTAS",
+        "ASESOR",
       ],
       default: "INVENTARIO"
     },

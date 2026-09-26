@@ -33,6 +33,7 @@ const rolesUsuario = [
   ["ADMIN", "Administrador"],
   ["INVENTARIO", "Inventario"],
   ["VENTAS", "Ventas"],
+  ["ASESOR", "Asesor"],
 ];
 
 const formInicial = {
@@ -43,6 +44,11 @@ const formInicial = {
 };
 
 const modulosConfigurables = [
+  {
+    key: "asesores",
+    label: "Catálogo para asesores",
+    permisos: ["asesores:*"],
+  },
   {
     key: "dashboard",
     label: "Inicio",
@@ -105,6 +111,7 @@ const roleLabels = {
   ADMIN: "Administrador",
   INVENTARIO: "Inventario",
   VENTAS: "Ventas",
+  ASESOR: "Asesor",
 };
 
 const modulosPermitidosPorRol = () => modulosConfigurables;

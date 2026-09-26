@@ -4,6 +4,7 @@ export const rolesConfigurables = [
   "ADMIN",
   "INVENTARIO",
   "VENTAS",
+  "ASESOR",
 ];
 
 export const permisosPorRolBase = {
@@ -20,6 +21,12 @@ export const permisosPorRolBase = {
   ],
   VENTAS: [
     "dashboard:read",
+    "ventas:*",
+    "cortes:read",
+  ],
+  ASESOR: [
+    "dashboard:read",
+    "asesores:read",
     "ventas:*",
     "cortes:read",
   ],

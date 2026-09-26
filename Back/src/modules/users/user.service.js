@@ -23,13 +23,10 @@ const normalizarRol = (rol) => {
       "ADMIN",
       "INVENTARIO",
       "VENTAS",
+      "ASESOR",
     ].includes(rol)
   ) {
     return rol;
-  }
-
-  if (rol === "ASESOR") {
-    return "VENTAS";
   }
 
   return "INVENTARIO";

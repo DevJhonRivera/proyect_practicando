@@ -21,6 +21,7 @@ import FinanzasPage from "../pages/finanzas/FinanzasPage";
 import VentasPage from "../pages/ventas/VentasPage";
 import AuditoriaPage from "../pages/auditoria/AuditoriaPage";
 import UsuariosPage from "../pages/usuarios/UsuariosPage";
+import AsesoresPage from "../pages/asesores/AsesoresPage";
 
 import PrivateRoute from "./PrivateRoute";
 import MainLayout from "../layouts/MainLayout";
@@ -185,6 +186,15 @@ function AppRouter() {
             element={
               <RutaPermitida modulo="ventas" accion="write">
                 <VentasPage />
+              </RutaPermitida>
+            }
+          />
+
+          <Route
+            path="/asesores"
+            element={
+              <RutaPermitida modulo="asesores">
+                <AsesoresPage />
               </RutaPermitida>
             }
           />
