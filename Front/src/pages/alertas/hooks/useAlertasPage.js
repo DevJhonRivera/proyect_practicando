@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
+import { currentMonthValue } from "../../../hooks/useMonthFilter";
 
 import {
   atenderAlerta,
@@ -13,6 +14,7 @@ export function useAlertasPage() {
   const [search, setSearch] = useState("");
   const [tipo, setTipo] = useState("TODOS");
   const [estado, setEstado] = useState("PENDIENTES");
+  const [month, setMonth] = useState(currentMonthValue);
 
   const cargar = async () => {
     try {
@@ -95,6 +97,16 @@ export function useAlertasPage() {
     const texto = search.toLowerCase();
 
     return alertas.filter((alerta) => {
+      const fecha = alerta.createdAt
+        ? new Date(alerta.createdAt)
+        : null;
+      const mesAlerta =
+        fecha && !Number.isNaN(fecha.getTime())
+          ? `${fecha.getFullYear()}-${String(
+              fecha.getMonth() + 1
+            ).padStart(2, "0")}`
+          : "";
+      const coincideMes = !month || mesAlerta === month;
       const coincideBusqueda =
         alerta.tipo?.toLowerCase().includes(texto) ||
         alerta.mensaje?.toLowerCase().includes(texto);
@@ -110,12 +122,13 @@ export function useAlertasPage() {
           alerta.atendida);
 
       return (
+        coincideMes &&
         coincideBusqueda &&
         coincideTipo &&
         coincideEstado
       );
     });
-  }, [alertas, estado, search, tipo]);
+  }, [alertas, estado, month, search, tipo]);
 
   const pendientesFiltradas = useMemo(
     () =>
@@ -224,9 +237,11 @@ export function useAlertasPage() {
     excelColumns,
     indicadores,
     loading,
+    month,
     pendientesFiltradas,
     search,
     setEstado,
+    setMonth,
     setSearch,
     setTipo,
     tipo,

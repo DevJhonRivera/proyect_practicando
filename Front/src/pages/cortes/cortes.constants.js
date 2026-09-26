@@ -13,6 +13,7 @@ export const tipoCorteLabels = {
   FIJOS: "Fijos / Custodias",
   SUNROOF: "Sunroof",
   COMPLETO: "Completo",
+  PIEZAS_PPF: "Piezas PPF",
   OTROS: "Otros",
 };
 
@@ -27,5 +28,6 @@ export const initialCorteForm = {
   instalador: "",
   tipoCorte: "PANORAMICO",
   tipoCorteDetalle: "",
+  piezasPpf: [],
   metrosUtilizados: "",
 };

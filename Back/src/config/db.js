@@ -6,6 +6,7 @@ export const connectDB = async () => {
         mongoose.set("strictQuery", false);
         await mongoose.connect(MONGO_URI, {
             serverSelectionTimeoutMS: 10000,
+            retryWrites: false,
         });
         console.log(
             "Mongo conectado:",
@@ -15,4 +16,15 @@ export const connectDB = async () => {
         console.error("Error Mongo DB:", error.message);
         process.exit(1);
     }
+};
+
+export const mongoSoportaTransacciones = () => {
+    const topologyType =
+        mongoose.connection.client?.topology
+            ?.description?.type;
+
+    return [
+        "ReplicaSetWithPrimary",
+        "Sharded",
+    ].includes(topologyType);
 };

@@ -4,6 +4,16 @@ import {
 } from "./cortes.constants";
 
 export const getTipoCorteTexto = (corte) => {
+  if (corte.esCortePpf || corte.tipoCorte === "PIEZAS_PPF") {
+    const cantidad = (corte.piezasPpf || []).reduce(
+      (total, pieza) =>
+        total + Number(pieza.cantidad || 1),
+      0
+    );
+
+    return `Piezas PPF (${cantidad})`;
+  }
+
   const label =
     tipoCorteLabels[corte.tipoCorte] ||
     corte.tipoCorte ||
@@ -83,6 +93,17 @@ export const getCortesExcelColumns = () => [
   {
     header: "Tipo corte",
     value: getTipoCorteTexto,
+  },
+  {
+    header: "Piezas PPF",
+    value: (corte) =>
+      (corte.piezasPpf || [])
+        .map(
+          (pieza) =>
+            `${pieza.pieza} x${pieza.cantidad || 1}`
+        )
+        .join(", "),
+    width: 36,
   },
   {
     header: "Metros utilizados",

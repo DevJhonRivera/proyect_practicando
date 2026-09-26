@@ -13,23 +13,23 @@ function PedidoStatsCard({
   fondo,
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <div className="metric-card bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
 
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-3">
 
-        <div>
+        <div className="min-w-0 flex-1">
 
           <p className="text-sm text-slate-500">
             {titulo}
           </p>
 
-          <h2 className="text-4xl font-bold text-slate-800 mt-2">
+          <h2 className="metric-value font-bold text-slate-800 mt-2">
             {valor}
           </h2>
 
         </div>
 
-        <div className={`${fondo} p-4 rounded-2xl`}>
+        <div className={`${fondo} shrink-0 p-4 rounded-2xl`}>
 
           <Icon
             size={32}

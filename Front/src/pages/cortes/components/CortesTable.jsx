@@ -1,6 +1,8 @@
 import { Pencil } from "lucide-react";
 
 import ExcelButton from "../../../components/ui/ExcelButton";
+import TablePagination from "../../../components/ui/TablePagination";
+import { usePagination } from "../../../hooks/usePagination";
 import { etiquetaDetalle } from "../../../utils/materiales";
 import {
   servicioLabels,
@@ -22,6 +24,8 @@ function CortesTable({
   excelColumns,
   onEdit,
 }) {
+  const pagination = usePagination(cortes);
+
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="p-6 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
@@ -49,8 +53,9 @@ function CortesTable({
           No existen cortes registrados.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1180px] text-sm">
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1180px] text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="p-4 text-left">
@@ -93,7 +98,7 @@ function CortesTable({
             </thead>
 
             <tbody>
-              {cortes.map((corte) => (
+              {pagination.pageItems.map((corte) => (
                 <tr
                   key={corte._id}
                   className="border-b border-slate-200 hover:bg-slate-50"
@@ -129,6 +134,9 @@ function CortesTable({
 
                   <td className="p-4">
                     {getTipoCorteTexto(corte)}
+                    {corte.piezasPpf?.length > 0 && (
+                      <PiezasPpfDetalle corte={corte} />
+                    )}
                   </td>
 
                   <td className="p-4 font-bold text-blue-700">
@@ -168,10 +176,41 @@ function CortesTable({
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+          <TablePagination pagination={pagination} />
+        </>
       )}
     </div>
+  );
+}
+
+function PiezasPpfDetalle({ corte }) {
+  return (
+    <details className="mt-2 max-w-64 text-xs">
+      <summary className="cursor-pointer font-semibold text-blue-700">
+        Ver piezas y costos
+      </summary>
+      <div className="mt-2 space-y-2 border-l-2 border-blue-100 pl-2">
+        {corte.piezasPpf.map((pieza, index) => (
+          <div
+            key={`${pieza.pieza}-${index}`}
+            className="leading-4 text-slate-600"
+          >
+            <p className="font-semibold text-slate-800">
+              {pieza.pieza} x{pieza.cantidad || 1}
+            </p>
+            <p>
+              {pieza.ubicacion} · {Number(pieza.anchoCm || 0)} x {Number(pieza.largoCm || 0)} cm
+              {pieza.rotada ? " · Rotada" : ""}
+            </p>
+          </div>
+        ))}
+        <p className="border-t border-slate-100 pt-2 font-semibold text-slate-800">
+          Costo de la tira completa: {formatoCop.format(corte.costoMaterialCop || 0)}
+        </p>
+      </div>
+    </details>
   );
 }
 

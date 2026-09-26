@@ -17,6 +17,8 @@ import {
   moverUso
 } from "../../api/rollos.api";
 import ExcelButton from "../../components/ui/ExcelButton";
+import TablePagination from "../../components/ui/TablePagination";
+import { usePagination } from "../../hooks/usePagination";
 import { anchoLabel } from "../../utils/anchos";
 import { etiquetaDetalle } from "../../utils/materiales";
 
@@ -101,7 +103,23 @@ function ReservaPage() {
     };
   }, []);
 
-  const pasar = async (id) => {
+  const pasar = async (rollo) => {
+
+    const tieneCostoAsignado =
+      Boolean(rollo.costeoPedidoId) &&
+      Number(rollo.costoUnitarioCop || 0) > 0 &&
+      Number(rollo.costoPorMetroCop || 0) > 0;
+
+    if (!tieneCostoAsignado) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Rollo sin costo",
+        text: `El rollo ${rollo.codigoRollo} todavía no tiene un costo asignado. Primero debes costear el pedido para poder pasarlo a uso.`,
+        confirmButtonText: "Entendido"
+      });
+
+      return;
+    }
 
     const result =
       await Swal.fire({
@@ -130,7 +148,7 @@ function ReservaPage() {
 
     try {
 
-      await moverUso(id);
+      await moverUso(rollo._id);
 
       Swal.fire({
 
@@ -143,14 +161,18 @@ function ReservaPage() {
 
       cargar();
 
-    } catch {
+    } catch (error) {
 
       Swal.fire({
 
         icon: "error",
 
         title:
-          "Error al actualizar"
+          "No se pudo pasar a uso",
+
+        text:
+          error.response?.data?.message ||
+          "Ocurrió un error al actualizar el rollo"
 
       });
 
@@ -236,6 +258,8 @@ function ReservaPage() {
 
     });
 
+  const pagination = usePagination(filtrados);
+
   const totalMetros =
     filtrados.reduce(
 
@@ -316,6 +340,7 @@ function ReservaPage() {
 
         <div
           className="
+          metric-card
           rounded-2xl
           border
           border-slate-200
@@ -336,13 +361,13 @@ function ReservaPage() {
               text-blue-600"
             />
 
-            <div>
+            <div className="min-w-0 flex-1">
 
               <p className="text-slate-500">
                 Rollos
               </p>
 
-              <h2 className="text-3xl font-bold">
+              <h2 className="metric-value font-bold">
                 {filtrados.length}
               </h2>
 
@@ -354,6 +379,7 @@ function ReservaPage() {
 
         <div
           className="
+          metric-card
           rounded-2xl
           border
           border-slate-200
@@ -374,14 +400,14 @@ function ReservaPage() {
               text-green-600"
             />
 
-            <div>
+            <div className="min-w-0 flex-1">
 
               <p className="text-slate-500">
                 Metros Disponibles
               </p>
 
-              <h2 className="text-3xl font-bold">
-                {totalMetros} m
+              <h2 className="metric-value font-bold">
+                {Number(totalMetros || 0).toFixed(2)} m
               </h2>
 
             </div>
@@ -392,6 +418,7 @@ function ReservaPage() {
 
         <div
           className="
+          metric-card
           rounded-2xl
           border
           border-slate-200
@@ -412,13 +439,13 @@ function ReservaPage() {
               text-purple-600"
             />
 
-            <div>
+            <div className="min-w-0 flex-1">
 
               <p className="text-slate-500">
                 Materiales
               </p>
 
-              <h2 className="text-3xl font-bold">
+              <h2 className="metric-value font-bold">
                 {
                   materiales.length - 1
                 }
@@ -609,6 +636,7 @@ function ReservaPage() {
 
         ) : (
 
+          <>
           <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-sm">
 
@@ -656,7 +684,7 @@ function ReservaPage() {
 
             <tbody>
 
-              {filtrados.map(
+              {pagination.pageItems.map(
                 rollo => (
 
                 <tr
@@ -714,7 +742,7 @@ function ReservaPage() {
                     <button
                       onClick={() =>
                         pasar(
-                          rollo._id
+                          rollo
                         )
                       }
                       className="
@@ -738,6 +766,8 @@ function ReservaPage() {
 
           </table>
           </div>
+          <TablePagination pagination={pagination} />
+          </>
 
         )}
 

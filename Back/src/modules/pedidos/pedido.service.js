@@ -1,7 +1,80 @@
+import mongoose from "mongoose";
 import detallePedidoModel from "./detallePedido.model.js";
 import DetallePedido from "./detallePedido.model.js";
 import Pedido from "./pedido.model.js";
 import Rollo from "../rollos/rollo.model.js";
+import {
+  mongoSoportaTransacciones,
+} from "../../config/db.js";
+
+const UNIDADES_MATERIAL = new Set([
+  "PORCENTAJE",
+  "MICRAS",
+  "NINGUNA",
+]);
+
+export const prepararDetallePedido = (detalle, pedidoId) => {
+  const tipoPolarizado = String(
+    detalle.tipoPolarizado || ""
+  )
+    .trim()
+    .toUpperCase();
+  const unidadMedida =
+    detalle.unidadMedida || "PORCENTAJE";
+  const porcentaje =
+    unidadMedida === "NINGUNA"
+      ? 0
+      : Number(detalle.porcentaje);
+  const ancho = Number(detalle.ancho);
+  const cantidadRollos = Number(
+    detalle.cantidadRollos
+  );
+
+  if (!tipoPolarizado) {
+    throw new Error(
+      "Ingrese el nombre del material"
+    );
+  }
+
+  if (!UNIDADES_MATERIAL.has(unidadMedida)) {
+    throw new Error(
+      "La clasificacion del material no es valida"
+    );
+  }
+
+  if (
+    !Number.isFinite(porcentaje) ||
+    (unidadMedida !== "NINGUNA" && porcentaje <= 0)
+  ) {
+    throw new Error(
+      "Ingrese un porcentaje o micraje valido"
+    );
+  }
+
+  if (!Number.isFinite(ancho) || ancho <= 0) {
+    throw new Error(
+      "Ingrese un ancho valido"
+    );
+  }
+
+  if (
+    !Number.isInteger(cantidadRollos) ||
+    cantidadRollos <= 0
+  ) {
+    throw new Error(
+      "Ingrese una cantidad de rollos valida"
+    );
+  }
+
+  return {
+    pedidoId,
+    tipoPolarizado,
+    porcentaje,
+    unidadMedida,
+    ancho,
+    cantidadRollos,
+  };
+};
 
 export const crearPedido = async (data) => {
   return await Pedido.create(data);
@@ -43,21 +116,72 @@ export const crearPedidoCompleto = async (
     );
   }
 
-  const pedido = await Pedido.create({
-    codigoPedido: data.codigoPedido,
-    proveedor: data.proveedor,
-    observaciones: data.observaciones,
-  });
+  const detallesValidados =
+    data.detalles.map((detalle) =>
+      prepararDetallePedido(detalle)
+    );
 
-  const detalles =
-    data.detalles.map((detalle) => ({
-      ...detalle,
-      pedidoId: pedido._id,
-    }));
+  let pedido;
 
-  await detallePedidoModel.insertMany(
-    detalles
-  );
+  const guardarPedido = async (
+    session = null
+  ) => {
+    const options = session
+      ? { session }
+      : {};
+
+    [pedido] = await Pedido.create(
+      [
+        {
+          codigoPedido: data.codigoPedido,
+          proveedor: data.proveedor,
+          observaciones: data.observaciones,
+        },
+      ],
+      options
+    );
+
+    const detalles =
+      detallesValidados.map((detalle) => ({
+        ...detalle,
+        pedidoId: pedido._id,
+      }));
+
+    await detallePedidoModel.insertMany(
+      detalles,
+      options
+    );
+  };
+
+  if (!mongoSoportaTransacciones()) {
+    try {
+      await guardarPedido();
+    } catch (error) {
+      if (pedido?._id) {
+        await Promise.allSettled([
+          DetallePedido.deleteMany({
+            pedidoId: pedido._id,
+          }),
+          Pedido.findByIdAndDelete(pedido._id),
+        ]);
+      }
+
+      throw error;
+    }
+
+    return pedido;
+  }
+
+  const session =
+    await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      await guardarPedido(session);
+    });
+  } finally {
+    await session.endSession();
+  }
 
   return pedido;
 };

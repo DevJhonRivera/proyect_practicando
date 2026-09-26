@@ -147,7 +147,7 @@ function AppRouter() {
           <Route
             path="/piezas-ppf"
             element={
-              <RutaPermitida modulo="cortes" accion="read">
+              <RutaPermitida modulo="piezasPpf" accion="read">
                 <PiezasPpfPage />
               </RutaPermitida>
             }

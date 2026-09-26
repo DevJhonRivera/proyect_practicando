@@ -10,17 +10,19 @@ function StatCard({
       bg-white
       rounded-xl
       shadow-md
-      p-5"
+      p-5
+      metric-card"
     >
 
       <div
         className="
         flex
         justify-between
-        items-center"
+        items-center
+        gap-3"
       >
 
-        <div>
+        <div className="min-w-0 flex-1">
 
           <p
             className="
@@ -31,7 +33,7 @@ function StatCard({
 
           <h2
             className="
-            text-3xl
+            metric-value
             font-bold"
           >
             {value}
@@ -41,6 +43,7 @@ function StatCard({
 
         <Icon
           className="
+          shrink-0
           text-blue-600"
         />
 

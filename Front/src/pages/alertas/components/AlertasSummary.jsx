@@ -148,9 +148,9 @@ function Metric({
   valueClassName = "",
 }) {
   return (
-    <div className="flex justify-between border-b border-slate-800 pb-3">
-      <span className="text-slate-300">{label}</span>
-      <strong className={valueClassName}>
+    <div className="flex min-w-0 justify-between gap-3 border-b border-slate-800 pb-3">
+      <span className="min-w-0 text-slate-300">{label}</span>
+      <strong className={`max-w-[55%] break-words text-right ${valueClassName}`}>
         {value}
       </strong>
     </div>

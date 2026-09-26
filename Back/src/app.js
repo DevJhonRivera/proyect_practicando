@@ -1,4 +1,5 @@
 import express from "express"
+import mongoose from "mongoose";
 import morgan from "morgan";
 import cors from "cors"
 import authRoutes from "./modules/auth/auth.routes.js";
@@ -23,10 +24,36 @@ import {
 
 const app = express();
 
-app.use(cors());
+app.disable("x-powered-by");
+
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
+app.use(cors(corsOptions));
 app.use(securityHeaders);
-app.use(morgan("dev"));
+app.use(
+  morgan(
+    process.env.NODE_ENV === "production"
+      ? "combined"
+      : "dev"
+  )
+);
 app.use(express.json({ limit: "1mb" }));
+
+app.get("/api/health", (req, res) => {
+  const databaseConnected =
+    mongoose.connection.readyState === 1;
+
+  res.status(databaseConnected ? 200 : 503).json({
+    success: databaseConnected,
+    service: "Polarizados Ya API",
+    database:
+      databaseConnected ? "connected" : "disconnected",
+    uptimeSeconds:
+      Math.round(process.uptime()),
+  });
+});
 
 app.get("/api", (req, res) => {
   res.json({

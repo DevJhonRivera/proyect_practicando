@@ -65,21 +65,21 @@ function KpiCard({ title, value, icon, color }) {
   const theme = colors[color];
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div className="metric-card relative rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className={`absolute inset-x-0 top-0 h-1 ${theme.accent}`} />
 
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex justify-between items-center gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
             {title}
           </p>
 
-          <h2 className={`mt-2 text-4xl font-black ${theme.text}`}>
+          <h2 className={`metric-value mt-2 font-black ${theme.text}`}>
             {value}
           </h2>
         </div>
 
-        <div className={`rounded-xl p-3 ring-1 ${theme.icon}`}>
+        <div className={`shrink-0 rounded-xl p-3 ring-1 ${theme.icon}`}>
           {icon}
         </div>
       </div>

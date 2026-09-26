@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
 import { createCorte } from "../../../api/cortes.api";
+import { getPiezasPpf } from "../../../api/piezasPpf.api";
 import { getRetazoCompatible } from "../../../api/retazos.api";
 import { cerrarRollo } from "../../../api/rollos.api";
+import { currentMonthRange } from "../../../hooks/useMonthFilter";
 import { initialCorteForm } from "../cortes.constants";
 import {
   showCorteGrandeDialog,
@@ -28,10 +30,18 @@ export function useCortesPage() {
     rollos,
   } = useCortesData();
   const [search, setSearch] = useState("");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
+  const [fechaDesde, setFechaDesde] = useState(
+    () => currentMonthRange().from
+  );
+  const [fechaHasta, setFechaHasta] = useState(
+    () => currentMonthRange().to
+  );
   const [form, setForm] = useState(initialCorteForm);
   const [mantenerDatosCarro, setMantenerDatosCarro] =
+    useState(false);
+  const [piezasPpfCatalogo, setPiezasPpfCatalogo] =
+    useState([]);
+  const [loadingPiezasPpf, setLoadingPiezasPpf] =
     useState(false);
 
   const rollosEnUso = useMemo(
@@ -50,6 +60,98 @@ export function useCortesPage() {
       retazos.find((retazo) => retazo._id === form.retazoId),
     [retazos, form.retazoId]
   );
+
+  const materialSeleccionado =
+    form.origenMaterial === "RETAZO"
+      ? retazoSeleccionado
+      : rolloSeleccionado;
+  const esPpfSeleccionado = Boolean(
+    materialSeleccionado &&
+      (materialSeleccionado.unidadMedida === "NINGUNA" ||
+        String(materialSeleccionado.tipoPolarizado || "")
+          .toUpperCase()
+          .includes("PPF"))
+  );
+
+  useEffect(() => {
+    setForm((actual) => {
+      if (
+        esPpfSeleccionado &&
+        actual.tipoCorte !== "PIEZAS_PPF"
+      ) {
+        return {
+          ...actual,
+          tipoCorte: "PIEZAS_PPF",
+          tipoCorteDetalle: "",
+        };
+      }
+
+      if (
+        !esPpfSeleccionado &&
+        actual.tipoCorte === "PIEZAS_PPF"
+      ) {
+        return {
+          ...actual,
+          tipoCorte: "PANORAMICO",
+          piezasPpf: [],
+        };
+      }
+
+      return actual;
+    });
+  }, [esPpfSeleccionado]);
+
+  useEffect(() => {
+    let active = true;
+    let timer;
+
+    if (
+      !esPpfSeleccionado ||
+      !form.marca.trim() ||
+      !form.modelo.trim()
+    ) {
+      setPiezasPpfCatalogo([]);
+      setLoadingPiezasPpf(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setLoadingPiezasPpf(true);
+    timer = setTimeout(async () => {
+      try {
+        const res = await getPiezasPpf({
+          marca: form.marca,
+          modelo: form.modelo,
+        });
+
+        if (active) {
+          setPiezasPpfCatalogo(
+            res.data?.data || res.data || []
+          );
+        }
+      } catch (error) {
+        console.error(error);
+
+        if (active) {
+          setPiezasPpfCatalogo([]);
+        }
+      } finally {
+        if (active) {
+          setLoadingPiezasPpf(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [
+    esPpfSeleccionado,
+    form.marca,
+    form.modelo,
+  ]);
 
   const vehiculosSugeridos = useMemo(() => {
     const textoPlaca =
@@ -152,6 +254,9 @@ export function useCortesPage() {
           corte.tipoServicio?.toLowerCase().includes(texto) ||
           corte.tipoCorte?.toLowerCase().includes(texto) ||
           corte.tipoCorteDetalle?.toLowerCase().includes(texto) ||
+          corte.piezasPpf?.some((pieza) =>
+            pieza.pieza?.toLowerCase().includes(texto)
+          ) ||
           codigoMaterial.toLowerCase().includes(texto))
       );
     });
@@ -238,6 +343,18 @@ export function useCortesPage() {
       Swal.fire({
         icon: "warning",
         title: "Ingrese el detalle del corte",
+      });
+      return false;
+    }
+
+    if (
+      esPpfSeleccionado &&
+      !form.piezasPpf?.length
+    ) {
+      Swal.fire({
+        icon: "warning",
+        title: "Seleccione las piezas PPF",
+        text: "Agregue al menos una pieza antes de registrar el corte.",
       });
       return false;
     }
@@ -500,7 +617,10 @@ export function useCortesPage() {
     indicadores,
     loading,
     loadingSugerencias,
+    loadingPiezasPpf,
     mantenerDatosCarro,
+    esPpfSeleccionado,
+    piezasPpfCatalogo,
     retazoSeleccionado,
     retazosDisponibles: retazos,
     recargar: cargar,

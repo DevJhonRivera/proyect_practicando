@@ -15,28 +15,28 @@ const router = Router();
 router.get(
   "/",
   authMiddleware,
-  requirePermission("cortes", "read"),
+  requirePermission("piezasPpf", "read"),
   getPiezasPpf
 );
 
 router.post(
   "/",
   authMiddleware,
-  requirePermission("cortes", "write"),
+  requirePermission("piezasPpf", "write"),
   createPiezaPpf
 );
 
 router.put(
   "/:id",
   authMiddleware,
-  requirePermission("cortes", "write"),
+  requirePermission("piezasPpf", "write"),
   updatePiezaPpf
 );
 
 router.delete(
   "/:id",
   authMiddleware,
-  requirePermission("cortes", "delete"),
+  requirePermission("piezasPpf", "delete"),
   deletePiezaPpf
 );
 

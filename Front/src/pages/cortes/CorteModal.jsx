@@ -8,6 +8,21 @@ const mayusculas = (value) =>
 const soloNumeros = (value) =>
   String(value || "").replace(/\D/g, "");
 
+const metrosConDosDecimales = (value) => {
+  const limpio =
+    String(value || "")
+      .replace(",", ".")
+      .replace(/[^0-9.]/g, "");
+  const partes = limpio.split(".");
+  const entero = partes[0] || "";
+
+  if (partes.length === 1) {
+    return entero;
+  }
+
+  return `${entero}.${partes.slice(1).join("").slice(0, 2)}`;
+};
+
 function CorteModal({
   rollo,
   onClose,
@@ -154,16 +169,19 @@ function CorteModal({
         </select>
 
         <input
-          type="number"
+          type="text"
+          inputMode="decimal"
+          pattern="^[0-9]+([.,][0-9]{1,2})?$"
           placeholder="Metros utilizados"
           className="border p-2 w-full mb-3"
           onChange={(e) =>
             setForm({
               ...form,
               metrosUtilizados:
-                e.target.value
+                metrosConDosDecimales(e.target.value)
             })
           }
+          value={form.metrosUtilizados}
         />
 
         <div className="flex justify-end gap-2">

@@ -1,6 +1,8 @@
 export const UNIDAD_PORCENTAJE = "PORCENTAJE";
 export const UNIDAD_MICRAS = "MICRAS";
+export const UNIDAD_PPF = "PPF";
 export const UNIDAD_NINGUNA = "NINGUNA";
+export const MATERIAL_PPF = "PPF";
 
 export const MICRAJES_SEGURIDAD = [
   120,
@@ -16,9 +18,18 @@ export const PORCENTAJES_POLARIZADO = [
   15,
   20,
   22,
+  30,
   35,
   50,
   70,
+];
+export const REFERENCIA_PPF = [
+  "ROAD GUARD",
+  "HALF",
+  "MATE",
+  "SATINADO",
+  "SMOKE 20%",
+  "SMOKE 40%",
 ];
 
 export const materialesCatalogo = [
@@ -27,22 +38,21 @@ export const materialesCatalogo = [
     unidadMedida: UNIDAD_PORCENTAJE,
     opciones: PORCENTAJES_POLARIZADO,
     materiales: [
-      "Nanoceramico",
-      "Blackceramic",
-      "Ceramic I3",
-      "Ceramic I3+",
-    ],
+      "CERAMIC I3 +",
+"CERAMIC I3",
+"CARBON CRYSTALLINE",
+"BLACK CERAMIC",
+"HUPER OPTIK",
+"NANOCERAMICA",
+"NANOCARBON",
+"AMERICANO",    ],
   },
   {
     categoria: "PPF",
     unidadMedida: UNIDAD_NINGUNA,
-    opciones: [
-      0,
-    ],
+    opciones:REFERENCIA_PPF,
     materiales: [
-      "PPF",
-      "PPF Road Guard",
-      "PPF Half",
+      MATERIAL_PPF
     ],
   },
   {
@@ -50,7 +60,19 @@ export const materialesCatalogo = [
     unidadMedida: UNIDAD_MICRAS,
     opciones: MICRAJES_SEGURIDAD,
     materiales: [
-      "Pelicula de seguridad",
+      "PELICULA",
+
+    ],
+  },
+    {
+    categoria: "Clear Plex",
+    unidadMedida: UNIDAD_NINGUNA,
+    opciones: [0],
+    materiales: [
+      "CLEAR PLEX PANORAMICO",
+      "CLEAR PLEX LUNETA"
+,
+
     ],
   },
 ];
@@ -66,9 +88,48 @@ export const materialesOpciones =
   );
 
 export function obtenerMaterial(material) {
+  const materialCatalogo = esMaterialPpf(material)
+    ? MATERIAL_PPF
+    : material;
+
   return materialesOpciones.find(
-    (item) => item.material === material
+    (item) => item.material === materialCatalogo
   );
+}
+
+export function esMaterialPpf(material) {
+  const valor = String(material || "")
+    .trim()
+    .toUpperCase();
+
+  return (
+    valor === MATERIAL_PPF ||
+    valor.startsWith(`${MATERIAL_PPF} - `)
+  );
+}
+
+export function obtenerReferenciaPpf(material) {
+  if (!esMaterialPpf(material)) {
+    return "";
+  }
+
+  const valor = String(material || "")
+    .trim()
+    .toUpperCase();
+
+  return valor.startsWith(`${MATERIAL_PPF} - `)
+    ? valor.slice(`${MATERIAL_PPF} - `.length)
+    : "";
+}
+
+export function materialPpfConReferencia(referencia) {
+  const valor = String(referencia || "")
+    .trim()
+    .toUpperCase();
+
+  return valor
+    ? `${MATERIAL_PPF} - ${valor}`
+    : MATERIAL_PPF;
 }
 
 export function unidadPorMaterial(material) {
@@ -101,7 +162,7 @@ export function sufijoUnidad(unidadMedida) {
   }
 
   return unidadMedida === UNIDAD_MICRAS
-    ? "micras"
+    ? "MICRAS"
     : "%";
 }
 

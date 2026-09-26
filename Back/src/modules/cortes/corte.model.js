@@ -36,6 +36,48 @@ const auditoriaSchema = new mongoose.Schema(
     }
 );
 
+const piezaCortePpfSchema = new mongoose.Schema(
+    {
+        piezaPpfId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "PiezaPpf"
+        },
+        pieza: {
+            type: String,
+            required: true,
+            trim: true,
+            uppercase: true
+        },
+        ubicacion: {
+            type: String,
+            enum: ["EXTERIOR", "INTERIOR"],
+            required: true
+        },
+        cantidad: {
+            type: Number,
+            min: 1,
+            default: 1
+        },
+        anchoCm: {
+            type: Number,
+            min: 0,
+            default: 0
+        },
+        largoCm: {
+            type: Number,
+            min: 0,
+            default: 0
+        },
+        rotada: {
+            type: Boolean,
+            default: false
+        }
+    },
+    {
+        _id: false
+    }
+);
+
 const corteSchema = new mongoose.Schema(
     {
         rolloId: {
@@ -107,6 +149,7 @@ const corteSchema = new mongoose.Schema(
                 "FIJOS",
                 "SUNROOF", 
                 "COMPLETO",
+                "PIEZAS_PPF",
                 "OTROS"
             ]
         },
@@ -121,6 +164,16 @@ const corteSchema = new mongoose.Schema(
             type: Number,
             required: true,
             min:0.05
+        },
+
+        esCortePpf: {
+            type: Boolean,
+            default: false
+        },
+
+        piezasPpf: {
+            type: [piezaCortePpfSchema],
+            default: []
         },
 
         valorVenta: {

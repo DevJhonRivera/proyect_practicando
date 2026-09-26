@@ -13,6 +13,8 @@ import {
 
 import { getUso } from "../../api/rollos.api";
 import ExcelButton from "../../components/ui/ExcelButton";
+import TablePagination from "../../components/ui/TablePagination";
+import { usePagination } from "../../hooks/usePagination";
 import {
   anchoLabel,
   anchoValue,
@@ -120,6 +122,7 @@ function UsoPage() {
       coincideAncho
     );
   });
+  const pagination = usePagination(filtrados);
 
   const totalRollos = filtrados.length;
 
@@ -455,7 +458,7 @@ function UsoPage() {
       {/* TABLA */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/80 p-6">
-          <div>
+          <div className="min-w-0">
           <h2 className="text-lg font-bold text-slate-800">
             Detalle de rollos
           </h2>
@@ -479,7 +482,8 @@ function UsoPage() {
             No hay rollos con los filtros seleccionados.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full min-w-[1020px] text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -496,7 +500,7 @@ function UsoPage() {
               </thead>
 
               <tbody>
-                {filtrados.map((rollo) => {
+                {pagination.pageItems.map((rollo) => {
                   const original = Number(rollo.largoOriginal || 0);
                   const disponible = Number(rollo.largoDisponible || 0);
                   const consumido = original - disponible;
@@ -568,7 +572,9 @@ function UsoPage() {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+            <TablePagination pagination={pagination} />
+          </>
         )}
       </div>
 
@@ -580,27 +586,27 @@ function UsoPage() {
               Promedio consumido por rollo
             </p>
 
-            <h3 className="text-2xl font-bold text-slate-800">
+            <h3 className="metric-value font-bold text-slate-800">
               {formatMetros(promedioConsumo)}
             </h3>
           </div>
 
-          <div>
+          <div className="metric-card">
             <p className="text-sm text-slate-500">
               Metros disponibles filtrados
             </p>
 
-            <h3 className="text-2xl font-bold text-slate-800">
+            <h3 className="metric-value font-bold text-slate-800">
               {formatMetros(metrosDisponibles)}
             </h3>
           </div>
 
-          <div>
+          <div className="metric-card">
             <p className="text-sm text-slate-500">
               Estado del inventario
             </p>
 
-            <h3 className="text-2xl font-bold text-slate-800">
+            <h3 className="metric-value font-bold text-slate-800">
               {alertas.length > 0 ? "Revisar alertas" : "Estable"}
             </h3>
           </div>
@@ -620,19 +626,19 @@ function KpiCard({ title, value, icon, color }) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex justify-between items-center">
-        <div>
+    <div className="metric-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex justify-between items-center gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-slate-500 text-sm">
             {title}
           </p>
 
-          <h2 className="text-2xl font-bold mt-1">
+          <h2 className="metric-value font-bold mt-1">
             {value}
           </h2>
         </div>
 
-        <div className={`p-3 rounded-xl ${colors[color]}`}>
+        <div className={`shrink-0 p-3 rounded-xl ${colors[color]}`}>
           {icon}
         </div>
       </div>

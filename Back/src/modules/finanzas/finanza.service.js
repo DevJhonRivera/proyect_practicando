@@ -3,12 +3,108 @@ import Pedido from "../pedidos/pedido.model.js";
 import DetallePedido from "../pedidos/detallePedido.model.js";
 import Rollo from "../rollos/rollo.model.js";
 import Corte from "../cortes/corte.model.js";
+import Retazo from "../retazos/retazo.model.js";
 
 const roundMoney = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
 const tasaCambio = (moneda, trm) =>
   moneda === "USD" ? Number(trm || 0) : 1;
+
+const calcularRentabilidadCorte = ({
+  valorVenta,
+  costoMaterialCop,
+}) => {
+  const venta = Number(valorVenta || 0);
+  const costo = Number(costoMaterialCop || 0);
+  const utilidad =
+    venta > 0 ? venta - costo : 0;
+
+  return {
+    costoMaterialCop:
+      roundMoney(costo),
+    utilidadBrutaCop:
+      roundMoney(utilidad),
+    margenBrutoPorcentaje:
+      roundMoney(
+        venta > 0
+          ? (utilidad / venta) * 100
+          : 0
+      ),
+  };
+};
+
+const recalcularCortesPorMaterial =
+  async ({ filtro, costoPorMetroCop }) => {
+    const cortes =
+      await Corte.find(filtro);
+
+    await Promise.all(
+      cortes.map(async (corte) => {
+        const costoMaterialCop =
+          Number(costoPorMetroCop || 0) *
+          Number(corte.metrosUtilizados || 0);
+
+        const rentabilidad =
+          calcularRentabilidadCorte({
+            valorVenta:
+              corte.valorVenta,
+            costoMaterialCop,
+          });
+
+        corte.costoMaterialCop =
+          rentabilidad.costoMaterialCop;
+        corte.utilidadBrutaCop =
+          rentabilidad.utilidadBrutaCop;
+        corte.margenBrutoPorcentaje =
+          rentabilidad.margenBrutoPorcentaje;
+
+        await corte.save();
+      })
+    );
+  };
+
+const sincronizarCostosMaterialUsado =
+  async (rollo) => {
+    const costoPorMetroCop =
+      Number(rollo.costoPorMetroCop || 0);
+
+    await recalcularCortesPorMaterial({
+      filtro: {
+        rolloId:
+          rollo._id,
+      },
+      costoPorMetroCop,
+    });
+
+    const retazos =
+      await Retazo.find({
+        origenRolloId:
+          rollo._id,
+      });
+
+    await Promise.all(
+      retazos.map(async (retazo) => {
+        retazo.costoPorMetroCop =
+          roundMoney(costoPorMetroCop);
+        retazo.costoTotalCop =
+          roundMoney(
+            costoPorMetroCop *
+              Number(retazo.largoOriginal || 0)
+          );
+
+        await retazo.save();
+
+        await recalcularCortesPorMaterial({
+          filtro: {
+            retazoId:
+              retazo._id,
+          },
+          costoPorMetroCop,
+        });
+      })
+    );
+  };
 
 const calcularFactorProrrateo = ({
   metodo,
@@ -357,6 +453,7 @@ export const asignarCostosARollos =
               new Date();
 
             await rollo.save();
+            await sincronizarCostosMaterialUsado(rollo);
           })
         );
       })

@@ -3,8 +3,18 @@ import {
   formatoNumero,
 } from "../finanzas.helpers";
 import ExcelButton from "../../../components/ui/ExcelButton";
+import MonthFilter from "../../../components/ui/MonthFilter";
+import TablePagination from "../../../components/ui/TablePagination";
+import { useMonthFilter } from "../../../hooks/useMonthFilter";
+import { usePagination } from "../../../hooks/usePagination";
 
 function CosteosTable({ costeos, onSelectPedido }) {
+  const {
+    filteredItems: costeosDelMes,
+    month,
+    setMonth,
+  } = useMonthFilter(costeos);
+  const pagination = usePagination(costeosDelMes);
   const excelColumns = [
     {
       header: "Pedido",
@@ -46,7 +56,7 @@ function CosteosTable({ costeos, onSelectPedido }) {
 
   return (
     <section className="bg-white rounded-2xl shadow overflow-hidden">
-      <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+      <div className="p-6 border-b border-slate-100 flex flex-wrap items-end justify-between gap-4">
         <h2 className="text-lg font-bold text-slate-800">
           Pedidos costeados
         </h2>
@@ -56,17 +66,19 @@ function CosteosTable({ costeos, onSelectPedido }) {
           fileName="pedidos-costeados"
           sheetName="Finanzas"
           columns={excelColumns}
-          rows={costeos}
+          rows={costeosDelMes}
         />
+        <MonthFilter month={month} onChange={setMonth} />
       </div>
 
-      {costeos.length === 0 ? (
+      {costeosDelMes.length === 0 ? (
         <div className="p-8 text-center text-slate-500">
-          Aun no hay pedidos costeados.
+          No hay pedidos costeados en el periodo seleccionado.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
             <thead className="bg-slate-100 text-slate-600">
               <tr>
                 <th className="p-4 text-left">Pedido</th>
@@ -79,7 +91,7 @@ function CosteosTable({ costeos, onSelectPedido }) {
               </tr>
             </thead>
             <tbody>
-              {costeos.map((costeo) => (
+              {pagination.pageItems.map((costeo) => (
                 <tr
                   key={costeo._id}
                   className="border-t hover:bg-slate-50 cursor-pointer"
@@ -129,8 +141,10 @@ function CosteosTable({ costeos, onSelectPedido }) {
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+          <TablePagination pagination={pagination} />
+        </>
       )}
     </section>
   );

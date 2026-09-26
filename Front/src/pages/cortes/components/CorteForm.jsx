@@ -5,9 +5,11 @@ import {
 } from "react";
 import {
   Car,
+  PackagePlus,
   Plus,
   Scissors,
   Search,
+  Trash2,
 } from "lucide-react";
 
 import {
@@ -24,8 +26,25 @@ const mayusculas = (value) =>
 const soloNumeros = (value) =>
   String(value || "").replace(/\D/g, "");
 
+const metrosConDosDecimales = (value) => {
+  const limpio =
+    String(value || "")
+      .replace(",", ".")
+      .replace(/[^0-9.]/g, "");
+  const partes = limpio.split(".");
+  const entero = partes[0] || "";
+
+  if (partes.length === 1) {
+    return entero;
+  }
+
+  return `${entero}.${partes.slice(1).join("").slice(0, 2)}`;
+};
+
 function CorteForm({
+  esPpfSeleccionado,
   form,
+  loadingPiezasPpf,
   loadingSugerencias,
   mantenerDatosCarro,
   onApplySuggestion,
@@ -33,6 +52,7 @@ function CorteForm({
   onChange,
   onMantenerDatosCarroChange,
   onSubmit,
+  piezasPpfCatalogo,
   retazoSeleccionado,
   retazosDisponibles,
   rolloSeleccionado,
@@ -82,6 +102,7 @@ function CorteForm({
       modelo: soloNumeros,
       instalador: mayusculas,
       tipoCorteDetalle: mayusculas,
+      metrosUtilizados: metrosConDosDecimales,
     };
     const normalizar =
       normalizers[field] || ((input) => input);
@@ -342,62 +363,83 @@ function CorteForm({
           </CampoGuia>
         )}
 
-        <CampoGuia
-          label="Parte del carro"
-          ayuda="Indica que vidrio o zona se corto: panoramico, luneta, puertas, completo, etc."
-        >
-          <select
-            value={form.tipoCorte}
-            onChange={(e) =>
-              updateField("tipoCorte", e.target.value)
+        {esPpfSeleccionado ? (
+          <PiezasPpfSelector
+            loading={loadingPiezasPpf}
+            piezas={piezasPpfCatalogo}
+            seleccionadas={form.piezasPpf || []}
+            marca={form.marca}
+            modelo={form.modelo}
+            onChange={(piezasPpf) =>
+              onChange({
+                ...form,
+                piezasPpf,
+                tipoCorte: "PIEZAS_PPF",
+                tipoCorteDetalle: "",
+              })
             }
-            className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
-          >
-            {Object.entries(tipoCorteLabels).map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              )
+          />
+        ) : (
+          <>
+            <CampoGuia
+              label="Parte del carro"
+              ayuda="Indica que vidrio o zona se corto: panoramico, luneta, puertas, completo, etc."
+            >
+              <select
+                value={form.tipoCorte}
+                onChange={(e) =>
+                  updateField("tipoCorte", e.target.value)
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+              >
+                {Object.entries(tipoCorteLabels)
+                  .filter(([value]) => value !== "PIEZAS_PPF")
+                  .map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+              </select>
+            </CampoGuia>
+
+            {form.tipoCorte === "OTROS" && (
+              <CampoGuia
+                label="Detalle del corte"
+                ayuda="Escribe exactamente que parte del carro se corto. Ej: ALETA DERECHA, VIDRIO CUSTODIA IZQUIERDO."
+              >
+                <input
+                  type="text"
+                  placeholder="Ej: ALETA DERECHA"
+                  value={form.tipoCorteDetalle}
+                  onChange={(e) =>
+                    updateField("tipoCorteDetalle", e.target.value)
+                  }
+                  required
+                  className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                />
+              </CampoGuia>
             )}
-          </select>
-        </CampoGuia>
 
-        {form.tipoCorte === "OTROS" && (
-          <CampoGuia
-            label="Detalle del corte"
-            ayuda="Escribe exactamente que parte del carro se corto. Ej: ALETA DERECHA, VIDRIO CUSTODIA IZQUIERDO."
-          >
-            <input
-              type="text"
-              placeholder="Ej: ALETA DERECHA"
-              value={form.tipoCorteDetalle}
-              onChange={(e) =>
-                updateField("tipoCorteDetalle", e.target.value)
-              }
-              required
-              className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            <CorteSuggestions
+              sugerencias={sugerencias}
+              sugerenciasKey={sugerenciasKey}
+              loading={loadingSugerencias}
+              marca={form.marca}
+              modelo={form.modelo}
+              tipoCorte={form.tipoCorte}
+              onApply={onApplySuggestion}
             />
-          </CampoGuia>
+          </>
         )}
-
-        <CorteSuggestions
-          sugerencias={sugerencias}
-          sugerenciasKey={sugerenciasKey}
-          loading={loadingSugerencias}
-          marca={form.marca}
-          modelo={form.modelo}
-          tipoCorte={form.tipoCorte}
-          onApply={onApplySuggestion}
-        />
 
         <CampoGuia
           label="Metros utilizados"
           ayuda="Cantidad exacta que se corto del rollo. Ej: 1.45."
         >
           <input
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
+            pattern="^[0-9]+([.,][0-9]{1,2})?$"
             placeholder="Ej: 1.45"
             value={form.metrosUtilizados}
             onChange={(e) =>
@@ -428,6 +470,379 @@ function CorteForm({
         </div>
       </form>
     </div>
+  );
+}
+
+function PiezasPpfSelector({
+  loading,
+  marca,
+  modelo,
+  onChange,
+  piezas,
+  seleccionadas,
+}) {
+  const [busqueda, setBusqueda] = useState("");
+  const [mostrarPersonalizada, setMostrarPersonalizada] =
+    useState(false);
+  const [errorPersonalizada, setErrorPersonalizada] =
+    useState("");
+  const [personalizada, setPersonalizada] = useState({
+    pieza: "",
+    ubicacion: "EXTERIOR",
+    anchoCm: "",
+    largoCm: "",
+    cantidad: "1",
+  });
+  const texto = busqueda.trim().toLowerCase();
+  const piezasFiltradas = piezas.filter((pieza) =>
+    [pieza.pieza, pieza.ubicacion]
+      .filter(Boolean)
+      .some((value) =>
+        String(value).toLowerCase().includes(texto)
+      )
+  );
+  const totalUnidades = seleccionadas.reduce(
+    (total, pieza) =>
+      total + Number(pieza.cantidad || 1),
+    0
+  );
+
+  const estaSeleccionada = (pieza) =>
+    seleccionadas.some(
+      (seleccionada) =>
+        String(seleccionada.piezaPpfId || "") ===
+        String(pieza._id)
+    );
+
+  const alternarPieza = (pieza) => {
+    if (estaSeleccionada(pieza)) {
+      onChange(
+        seleccionadas.filter(
+          (seleccionada) =>
+            String(seleccionada.piezaPpfId || "") !==
+            String(pieza._id)
+        )
+      );
+      return;
+    }
+
+    onChange([
+      ...seleccionadas,
+      {
+        piezaPpfId: pieza._id,
+        pieza: pieza.pieza,
+        ubicacion: pieza.ubicacion,
+        anchoCm: Number(pieza.anchoCm || 0),
+        largoCm: Number(pieza.largoCm || 0),
+        cantidad: Number(pieza.cantidad || 1),
+        rotada: false,
+      },
+    ]);
+  };
+
+  const actualizarSeleccionada = (index, cambios) => {
+    onChange(
+      seleccionadas.map((pieza, posicion) =>
+        posicion === index
+          ? {
+              ...pieza,
+              ...cambios,
+            }
+          : pieza
+      )
+    );
+  };
+
+  const agregarPersonalizada = () => {
+    const nombre = personalizada.pieza.trim().toUpperCase();
+    const anchoCm = Number(personalizada.anchoCm || 0);
+    const largoCm = Number(personalizada.largoCm || 0);
+    const cantidad = Number(personalizada.cantidad || 0);
+
+    if (
+      !nombre ||
+      anchoCm <= 0 ||
+      largoCm <= 0 ||
+      !Number.isInteger(cantidad) ||
+      cantidad <= 0
+    ) {
+      setErrorPersonalizada(
+        "Complete nombre, ancho, largo y cantidad."
+      );
+      return;
+    }
+
+    onChange([
+      ...seleccionadas,
+      {
+        claveCliente: `personalizada-${Date.now()}`,
+        pieza: nombre,
+        ubicacion: personalizada.ubicacion,
+        anchoCm,
+        largoCm,
+        cantidad,
+        rotada: false,
+      },
+    ]);
+    setPersonalizada({
+      pieza: "",
+      ubicacion: "EXTERIOR",
+      anchoCm: "",
+      largoCm: "",
+      cantidad: "1",
+    });
+    setErrorPersonalizada("");
+    setMostrarPersonalizada(false);
+  };
+
+  return (
+    <section className="md:col-span-2 xl:col-span-4 border-y border-slate-200 bg-slate-50 px-4 py-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-bold text-slate-900">
+            Piezas incluidas en este corte
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            {marca && modelo
+              ? `${marca} ${modelo}`
+              : "Complete marca y modelo para cargar el catalogo."}
+          </p>
+        </div>
+
+        <div className="text-right text-xs text-slate-500">
+          <p className="font-bold text-slate-800">
+            {totalUnidades} pieza{totalUnidades === 1 ? "" : "s"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,1fr)]">
+        <div>
+          <div className="relative">
+            <Search
+              size={16}
+              className="absolute left-3 top-3.5 text-slate-400"
+            />
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(event) =>
+                setBusqueda(event.target.value)
+              }
+              placeholder="Buscar capot, farola, pantalla..."
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-9 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            />
+          </div>
+
+          <div className="mt-3 max-h-64 overflow-y-auto border-y border-slate-200 bg-white">
+            {loading ? (
+              <p className="p-4 text-sm text-slate-500">
+                Cargando piezas del carro...
+              </p>
+            ) : piezasFiltradas.length === 0 ? (
+              <p className="p-4 text-sm text-slate-500">
+                No hay piezas registradas para esta marca y modelo.
+              </p>
+            ) : (
+              piezasFiltradas.map((pieza) => {
+                const activa = estaSeleccionada(pieza);
+
+                return (
+                  <label
+                    key={pieza._id}
+                    className={`flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 ${
+                      activa ? "bg-blue-50" : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={activa}
+                      onChange={() => alternarPieza(pieza)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-slate-800">
+                        {pieza.pieza}
+                      </span>
+                      <span className="block text-xs text-slate-500">
+                        {pieza.ubicacion} · {Number(pieza.anchoCm || 0)} x {Number(pieza.largoCm || 0)} cm · Cant. {pieza.cantidad || 1}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setMostrarPersonalizada((actual) => !actual)
+            }
+            className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-800"
+          >
+            <PackagePlus size={17} />
+            Agregar pieza personalizada
+          </button>
+
+          {mostrarPersonalizada && (
+            <div className="mt-3 grid gap-2 border-l-2 border-blue-300 pl-3 sm:grid-cols-2">
+              <input
+                type="text"
+                value={personalizada.pieza}
+                onChange={(event) =>
+                  setPersonalizada({
+                    ...personalizada,
+                    pieza: event.target.value.toUpperCase(),
+                  })
+                }
+                placeholder="Nombre de la pieza"
+                className="rounded-lg border border-slate-200 bg-white p-2.5 text-sm uppercase"
+              />
+              <select
+                value={personalizada.ubicacion}
+                onChange={(event) =>
+                  setPersonalizada({
+                    ...personalizada,
+                    ubicacion: event.target.value,
+                  })
+                }
+                className="rounded-lg border border-slate-200 bg-white p-2.5 text-sm"
+              >
+                <option value="EXTERIOR">Exterior</option>
+                <option value="INTERIOR">Interior</option>
+              </select>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={personalizada.anchoCm}
+                onChange={(event) =>
+                  setPersonalizada({
+                    ...personalizada,
+                    anchoCm: event.target.value,
+                  })
+                }
+                placeholder="Ancho cm"
+                className="rounded-lg border border-slate-200 bg-white p-2.5 text-sm"
+              />
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={personalizada.largoCm}
+                onChange={(event) =>
+                  setPersonalizada({
+                    ...personalizada,
+                    largoCm: event.target.value,
+                  })
+                }
+                placeholder="Largo cm"
+                className="rounded-lg border border-slate-200 bg-white p-2.5 text-sm"
+              />
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={personalizada.cantidad}
+                onChange={(event) =>
+                  setPersonalizada({
+                    ...personalizada,
+                    cantidad: event.target.value,
+                  })
+                }
+                placeholder="Cantidad"
+                className="rounded-lg border border-slate-200 bg-white p-2.5 text-sm"
+              />
+              <button
+                type="button"
+                onClick={agregarPersonalizada}
+                className="rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+              >
+                Agregar pieza
+              </button>
+              {errorPersonalizada && (
+                <p className="text-xs font-semibold text-red-600 sm:col-span-2">
+                  {errorPersonalizada}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase text-slate-500">
+            Seleccionadas
+          </p>
+          {seleccionadas.length === 0 ? (
+            <div className="border-y border-dashed border-slate-300 py-6 text-center text-sm text-slate-500">
+              Seleccione una o varias piezas.
+            </div>
+          ) : (
+            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {seleccionadas.map((pieza, index) => (
+                <div
+                  key={pieza.piezaPpfId || pieza.claveCliente || `${pieza.pieza}-${index}`}
+                  className="grid grid-cols-[minmax(0,1fr)_72px_34px] items-center gap-2 rounded-lg border border-slate-200 bg-white p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-800">
+                      {pieza.pieza}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {pieza.ubicacion} · {pieza.anchoCm || 0} x {pieza.largoCm || 0} cm
+                    </p>
+                    <label className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(pieza.rotada)}
+                        onChange={(event) =>
+                          actualizarSeleccionada(index, {
+                            rotada: event.target.checked,
+                          })
+                        }
+                      />
+                      Rotada
+                    </label>
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={pieza.cantidad || 1}
+                    onChange={(event) =>
+                      actualizarSeleccionada(index, {
+                        cantidad: Math.max(
+                          1,
+                          Number(event.target.value || 1)
+                        ),
+                      })
+                    }
+                    aria-label={`Cantidad de ${pieza.pieza}`}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-center text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onChange(
+                        seleccionadas.filter(
+                          (_, posicion) => posicion !== index
+                        )
+                      )
+                    }
+                    title="Quitar pieza"
+                    aria-label={`Quitar ${pieza.pieza}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 

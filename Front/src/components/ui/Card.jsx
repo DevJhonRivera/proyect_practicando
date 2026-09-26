@@ -8,7 +8,8 @@ function Card({
       bg-white
       rounded-xl
       shadow
-      p-6"
+      p-6
+      metric-card"
     >
 
       <p
@@ -20,7 +21,7 @@ function Card({
 
       <h2
         className="
-        text-3xl
+        metric-value
         font-bold"
       >
         {value}

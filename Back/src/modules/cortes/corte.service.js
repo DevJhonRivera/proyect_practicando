@@ -1,17 +1,44 @@
+import mongoose from "mongoose";
 import Corte from "./corte.model.js";
 import Rollo from "../rollos/rollo.model.js";
+import PiezaPpf from "../piezasPpf/piezaPpf.model.js";
 import { crearAlerta }
 from "../alertas/alerta.service.js";
 import {
   REMANENTE_MINIMO_UTIL,
   consumirRetazo,
 } from "../retazos/retazo.service.js";
+import {
+  esMaterialPpf,
+  prepararPiezasPpf,
+} from "./cortePpf.utils.js";
 
 const roundMoney = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
 const roundMeters = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
+const validarMetrosDosDecimales = (value) => {
+  const texto =
+    String(value ?? "").trim().replace(",", ".");
+
+  if (!/^\d+(\.\d{1,2})?$/.test(texto)) {
+    throw new Error(
+      "Los metros utilizados deben tener maximo 2 decimales"
+    );
+  }
+
+  const numero = Number(texto);
+
+  if (!Number.isFinite(numero) || numero <= 0) {
+    throw new Error(
+      "Ingrese los metros utilizados"
+    );
+  }
+
+  return numero;
+};
 
 const normalizarTexto = (value) =>
   String(value || "").trim();
@@ -106,6 +133,122 @@ const prepararDatosVehiculo = (data) => {
   };
 };
 
+const resolverPiezasPpf = async ({
+  piezas = [],
+  marca,
+  modelo,
+  session,
+}) => {
+  const idsSeleccionados =
+    piezas
+      .map((pieza) =>
+        String(pieza.piezaPpfId || pieza._id || "")
+      )
+      .filter(Boolean);
+
+  if (
+    new Set(idsSeleccionados).size !==
+    idsSeleccionados.length
+  ) {
+    throw new Error(
+      "Una pieza PPF no puede agregarse dos veces; aumente su cantidad"
+    );
+  }
+
+  const ids = [
+    ...new Set(
+      idsSeleccionados
+    ),
+  ];
+  const piezasCatalogo = ids.length
+    ? await PiezaPpf.find({
+        _id: { $in: ids },
+        activa: { $ne: false },
+      }).session(session)
+    : [];
+
+  if (piezasCatalogo.length !== ids.length) {
+    throw new Error(
+      "Una de las piezas PPF seleccionadas ya no esta disponible"
+    );
+  }
+
+  const catalogoPorId = new Map(
+    piezasCatalogo.map((pieza) => [
+      String(pieza._id),
+      pieza,
+    ])
+  );
+  const piezasResueltas = piezas.map((seleccion) => {
+    const id = String(
+      seleccion.piezaPpfId || seleccion._id || ""
+    );
+
+    if (!id) {
+      return seleccion;
+    }
+
+    const pieza = catalogoPorId.get(id);
+
+    if (
+      normalizarMayusculas(pieza.marca) !==
+        normalizarMayusculas(marca) ||
+      soloNumeros(pieza.modelo) !== soloNumeros(modelo)
+    ) {
+      throw new Error(
+        `${pieza.pieza} no pertenece a la marca y modelo seleccionados`
+      );
+    }
+
+    return {
+      piezaPpfId: pieza._id,
+      pieza: pieza.pieza,
+      ubicacion: pieza.ubicacion,
+      anchoCm: pieza.anchoCm,
+      largoCm: pieza.largoCm,
+      cantidad:
+        Number(seleccion.cantidad || pieza.cantidad || 1),
+      rotada:
+        Boolean(seleccion.rotada),
+    };
+  });
+
+  return prepararPiezasPpf(piezasResueltas);
+};
+
+const prepararDetallePpf = async ({
+  material,
+  corteData,
+  session,
+}) => {
+  if (!esMaterialPpf(material)) {
+    return {
+      esCortePpf: false,
+      piezasPpf: [],
+    };
+  }
+
+  const piezas = await resolverPiezasPpf({
+    piezas: corteData.piezasPpf,
+    marca: corteData.marca,
+    modelo: corteData.modelo,
+    session,
+  });
+
+  if (!piezas.length) {
+    throw new Error(
+      "Seleccione al menos una pieza para el corte PPF"
+    );
+  }
+
+  return {
+    esCortePpf: true,
+    tipoCorte: "PIEZAS_PPF",
+    tipoCorteDetalle: "",
+    piezasPpf: piezas,
+  };
+};
+
 const calcularRentabilidad = ({
   valorVenta,
   costoMaterialCop,
@@ -143,6 +286,8 @@ const calcularRentabilidad = ({
 
 export const registrarCorte =
   async (data, user) => {
+    const metrosUtilizados =
+      validarMetrosDosDecimales(data.metrosUtilizados);
     const datosVehiculo =
       prepararDatosVehiculo(data);
 
@@ -156,7 +301,7 @@ export const registrarCorte =
       tipoCorteDetalle:
         prepararDetalleTipoCorte(data),
       metrosUtilizados:
-        roundMeters(data.metrosUtilizados),
+        roundMeters(metrosUtilizados),
     };
 
     if (
@@ -168,138 +313,190 @@ export const registrarCorte =
       );
     }
 
-    if (data.retazoId) {
-      const retazo =
-        await consumirRetazo(
-          corteData.retazoId,
+    const session =
+      await mongoose.startSession();
+    let corteCreado;
+    let rolloConStockBajo;
+
+    try {
+      await session.withTransaction(async () => {
+        if (data.retazoId) {
+          const retazo =
+            await consumirRetazo(
+              corteData.retazoId,
+              corteData.metrosUtilizados,
+              { session }
+            );
+
+          const rentabilidad =
+            calcularRentabilidad({
+              valorVenta:
+                corteData.valorVenta,
+              costoMaterialCop:
+                Number(retazo.costoPorMetroCop || 0) *
+                Number(corteData.metrosUtilizados || 0),
+            });
+          const detallePpf =
+            await prepararDetallePpf({
+              material: retazo,
+              corteData,
+              session,
+            });
+
+          [corteCreado] = await Corte.create(
+            [
+              {
+                ...corteData,
+                ...rentabilidad,
+                ...detallePpf,
+                retazoId: retazo._id,
+                rolloId: undefined,
+                origenMaterial: "RETAZO",
+                auditoria: [
+                  entradaAuditoria({
+                    accion: "CREACION",
+                    descripcion: "Corte registrado",
+                    user,
+                    cambios: {
+                      metrosUtilizados:
+                        corteData.metrosUtilizados,
+                      costoMaterialCop:
+                        rentabilidad.costoMaterialCop,
+                      piezasPpf:
+                        detallePpf.piezasPpf.length,
+                    },
+                  }),
+                ],
+              },
+            ],
+            { session }
+          );
+
+          return;
+        }
+
+        const rollo =
+          await Rollo.findById(
+            corteData.rolloId
+          ).session(session);
+
+        if (!rollo) {
+          throw new Error(
+            "Rollo no encontrado"
+          );
+        }
+
+        if (rollo.estado !== "USO") {
+          throw new Error(
+            "El rollo no está en uso"
+          );
+        }
+
+        if (
+          rollo.largoDisponible <
           corteData.metrosUtilizados
+        ) {
+          throw new Error(
+            "Material insuficiente"
+          );
+        }
+
+        rollo.largoDisponible =
+          roundMeters(
+            Number(rollo.largoDisponible || 0) -
+              Number(corteData.metrosUtilizados || 0)
+          );
+
+        let remanenteDescartado = 0;
+
+        if (
+          corteData.agotarRemanente &&
+          rollo.largoDisponible > 0 &&
+          rollo.largoDisponible <=
+            REMANENTE_MINIMO_UTIL
+        ) {
+          remanenteDescartado =
+            roundMeters(rollo.largoDisponible);
+          rollo.largoDisponible = 0;
+          rollo.estado = "AGOTADO";
+        }
+
+        if (rollo.largoDisponible <= 0) {
+          rollo.estado = "AGOTADO";
+        }
+
+        await rollo.save({ session });
+
+        const rentabilidad =
+          calcularRentabilidad({
+            valorVenta:
+              corteData.valorVenta,
+            costoMaterialCop:
+              Number(rollo.costoPorMetroCop || 0) *
+              Number(corteData.metrosUtilizados || 0),
+          });
+        const detallePpf =
+          await prepararDetallePpf({
+            material: rollo,
+            corteData,
+            session,
+          });
+
+        [corteCreado] = await Corte.create(
+          [
+            {
+              ...corteData,
+              ...rentabilidad,
+              ...detallePpf,
+              origenMaterial: "ROLLO",
+              remanenteDescartado,
+              auditoria: [
+                entradaAuditoria({
+                  accion: "CREACION",
+                  descripcion: "Corte registrado",
+                  user,
+                  cambios: {
+                    metrosUtilizados:
+                      corteData.metrosUtilizados,
+                    costoMaterialCop:
+                      rentabilidad.costoMaterialCop,
+                    piezasPpf:
+                      detallePpf.piezasPpf.length,
+                  },
+                }),
+              ],
+            },
+          ],
+          { session }
         );
 
-      const rentabilidad =
-        calcularRentabilidad({
-          valorVenta:
-            corteData.valorVenta,
-          costoMaterialCop:
-            Number(retazo.costoPorMetroCop || 0) *
-            Number(corteData.metrosUtilizados || 0),
-        });
-
-      return await Corte.create({
-        ...corteData,
-        ...rentabilidad,
-        retazoId: retazo._id,
-        rolloId: undefined,
-        origenMaterial: "RETAZO",
-        auditoria: [
-          entradaAuditoria({
-            accion: "CREACION",
-            descripcion: "Corte registrado",
-            user,
-            cambios: {
-              metrosUtilizados:
-                corteData.metrosUtilizados,
-              costoMaterialCop:
-                rentabilidad.costoMaterialCop,
-            },
-          }),
-        ],
+        if (rollo.largoDisponible <= 3) {
+          rolloConStockBajo = {
+            _id: rollo._id,
+            codigoRollo: rollo.codigoRollo,
+          };
+        }
       });
+    } finally {
+      await session.endSession();
     }
 
-    const rollo =
-      await Rollo.findById(
-        corteData.rolloId
-      );
-
-    if (!rollo) {
-      throw new Error(
-        "Rollo no encontrado"
-      );
+    if (rolloConStockBajo) {
+      try {
+        await crearAlerta(
+          "ROLLO_BAJO",
+          `El rollo ${rolloConStockBajo.codigoRollo} tiene menos de 3 metros`,
+          rolloConStockBajo._id
+        );
+      } catch (error) {
+        console.error(
+          "No fue posible crear la alerta de stock bajo",
+          error
+        );
+      }
     }
 
-    if (rollo.estado !== "USO") {
-      throw new Error(
-        "El rollo no está en uso"
-      );
-    }
-
-    if (
-      rollo.largoDisponible <
-      corteData.metrosUtilizados
-    ) {
-      throw new Error(
-        "Material insuficiente"
-      );
-    }
-
-    rollo.largoDisponible =
-      roundMeters(
-        Number(rollo.largoDisponible || 0) -
-          Number(corteData.metrosUtilizados || 0)
-      );
-
-    let remanenteDescartado = 0;
-
-    if (
-      corteData.agotarRemanente &&
-      rollo.largoDisponible > 0 &&
-          rollo.largoDisponible <=
-        REMANENTE_MINIMO_UTIL
-    ) {
-      remanenteDescartado =
-        roundMeters(rollo.largoDisponible);
-      rollo.largoDisponible = 0;
-      rollo.estado = "AGOTADO";
-    }
-
-    if (
-      rollo.largoDisponible <= 0
-    ) {
-      rollo.estado = "AGOTADO";
-    }
-
-    await rollo.save();
-
-    const rentabilidad =
-      calcularRentabilidad({
-        valorVenta:
-          corteData.valorVenta,
-        costoMaterialCop:
-          Number(rollo.costoPorMetroCop || 0) *
-          Number(corteData.metrosUtilizados || 0),
-      });
-
-    const corte = await Corte.create({
-      ...corteData,
-      ...rentabilidad,
-      origenMaterial: "ROLLO",
-      remanenteDescartado,
-      auditoria: [
-        entradaAuditoria({
-          accion: "CREACION",
-          descripcion: "Corte registrado",
-          user,
-          cambios: {
-            metrosUtilizados:
-              corteData.metrosUtilizados,
-            costoMaterialCop:
-              rentabilidad.costoMaterialCop,
-          },
-        }),
-      ],
-    });
-
-    if (
-      rollo.largoDisponible <= 3
-    ) {
-      await crearAlerta(
-        "ROLLO_BAJO",
-        `El rollo ${rollo.codigoRollo} tiene menos de 3 metros`,
-        rollo._id
-      );
-    }
-
-    return corte;
+    return corteCreado;
   };
 
 

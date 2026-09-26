@@ -20,6 +20,32 @@ const roundMeters = (value) =>
 
 export const registrarRollo = async (data) => {
 
+  const largoOriginal = roundMeters(
+    data.largoOriginal
+  );
+  const tieneLargoDisponible =
+    data.largoDisponible !== undefined &&
+    data.largoDisponible !== null &&
+    data.largoDisponible !== "";
+  const largoDisponible = tieneLargoDisponible
+    ? roundMeters(data.largoDisponible)
+    : largoOriginal;
+
+  if (largoOriginal <= 0) {
+    throw new Error(
+      "Ingrese un largo original valido"
+    );
+  }
+
+  if (
+    largoDisponible <= 0 ||
+    largoDisponible > largoOriginal
+  ) {
+    throw new Error(
+      "El largo disponible debe ser mayor a cero y no puede superar el largo original"
+    );
+  }
+
   // Buscar pedido
   const pedido = await Pedido.findOne({
     codigoPedido: data.codigoPedido,
@@ -133,8 +159,8 @@ export const registrarRollo = async (data) => {
       unidadMedida,
       pedidoId: pedido._id,
       estado: "RESERVA",
-      largoDisponible:
-        data.largoOriginal,
+      largoOriginal,
+      largoDisponible,
     });
 
   const costeo =
@@ -219,6 +245,17 @@ async (id) => {
   ) {
     throw new Error(
       "El rollo está agotado"
+    );
+  }
+
+  const tieneCostoAsignado =
+    Boolean(rollo.costeoPedidoId) &&
+    Number(rollo.costoUnitarioCop || 0) > 0 &&
+    Number(rollo.costoPorMetroCop || 0) > 0;
+
+  if (!tieneCostoAsignado) {
+    throw new Error(
+      "Este rollo todavía no tiene costo. Debe costear el pedido antes de pasarlo a uso"
     );
   }
 

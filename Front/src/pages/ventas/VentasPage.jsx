@@ -21,6 +21,10 @@ import {
   updateEstadoVenta,
 } from "../../api/ventas.api";
 import ExcelButton from "../../components/ui/ExcelButton";
+import MonthFilter from "../../components/ui/MonthFilter";
+import TablePagination from "../../components/ui/TablePagination";
+import { useMonthFilter } from "../../hooks/useMonthFilter";
+import { usePagination } from "../../hooks/usePagination";
 import { etiquetaDetalle } from "../../utils/materiales";
 
 const formatoCop = new Intl.NumberFormat("es-CO", {
@@ -95,6 +99,11 @@ function VentasPage() {
     useState(itemManualInicial);
   const [vistaVentas, setVistaVentas] =
     useState("cortes");
+  const {
+    filteredItems: ventasDelMes,
+    month: mesVentas,
+    setMonth: setMesVentas,
+  } = useMonthFilter(ventas);
 
   const cargar = async () => {
     try {
@@ -156,7 +165,7 @@ function VentasPage() {
   const ventasFiltradas = useMemo(() => {
     const texto = search.toLowerCase();
 
-    return ventas.filter((venta) => {
+    return ventasDelMes.filter((venta) => {
       const cliente =
         venta.cliente?.nombre || "";
       const placa =
@@ -170,7 +179,8 @@ function VentasPage() {
         codigo.toLowerCase().includes(texto)
       );
     });
-  }, [ventas, search]);
+  }, [ventasDelMes, search]);
+  const paginationVentas = usePagination(ventasFiltradas);
 
   const subtotal = form.items.reduce(
     (acc, item) =>
@@ -816,7 +826,7 @@ function VentasPage() {
                       {grupoActual.cortes
                         .map(
                           (corte) =>
-                            `${labelTipoCorte(corte.tipoCorte)}: ${formatoMetros(corte.metrosUtilizados)}`
+                            `${descripcionCorteVenta(corte)}: ${formatoMetros(corte.metrosUtilizados)}`
                         )
                         .join(" | ")}
                     </p>
@@ -964,7 +974,7 @@ function VentasPage() {
                 <p className="text-sm text-slate-500">
                   Subtotal: <strong>{formatoCop.format(subtotal)}</strong>
                 </p>
-                <p className="text-2xl font-bold text-blue-700">
+                <p className="metric-value font-bold text-blue-700">
                   Total: {formatoCop.format(total)}
                 </p>
               </div>
@@ -999,18 +1009,24 @@ function VentasPage() {
                 </p>
               </div>
             </div>
-            <div className="relative">
-              <Search
-                size={18}
-                className="absolute left-3 top-3.5 text-slate-400"
-              />
-              <input
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Buscar cliente, placa o venta..."
-                className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div className="relative">
+                <Search
+                  size={18}
+                  className="absolute left-3 top-3.5 text-slate-400"
+                />
+                <input
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Buscar cliente, placa o venta..."
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                />
+              </div>
+              <MonthFilter
+                month={mesVentas}
+                onChange={setMesVentas}
               />
             </div>
           </div>
@@ -1021,7 +1037,7 @@ function VentasPage() {
                 No hay ventas registradas.
               </div>
             ) : (
-              ventasFiltradas.map((venta) => (
+              paginationVentas.pageItems.map((venta) => (
                 <VentaCard
                   key={venta._id}
                   venta={venta}
@@ -1031,6 +1047,7 @@ function VentasPage() {
               ))
             )}
           </div>
+          <TablePagination pagination={paginationVentas} />
         </section>
       )}
     </div>
@@ -1276,7 +1293,7 @@ function VerificacionCortesAgrupada({
                     )}
 
                     <td className="p-3">
-                      {corte.tipoCorte || "-"}
+                      {descripcionCorteVenta(corte)}
                     </td>
                     <td className="p-3 text-right font-semibold text-slate-700">
                       {formatoCop.format(costoMaterialCorte(corte))}
@@ -1353,11 +1370,11 @@ function VerificacionCortesAgrupada({
 
 function ResumenVenta({ label, value, color }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+    <div className="metric-card rounded-xl border border-slate-200 bg-slate-50/70 p-4">
       <p className="text-sm text-slate-500">
         {label}
       </p>
-      <p className={`text-3xl font-bold ${color}`}>
+      <p className={`metric-value font-bold ${color}`}>
         {value}
       </p>
     </div>
@@ -1503,7 +1520,9 @@ function ItemCortesRelacionados({ item }) {
     <span className="block text-xs text-slate-400 mt-0.5">
       Cortes: {cortes
         .map((corte) =>
-          corte?.tipoCorte || corte?._id || corte
+          corte?.tipoCorte
+            ? descripcionCorteVenta(corte)
+            : corte?._id || corte
         )
         .join(", ")}
     </span>
@@ -1586,6 +1605,7 @@ function labelTipoCorte(tipoCorte) {
     FIJOS: "Fijos",
     SUNROOF: "Sunroof",
     COMPLETO: "Completo",
+    PIEZAS_PPF: "Piezas PPF",
     OTROS: "Otros",
   };
 
@@ -1594,9 +1614,24 @@ function labelTipoCorte(tipoCorte) {
 
 function partesGrupoCorte(grupo) {
   return grupo.cortes
-    .map((corte) => labelTipoCorte(corte.tipoCorte))
+    .map(descripcionCorteVenta)
     .filter(Boolean)
     .join(", ");
+}
+
+function descripcionCorteVenta(corte) {
+  if (corte?.esCortePpf || corte?.tipoCorte === "PIEZAS_PPF") {
+    const piezas = (corte.piezasPpf || [])
+      .map(
+        (pieza) =>
+          `${pieza.pieza} x${pieza.cantidad || 1}`
+      )
+      .join(", ");
+
+    return piezas || "Piezas PPF";
+  }
+
+  return labelTipoCorte(corte?.tipoCorte);
 }
 
 function textoOpcionGrupoCorte(grupo) {

@@ -131,9 +131,15 @@ export const buscarRetazoCompatible =
   };
 
 export const consumirRetazo =
-  async (id, metrosUtilizados) => {
+  async (
+    id,
+    metrosUtilizados,
+    { session } = {}
+  ) => {
     const retazo =
-      await Retazo.findById(id);
+      await Retazo.findById(id).session(
+        session || null
+      );
 
     if (!retazo) {
       throw new Error("Retazo no encontrado");
@@ -173,7 +179,7 @@ export const consumirRetazo =
       retazo.estado = "USADO";
     }
 
-    await retazo.save();
+    await retazo.save({ session });
 
     return retazo;
   };

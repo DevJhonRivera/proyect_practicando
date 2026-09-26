@@ -27,6 +27,13 @@ import { cerrarSesion as cerrarSesionUsuario } from "../../utils/session";
 function Sidebar() {
   const navigate = useNavigate();
   const usuario = obtenerUsuarioActual();
+  const iniciales = String(usuario?.nombre || "U")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((parte) => parte.charAt(0))
+    .join("")
+    .toUpperCase();
   const rolLabel =
     usuario?.rol === "SUPERUSUARIO"
       ? "Superusuario"
@@ -139,7 +146,7 @@ function Sidebar() {
           icon: Car,
           text: "Piezas PPF",
           url: "/piezas-ppf",
-          modulo: "cortes",
+          modulo: "piezasPpf",
           accion: "read",
         },
       ],
@@ -188,62 +195,55 @@ function Sidebar() {
       className="
       w-full
       lg:w-72
-      lg:min-h-screen
-      bg-[#07111f]
+      lg:h-screen
+      lg:min-h-0
+      lg:overflow-hidden
+      bg-slate-950
       text-white
       flex
       flex-col
       shrink-0
       border-r
-      border-slate-800"
+      border-white/[0.08]
+      shadow-xl
+      shadow-slate-950/10"
     >
       <div
         className="
-        p-4
-        lg:p-5
+        px-4
+        py-4
+        shrink-0
         border-b
-        border-white/10"
+        border-white/[0.08]"
       >
-        <div
-          className="
-          bg-white
-          rounded-xl
-          p-3
-          shadow-lg
-          shadow-black/20"
-        >
-          <img
-            src={logo}
-            alt="Polarizados YA"
-            className="
-            w-full
-            h-14
-            lg:h-20
-            object-contain"
-          />
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-[4.5rem] shrink-0 items-center justify-center rounded-lg bg-white px-2 shadow-sm shadow-black/20">
+            <img
+              src={logo}
+              alt="Polarizados YA"
+              className="h-10 w-full object-contain"
+            />
+          </div>
+
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-bold leading-tight text-white">
+              Polarizados YA
+            </h1>
+            <p className="mt-0.5 truncate text-xs text-slate-400">
+              Control operativo
+            </p>
+          </div>
         </div>
 
-        <div className="mt-3 lg:mt-4">
-          <h2 className="text-lg font-bold leading-tight">
-            Control operativo
-          </h2>
-
-          <p className="text-sm text-slate-400">
-            Compras, inventario y cortes
-          </p>
-
-          <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-            <p className="text-xs uppercase text-slate-500">
-              Sesion activa
+        <div className="mt-4 flex items-center gap-3 border-t border-white/[0.08] pt-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200 ring-1 ring-inset ring-blue-400/20">
+            {iniciales}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-100">
+              {usuario?.nombre || "Usuario"}
             </p>
-            <div className="mt-1 flex items-center justify-between gap-3">
-              <span className="truncate text-sm font-semibold text-slate-100">
-                {usuario?.nombre || "Usuario"}
-              </span>
-              <span className="shrink-0 rounded-full bg-blue-500/15 px-2 py-1 text-[11px] font-bold text-blue-200">
-                {rolLabel}
-              </span>
-            </div>
+            <p className="mt-0.5 text-xs text-slate-500">{rolLabel}</p>
           </div>
         </div>
       </div>
@@ -251,13 +251,15 @@ function Sidebar() {
       <nav
         className="
         lg:flex-1
+        min-h-0
         overflow-y-auto
+        overscroll-contain
         max-h-[60vh]
         lg:max-h-none
-        p-3
-        lg:p-4
-        space-y-4
-        lg:space-y-6"
+        px-3
+        py-4
+        space-y-5
+        sidebar-scroll"
       >
         {menusPermitidos.map((group) => (
           <div key={group.section}>
@@ -265,11 +267,11 @@ function Sidebar() {
               className="
               text-xs
               uppercase
-              tracking-wider
-              text-slate-500
+              tracking-[0.08em]
+              text-slate-600
               font-semibold
-              mb-2
-              px-3"
+              mb-1.5
+              px-2.5"
             >
               {group.section}
             </p>
@@ -287,25 +289,26 @@ function Sidebar() {
                       flex
                       items-center
                       gap-3
-                      px-4
-                      py-3
+                      min-h-10
+                      px-3
+                      py-2
                       rounded-lg
-                      transition
+                      transition-colors
+                      duration-150
                       text-sm
                       font-medium
-                      border
-                      border-transparent
+                      relative
 
                       ${
                         isActive
-                          ? "bg-white text-slate-950 shadow-lg shadow-black/20"
-                          : "text-slate-300 hover:bg-white/[0.06] hover:text-white hover:border-white/10"
+                          ? "bg-blue-500/15 text-white shadow-sm shadow-black/10 before:absolute before:left-0 before:h-5 before:w-0.5 before:rounded-full before:bg-blue-400"
+                          : "text-slate-400 hover:bg-white/[0.05] hover:text-slate-100"
                       }
                     `
                     }
                   >
-                    <Icon size={19} />
-                    <span>{item.text}</span>
+                    <Icon size={18} strokeWidth={1.9} className="shrink-0" />
+                    <span className="truncate">{item.text}</span>
                   </NavLink>
                 );
               })}
@@ -317,9 +320,9 @@ function Sidebar() {
       <div
         className="
         p-3
-        lg:p-4
+        shrink-0
         border-t
-        border-white/10"
+        border-white/[0.08]"
       >
         <button
           onClick={cerrarSesion}
@@ -328,27 +331,22 @@ function Sidebar() {
           flex
           items-center
           gap-3
-          px-4
-          py-3
+          min-h-10
+          px-3
+          py-2
           rounded-lg
-          text-slate-300
-          hover:bg-red-600
-          hover:text-white
-          transition
+          text-slate-400
+          hover:bg-red-500/10
+          hover:text-red-300
+          transition-colors
           text-sm
           font-medium"
         >
-          <LogOut size={20} />
+          <LogOut size={18} strokeWidth={1.9} />
           Cerrar sesion
         </button>
 
-        <p
-          className="
-          text-xs
-          text-slate-600
-          mt-4
-          text-center"
-        >
+        <p className="mt-2 px-3 text-[10px] text-slate-700">
           Polarizados YA 2026
         </p>
       </div>

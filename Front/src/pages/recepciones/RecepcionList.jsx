@@ -18,6 +18,10 @@ import {
 } from "../../api/recepciones.api";
 import { getPedidos } from "../../api/pedidos.api";
 import ExcelButton from "../../components/ui/ExcelButton";
+import MonthFilter from "../../components/ui/MonthFilter";
+import TablePagination from "../../components/ui/TablePagination";
+import { useMonthFilter } from "../../hooks/useMonthFilter";
+import { usePagination } from "../../hooks/usePagination";
 import {
   anchoLabel,
   anchoValue,
@@ -49,6 +53,11 @@ const largosRolloOpciones = [
 function RecepcionList() {
   const [data, setData] =
     useState([]);
+  const {
+    filteredItems: recepcionesDelMes,
+    month: mesRecepciones,
+    setMonth: setMesRecepciones,
+  } = useMonthFilter(data);
 
   const [loading, setLoading] =
     useState(true);
@@ -84,6 +93,7 @@ function RecepcionList() {
       unidadMedida: "PORCENTAJE",
       ancho: "",
       largoOriginal: "",
+      largoDisponible: "",
     });
 
   const cargar =
@@ -251,6 +261,7 @@ function RecepcionList() {
           ? anchoValue(primerDetalle.ancho)
           : anchoValue(anchosPulgadas[0].value),
       largoOriginal: "",
+      largoDisponible: "",
     });
   };
 
@@ -368,6 +379,13 @@ function RecepcionList() {
     async () => {
       try {
         const unidadActual = unidadDetalle(rolloForm);
+        const largoOriginal = Number(
+          rolloForm.largoOriginal
+        );
+        const largoDisponible =
+          rolloForm.largoDisponible === ""
+            ? largoOriginal
+            : Number(rolloForm.largoDisponible);
         const requerido = [
           "codigoPedido",
           "detalleKey",
@@ -397,6 +415,21 @@ function RecepcionList() {
           });
         }
 
+        if (
+          !Number.isFinite(largoOriginal) ||
+          largoOriginal <= 0 ||
+          !Number.isFinite(largoDisponible) ||
+          largoDisponible <= 0 ||
+          largoDisponible > largoOriginal
+        ) {
+          return Swal.fire({
+            icon: "warning",
+            title: "Revise el largo del rollo",
+            text:
+              "Los metros disponibles deben ser mayores a cero y no pueden superar el largo original.",
+          });
+        }
+
         await clasificarRolloRecepcion(
           clasificarRecepcion._id,
           {
@@ -412,9 +445,8 @@ function RecepcionList() {
             ancho:
               Number(rolloForm.ancho),
             largoOriginal:
-              Number(
-                rolloForm.largoOriginal
-              ),
+              largoOriginal,
+            largoDisponible,
           }
         );
 
@@ -465,6 +497,7 @@ function RecepcionList() {
         item.estado !==
         "COMPLETADA"
     ).length;
+  const pagination = usePagination(recepcionesDelMes);
 
   const pedidosPendientes =
     pedidos.filter(
@@ -606,7 +639,7 @@ function RecepcionList() {
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-hidden">
-        <div className="p-6 border-b flex items-center justify-between gap-4">
+        <div className="p-6 border-b flex flex-wrap items-end justify-between gap-4">
           <h2 className="font-bold text-lg">
             Historial de entradas
           </h2>
@@ -616,7 +649,11 @@ function RecepcionList() {
             fileName="recepciones"
             sheetName="Entradas"
             columns={recepcionesExcelColumns}
-            rows={data}
+            rows={recepcionesDelMes}
+          />
+          <MonthFilter
+            month={mesRecepciones}
+            onChange={setMesRecepciones}
           />
         </div>
 
@@ -624,7 +661,7 @@ function RecepcionList() {
           <div className="p-10 text-center">
             Cargando...
           </div>
-        ) : data.length === 0 ? (
+        ) : recepcionesDelMes.length === 0 ? (
           <div className="p-10 text-center">
             <Package
               size={60}
@@ -632,11 +669,12 @@ function RecepcionList() {
             />
 
             <p className="mt-4 text-slate-500">
-              No existen recepciones registradas
+              No existen recepciones en el periodo seleccionado
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-100">
                 <tr>
@@ -662,7 +700,7 @@ function RecepcionList() {
               </thead>
 
               <tbody>
-                {data.map((item) => (
+                {pagination.pageItems.map((item) => (
                   <tr
                     key={item._id}
                     className="border-b hover:bg-slate-50"
@@ -743,7 +781,9 @@ function RecepcionList() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+            <TablePagination pagination={pagination} />
+          </>
         )}
       </div>
 
@@ -930,7 +970,7 @@ function RecepcionList() {
                 </select>
               </Field>
 
-              <Field label="Largo">
+              <Field label="Largo original">
                 <div className="space-y-3">
                   <select
                     value={
@@ -995,6 +1035,24 @@ function RecepcionList() {
                   )}
                 </div>
               </Field>
+
+              <Field label="Largo disponible actual">
+                <input
+                  type="number"
+                  min="0.01"
+                  max={rolloForm.largoOriginal || undefined}
+                  step="0.01"
+                  placeholder="Vacío si el rollo está completo"
+                  value={rolloForm.largoDisponible}
+                  onChange={(e) =>
+                    setRolloForm({
+                      ...rolloForm,
+                      largoDisponible: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg p-3"
+                />
+              </Field>
             </div>
 
             <Actions
@@ -1046,16 +1104,16 @@ function detalleKey(detalle) {
 
 function Stat({ icon, label, value, color }) {
   return (
-    <div className="bg-white rounded-xl shadow p-5">
+    <div className="metric-card bg-white rounded-xl shadow p-5">
       <div className="flex items-center gap-3">
-        <div className={color}>
+        <div className={`shrink-0 ${color}`}>
           {icon}
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-slate-500">
             {label}
           </p>
-          <h2 className="text-3xl font-bold">
+          <h2 className="metric-value font-bold">
             {value}
           </h2>
         </div>

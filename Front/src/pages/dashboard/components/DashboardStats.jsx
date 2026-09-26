@@ -67,14 +67,14 @@ function DashboardStats({ indicadores }) {
         return (
           <article
             key={card.titulo}
-            className={`rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${card.borde}`}
+            className={`metric-card rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${card.borde}`}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-500">
                   {card.titulo}
                 </p>
-                <p className="mt-2 max-w-full break-all text-2xl font-bold leading-tight text-slate-950 sm:text-[1.65rem] xl:text-2xl 2xl:text-xl">
+                <p className="metric-value mt-2 font-bold text-slate-950">
                   {card.valor}
                 </p>
                 <p className="mt-3 text-sm text-slate-500">

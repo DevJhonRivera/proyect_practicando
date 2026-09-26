@@ -19,6 +19,8 @@ import {
   getPermisosRoles,
   updatePermisosRol,
 } from "../../api/roles.api";
+import TablePagination from "../../components/ui/TablePagination";
+import { usePagination } from "../../hooks/usePagination";
 import { obtenerUsuarioActual } from "../../utils/permisos";
 
 const rolesUsuario = [
@@ -77,6 +79,12 @@ const modulosConfigurables = [
     key: "cortes",
     label: "Cortes",
     permisos: ["cortes:*"],
+  },
+  {
+    key: "piezasPpf",
+    label: "Piezas PPF",
+    permisos: ["piezasPpf:*"],
+    roles: ["ADMIN", "INVENTARIO"],
   },
   {
     key: "ventas",
@@ -143,6 +151,7 @@ function UsuariosPage() {
       ),
     [usuarios]
   );
+  const pagination = usePagination(usuariosOrdenados);
 
   const cargarUsuarios = async () => {
     try {
@@ -454,7 +463,8 @@ function UsuariosPage() {
               Cargando usuarios...
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-100 text-slate-600">
                   <tr>
@@ -465,7 +475,7 @@ function UsuariosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {usuariosOrdenados.map((usuario) => (
+                  {pagination.pageItems.map((usuario) => (
                     <tr
                       key={usuario._id}
                       className="border-t hover:bg-slate-50"
@@ -517,7 +527,9 @@ function UsuariosPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+              <TablePagination pagination={pagination} />
+            </>
           )}
         </section>
       </div>

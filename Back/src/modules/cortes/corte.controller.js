@@ -38,6 +38,8 @@ const ocultarCostosCorte = (corte) => {
 
   delete data.costoMaterialCop;
   delete data.utilidadCop;
+  delete data.utilidadBrutaCop;
+  delete data.margenBrutoPorcentaje;
   data.rolloId = limpiarCostosMaterial(data.rolloId);
   data.retazoId = limpiarCostosMaterial(data.retazoId);
 

@@ -29,11 +29,11 @@ function FinanzasStats({ resumen }) {
 
 function Stat({ label, value }) {
   return (
-    <div className="bg-white rounded-2xl shadow p-5">
+    <div className="metric-card bg-white rounded-2xl shadow p-5">
       <p className="text-slate-500 text-sm">
         {label}
       </p>
-      <h2 className="text-2xl font-bold mt-1 text-slate-800">
+      <h2 className="metric-value font-bold mt-1 text-slate-800">
         {value}
       </h2>
     </div>

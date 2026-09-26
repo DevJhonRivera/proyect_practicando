@@ -11,6 +11,8 @@ import {
 
 import { updatePedido } from "../../../api/pedidos.api";
 import ExcelButton from "../../../components/ui/ExcelButton";
+import TablePagination from "../../../components/ui/TablePagination";
+import { usePagination } from "../../../hooks/usePagination";
 import {
   anchoLabel,
   anchoValue,
@@ -20,14 +22,21 @@ import {
   etiquetaClasificacion,
   etiquetaDetalle,
   etiquetaUnidad,
+  esMaterialPpf,
+  MATERIAL_PPF,
+  materialPpfConReferencia,
   materialesCatalogo,
+  obtenerMaterial,
+  obtenerReferenciaPpf,
   opcionesPorMaterial,
+  REFERENCIA_PPF,
   sufijoUnidad,
   UNIDAD_NINGUNA,
   unidadPorMaterial,
 } from "../../../utils/materiales";
 
 function PedidoTable({ pedidos, onRefresh }) {
+  const pagination = usePagination(pedidos);
   const [viewPedido, setViewPedido] =
     useState(null);
 
@@ -138,6 +147,11 @@ function PedidoTable({ pedidos, onRefresh }) {
           unidadMedida === UNIDAD_NINGUNA
             ? 0
             : "";
+      } else if (field === "referenciaPpf") {
+        detalle.tipoPolarizado =
+          materialPpfConReferencia(value);
+        detalle.unidadMedida = UNIDAD_NINGUNA;
+        detalle.porcentaje = 0;
       } else {
         detalle[field] = value;
       }
@@ -241,6 +255,10 @@ function PedidoTable({ pedidos, onRefresh }) {
         editForm.detalles.find(
           (detalle) =>
             !detalle.tipoPolarizado ||
+            (esMaterialPpf(detalle.tipoPolarizado) &&
+              !obtenerReferenciaPpf(
+                detalle.tipoPolarizado
+              )) ||
             detalle.porcentaje === "" ||
             detalle.porcentaje === null ||
             detalle.porcentaje === undefined ||
@@ -371,7 +389,7 @@ function PedidoTable({ pedidos, onRefresh }) {
             </thead>
 
             <tbody>
-              {pedidos.map((pedido) => (
+              {pagination.pageItems.map((pedido) => (
                 <tr
                   key={pedido._id}
                   className="border-t border-slate-200 transition hover:bg-slate-50"
@@ -478,6 +496,7 @@ function PedidoTable({ pedidos, onRefresh }) {
             </tbody>
           </table>
         </div>
+        <TablePagination pagination={pagination} />
       </div>
 
       {viewPedido && (
@@ -596,6 +615,27 @@ function PedidoTable({ pedidos, onRefresh }) {
                         opcionesPorMaterial(
                           detalle.tipoPolarizado
                         );
+                      const materialEsPpf = esMaterialPpf(
+                        detalle.tipoPolarizado
+                      );
+                      const materialCatalogado =
+                        Boolean(
+                          obtenerMaterial(
+                            detalle.tipoPolarizado
+                          )
+                        );
+                      const clasificacionCatalogada =
+                        opcionesClasificacion.some(
+                          (opcion) =>
+                            Number(opcion) ===
+                            Number(detalle.porcentaje)
+                        );
+                      const anchoCatalogado =
+                        anchosPulgadas.some(
+                          (opcion) =>
+                            anchoValue(opcion.value) ===
+                            anchoValue(detalle.ancho)
+                        );
 
                       return (
                         <tr
@@ -604,7 +644,11 @@ function PedidoTable({ pedidos, onRefresh }) {
                         >
                           <td className="p-3 min-w-48">
                             <select
-                              value={detalle.tipoPolarizado}
+                              value={
+                                materialEsPpf
+                                  ? MATERIAL_PPF
+                                  : detalle.tipoPolarizado
+                              }
                               disabled={tieneRecibidos}
                               onChange={(event) =>
                                 actualizarDetalleEdicion(
@@ -618,6 +662,15 @@ function PedidoTable({ pedidos, onRefresh }) {
                               <option value="">
                                 Seleccione...
                               </option>
+
+                              {!materialCatalogado &&
+                                detalle.tipoPolarizado && (
+                                  <option
+                                    value={detalle.tipoPolarizado}
+                                  >
+                                    {detalle.tipoPolarizado}
+                                  </option>
+                                )}
 
                               {materialesCatalogo.map((grupo) => (
                                 <optgroup
@@ -638,7 +691,36 @@ function PedidoTable({ pedidos, onRefresh }) {
                           </td>
 
                           <td className="p-3 min-w-40">
-                            {unidadMedida === UNIDAD_NINGUNA ? (
+                            {materialEsPpf ? (
+                              <select
+                                value={obtenerReferenciaPpf(
+                                  detalle.tipoPolarizado
+                                )}
+                                disabled={tieneRecibidos}
+                                onChange={(event) =>
+                                  actualizarDetalleEdicion(
+                                    index,
+                                    "referenciaPpf",
+                                    event.target.value
+                                  )
+                                }
+                                className="w-full border rounded-lg p-2 disabled:bg-slate-100"
+                              >
+                                <option value="">
+                                  Seleccione referencia...
+                                </option>
+                                {REFERENCIA_PPF.map(
+                                  (referencia) => (
+                                    <option
+                                      key={referencia}
+                                      value={referencia}
+                                    >
+                                      {referencia}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            ) : unidadMedida === UNIDAD_NINGUNA ? (
                               <div className="border rounded-lg p-2 bg-slate-100 text-slate-500">
                                 Sin clasificacion
                               </div>
@@ -658,6 +740,15 @@ function PedidoTable({ pedidos, onRefresh }) {
                                 <option value="">
                                   {etiquetaUnidad(unidadMedida)}
                                 </option>
+
+                                {!clasificacionCatalogada && (
+                                  <option value={detalle.porcentaje}>
+                                    {etiquetaClasificacion(
+                                      detalle.porcentaje,
+                                      unidadMedida
+                                    )}
+                                  </option>
+                                )}
 
                                 {opcionesClasificacion.map(
                                   (item) => (
@@ -689,6 +780,12 @@ function PedidoTable({ pedidos, onRefresh }) {
                               }
                               className="w-full border rounded-lg p-2 disabled:bg-slate-100"
                             >
+                              {!anchoCatalogado && (
+                                <option value={anchoValue(detalle.ancho)}>
+                                  {anchoLabel(detalle.ancho)}
+                                </option>
+                              )}
+
                               {anchosPulgadas.map((item) => (
                                 <option
                                   key={item.value}

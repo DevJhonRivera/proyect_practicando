@@ -16,6 +16,8 @@ import {
   updatePiezaPpf,
 } from "../../api/piezasPpf.api";
 import ExcelButton from "../../components/ui/ExcelButton";
+import TablePagination from "../../components/ui/TablePagination";
+import { usePagination } from "../../hooks/usePagination";
 
 const piezasExteriores = [
   "PUERTAS",
@@ -80,7 +82,10 @@ function PiezasPpfPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
+  const [filtroMarca, setFiltroMarca] = useState("TODAS");
+  const [filtroModelo, setFiltroModelo] = useState("TODOS");
   const [filtroUbicacion, setFiltroUbicacion] = useState("TODAS");
+  const [mantenerCarro, setMantenerCarro] = useState(false);
   const [form, setForm] = useState(formInicial);
 
   const cargar = async () => {
@@ -168,6 +173,24 @@ function PiezasPpfPage() {
     setEditingId(null);
   };
 
+  const limpiarPiezaManteniendoCarro = () => {
+    setForm((actual) => ({
+      ...formInicial,
+      marca:
+        actual.marca,
+      modelo:
+        actual.modelo,
+      ubicacion:
+        actual.ubicacion || "EXTERIOR",
+    }));
+    setEditingId(null);
+  };
+
+  const finalizarCarro = () => {
+    setMantenerCarro(false);
+    limpiar();
+  };
+
   const guardar = async (event) => {
     event.preventDefault();
 
@@ -210,11 +233,19 @@ function PiezasPpfPage() {
         title: editingId
           ? "Pieza actualizada"
           : "Pieza guardada",
+        text:
+          mantenerCarro && !editingId
+            ? "Marca y modelo quedan listos para agregar otra pieza."
+            : undefined,
         timer: 1500,
         showConfirmButton: false,
       });
 
-      limpiar();
+      if (mantenerCarro && !editingId) {
+        limpiarPiezaManteniendoCarro();
+      } else {
+        limpiar();
+      }
       await cargar();
     } catch (error) {
       Swal.fire({
@@ -287,10 +318,43 @@ function PiezasPpfPage() {
     await cargar();
   };
 
+  const marcasDisponibles = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          piezas.map((pieza) => pieza.marca).filter(Boolean)
+        )
+      ).sort(),
+    [piezas]
+  );
+
+  const modelosDisponibles = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          piezas
+            .filter(
+              (pieza) =>
+                filtroMarca === "TODAS" ||
+                pieza.marca === filtroMarca
+            )
+            .map((pieza) => pieza.modelo)
+            .filter(Boolean)
+        )
+      ).sort((a, b) => Number(b) - Number(a)),
+    [filtroMarca, piezas]
+  );
+
   const filtradas = useMemo(() => {
     const texto = search.trim().toLowerCase();
 
     return piezas.filter((pieza) => {
+      const coincideMarca =
+        filtroMarca === "TODAS" ||
+        pieza.marca === filtroMarca;
+      const coincideModelo =
+        filtroModelo === "TODOS" ||
+        pieza.modelo === filtroModelo;
       const coincideUbicacion =
         filtroUbicacion === "TODAS" ||
         pieza.ubicacion === filtroUbicacion;
@@ -305,11 +369,19 @@ function PiezasPpfPage() {
         .toLowerCase();
 
       return (
+        coincideMarca &&
+        coincideModelo &&
         coincideUbicacion &&
         (!texto || contenido.includes(texto))
       );
     });
-  }, [filtroUbicacion, piezas, search]);
+  }, [
+    filtroMarca,
+    filtroModelo,
+    filtroUbicacion,
+    piezas,
+    search,
+  ]);
 
   const marcasModelos = new Set(
     piezas.map((pieza) => `${pieza.marca}-${pieza.modelo}`)
@@ -318,6 +390,7 @@ function PiezasPpfPage() {
     filtradas.filter((pieza) => pieza.ubicacion === "EXTERIOR").length;
   const interiores =
     filtradas.filter((pieza) => pieza.ubicacion === "INTERIOR").length;
+  const pagination = usePagination(filtradas);
 
   const excelColumns = [
     {
@@ -396,6 +469,41 @@ function PiezasPpfPage() {
             onSubmit={guardar}
             className="space-y-4"
           >
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-bold text-slate-900">
+                    Varias piezas del mismo carro
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Conserva marca y modelo despues de guardar cada pieza.
+                  </p>
+                </div>
+
+                <label className="inline-flex cursor-pointer items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-blue-100">
+                  <input
+                    type="checkbox"
+                    checked={mantenerCarro}
+                    onChange={(event) =>
+                      setMantenerCarro(event.target.checked)
+                    }
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                  />
+                  Mantener carro
+                </label>
+              </div>
+
+              {mantenerCarro && (
+                <button
+                  type="button"
+                  onClick={finalizarCarro}
+                  className="mt-3 rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50"
+                >
+                  Finalizar carro
+                </button>
+              )}
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Marca">
                 <input
@@ -587,7 +695,7 @@ function PiezasPpfPage() {
             />
           </div>
 
-          <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[1fr_180px]">
+          <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[1fr_160px_150px_150px]">
             <div className="relative">
               <Search
                 size={18}
@@ -600,6 +708,41 @@ function PiezasPpfPage() {
                 className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
               />
             </div>
+
+            <select
+              value={filtroMarca}
+              onChange={(event) => {
+                setFiltroMarca(event.target.value);
+                setFiltroModelo("TODOS");
+              }}
+              className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            >
+              <option value="TODAS">
+                Todas las marcas
+              </option>
+              {marcasDisponibles.map((marca) => (
+                <option key={marca} value={marca}>
+                  {marca}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={filtroModelo}
+              onChange={(event) =>
+                setFiltroModelo(event.target.value)
+              }
+              className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            >
+              <option value="TODOS">
+                Todos modelos
+              </option>
+              {modelosDisponibles.map((modelo) => (
+                <option key={modelo} value={modelo}>
+                  {modelo}
+                </option>
+              ))}
+            </select>
 
             <select
               value={filtroUbicacion}
@@ -625,7 +768,8 @@ function PiezasPpfPage() {
               No hay piezas PPF con esos filtros.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              <div className="overflow-x-auto">
               <table className="w-full min-w-[860px] text-sm">
                 <thead className="bg-slate-900 text-xs uppercase text-slate-200">
                   <tr>
@@ -639,7 +783,7 @@ function PiezasPpfPage() {
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                  {filtradas.map((pieza) => (
+                  {pagination.pageItems.map((pieza) => (
                     <tr
                       key={pieza._id}
                       className="hover:bg-slate-50"
@@ -706,7 +850,9 @@ function PiezasPpfPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+              <TablePagination pagination={pagination} />
+            </>
           )}
         </section>
       </div>
@@ -736,11 +882,11 @@ function Header() {
 
 function StatCard({ label, value }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="metric-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
         {label}
       </p>
-      <p className="mt-2 text-3xl font-black text-slate-900">
+      <p className="metric-value mt-2 font-black text-slate-900">
         {value}
       </p>
     </div>

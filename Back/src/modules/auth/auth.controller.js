@@ -1,4 +1,8 @@
 import {registerUser,loginUser} from "./auth.service.js";
+import {
+  limpiarIntentosLogin,
+  registrarLoginFallido,
+} from "../../middlewares/security.middleware.js";
 
 export const register = async (req,res) => {
   try {
@@ -21,8 +25,13 @@ export const login = async (req,res) => {
       password
     );
 
+    limpiarIntentosLogin(req);
+
+    res.setHeader("Cache-Control", "no-store");
     res.json(result);
   } catch (error) {
+    registrarLoginFallido(req);
+
     res.status(401).json({
       message: error.message
     });

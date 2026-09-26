@@ -43,7 +43,9 @@ export const anchoLabel = (value) => {
     (item) => normalizarAncho(item.value) === ancho
   );
 
-  return option ? option.label : `${ancho}"`;
+  return option
+    ? option.label
+    : `${Math.round(ancho / 0.0254)}"`;
 };
 
 export const anchoValue = (value) =>

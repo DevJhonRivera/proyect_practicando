@@ -62,7 +62,7 @@ function CosteoResultado({ costeo }) {
               <p className="text-sm text-slate-500">
                 Total final
               </p>
-              <p className="text-3xl font-bold text-blue-700">
+              <p className="metric-value font-bold text-blue-700">
                 {formatoCop.format(costeo.totalCop || 0)}
               </p>
             </div>

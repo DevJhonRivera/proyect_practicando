@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Corte from "../cortes/corte.model.js";
 import {
   cerrarAlertaVentaPendiente,
@@ -170,25 +171,48 @@ const prepararItems = (items = []) =>
     };
   });
 
-const actualizarCortesVendidos = async (items, venta, user) => {
-  await Promise.all(
-    items
-      .filter((item) => item.corteId || item.corteIds?.length)
-      .map(async (item) => {
-        const corteIds =
-          item.corteIds?.length
-            ? item.corteIds
-            : [item.corteId];
+const actualizarCortesVendidos = async (
+  items,
+  venta,
+  user,
+  session = null
+) => {
+  const itemsConCortes = items.filter(
+    (item) => item.corteId || item.corteIds?.length
+  );
+
+  for (const item of itemsConCortes) {
+        const corteIds = [
+          ...new Set(
+            item.corteIds?.length
+              ? item.corteIds
+              : [item.corteId]
+          ),
+        ];
 
         const cortes =
           await Corte.find({
             _id: {
               $in: corteIds,
             },
-          });
+          }).session(session);
 
-        if (!cortes.length) {
-          return;
+        if (cortes.length !== corteIds.length) {
+          throw new Error(
+            "Uno de los cortes seleccionados ya no existe"
+          );
+        }
+
+        const corteVendido = cortes.find(
+          (corte) =>
+            corte.ventaId &&
+            String(corte.ventaId) !== String(venta._id)
+        );
+
+        if (corteVendido) {
+          throw new Error(
+            "Uno de los cortes seleccionados ya pertenece a otra venta"
+          );
         }
 
         const costoTotal =
@@ -198,8 +222,7 @@ const actualizarCortesVendidos = async (items, venta, user) => {
             0
           );
 
-        await Promise.all(
-          cortes.map(async (corte) => {
+        for (const corte of cortes) {
             const factor =
               costoTotal > 0
                 ? Number(corte.costoMaterialCop || 0) / costoTotal
@@ -251,15 +274,18 @@ const actualizarCortesVendidos = async (items, venta, user) => {
                       },
                     }),
                 },
-              }
+              },
+              { session }
             );
-          })
-        );
-      })
-  );
+        }
+  }
 };
 
-const limpiarCortesVenta = async (items = [], user) => {
+const limpiarCortesVenta = async (
+  items = [],
+  user,
+  session = null
+) => {
   const corteIds = normalizarIds(
     items.flatMap((item) => [
       item.corteId,
@@ -297,7 +323,8 @@ const limpiarCortesVenta = async (items = [], user) => {
             user,
           }),
       },
-    }
+    },
+    { session }
   );
 };
 
@@ -349,6 +376,19 @@ const prepararVenta = async (data, ventaActual = null) => {
 
   const items =
     prepararItems(data.items);
+
+  const idsCortes = normalizarIds(
+    items.flatMap((item) => [
+      item.corteId,
+      ...(item.corteIds || []),
+    ])
+  );
+
+  if (new Set(idsCortes).size !== idsCortes.length) {
+    throw new Error(
+      "Un mismo corte no puede agregarse mas de una vez a la venta"
+    );
+  }
 
   const itemConCorte =
     items.find((item) => item.corteId || item.corteIds?.length);
@@ -429,27 +469,46 @@ const prepararVenta = async (data, ventaActual = null) => {
 export const crearVenta = async (data, user) => {
   const ventaData =
     await prepararVenta(data);
-
-  const venta =
-    await Venta.create({
-      ...ventaData,
-      auditoria: [
-        entradaAuditoria({
-          accion: "CREACION",
-          descripcion: "Venta registrada",
-          user,
-          cambios: {
-            total:
-              ventaData.total,
-            estado:
-              ventaData.estado,
-          },
-        }),
-      ],
-    });
+  const session =
+    await mongoose.startSession();
+  let venta;
 
   try {
-    await actualizarCortesVendidos(ventaData.items, venta, user);
+    await session.withTransaction(async () => {
+      [venta] = await Venta.create(
+        [
+          {
+            ...ventaData,
+            auditoria: [
+              entradaAuditoria({
+                accion: "CREACION",
+                descripcion: "Venta registrada",
+                user,
+                cambios: {
+                  total:
+                    ventaData.total,
+                  estado:
+                    ventaData.estado,
+                },
+              }),
+            ],
+          },
+        ],
+        { session }
+      );
+
+      await actualizarCortesVendidos(
+        ventaData.items,
+        venta,
+        user,
+        session
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  try {
     await sincronizarAlertaVenta(venta);
   } catch (error) {
     await registrarErrorPostVenta(venta, error);
@@ -482,68 +541,80 @@ export const actualizarEstadoVenta =
       throw new Error("Venta no encontrada");
     }
 
-    const venta =
-      await Venta.findByIdAndUpdate(
-        id,
-        {
-          $set: {
-            estado,
-          },
-          $push: {
-            auditoria:
-              entradaAuditoria({
-                accion: "CAMBIO_ESTADO",
-                descripcion:
-                  `Estado cambiado a ${estado}`,
-                user,
-                cambios: {
-                  estado: {
-                    antes:
-                      ventaActual.estado,
-                    despues:
-                      estado,
-                  },
-                },
-              }),
-          },
-        },
-        {
-          new: true,
-          runValidators: true,
-        }
-      );
+    const session =
+      await mongoose.startSession();
+    let venta;
 
     try {
-      await Corte.updateMany(
-        {
-          ventaId:
-            venta._id,
-        },
-        {
-          $set: {
-            ventaEstado:
-              venta.estado,
-          },
-          $push: {
-            auditoria:
-              entradaAuditoria({
-                accion: "CAMBIO_ESTADO_VENTA",
-                descripcion:
-                  `Estado de venta cambiado a ${venta.estado}`,
-                user,
-                cambios: {
-                  estado: {
-                    antes:
-                      ventaActual.estado,
-                    despues:
-                      venta.estado,
-                  },
-                },
-              }),
-          },
-        }
-      );
+      await session.withTransaction(async () => {
+        venta =
+          await Venta.findByIdAndUpdate(
+            id,
+            {
+              $set: {
+                estado,
+              },
+              $push: {
+                auditoria:
+                  entradaAuditoria({
+                    accion: "CAMBIO_ESTADO",
+                    descripcion:
+                      `Estado cambiado a ${estado}`,
+                    user,
+                    cambios: {
+                      estado: {
+                        antes:
+                          ventaActual.estado,
+                        despues:
+                          estado,
+                      },
+                    },
+                  }),
+              },
+            },
+            {
+              new: true,
+              runValidators: true,
+              session,
+            }
+          );
 
+        await Corte.updateMany(
+          {
+            ventaId:
+              venta._id,
+          },
+          {
+            $set: {
+              ventaEstado:
+                venta.estado,
+            },
+            $push: {
+              auditoria:
+                entradaAuditoria({
+                  accion: "CAMBIO_ESTADO_VENTA",
+                  descripcion:
+                    `Estado de venta cambiado a ${venta.estado}`,
+                  user,
+                  cambios: {
+                    estado: {
+                      antes:
+                        ventaActual.estado,
+                      despues:
+                        venta.estado,
+                    },
+                  },
+                }),
+            },
+          },
+          { session }
+        );
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    try {
       await sincronizarAlertaVenta(venta);
     } catch (error) {
       await registrarErrorPostVenta(venta, error);
@@ -564,34 +635,56 @@ export const actualizarVenta = async (id, data, user) => {
     await prepararVenta(data, ventaActual);
   const cambios =
     cambiosVenta(ventaActual, ventaData);
-
-  await limpiarCortesVenta(ventaActual.items, user);
-
-  const venta =
-    await Venta.findByIdAndUpdate(
-      id,
-      {
-        $set: ventaData,
-        $push: {
-          auditoria:
-            entradaAuditoria({
-              accion: "EDICION",
-              descripcion: "Venta editada",
-              user,
-              cambios,
-            }),
-        },
-      },
-      {
-        new: true,
-        runValidators: true,
-      }
-    )
-      .populate("items.corteId")
-      .populate("items.corteIds");
+  const session =
+    await mongoose.startSession();
+  let venta;
 
   try {
-    await actualizarCortesVendidos(ventaData.items, venta, user);
+    await session.withTransaction(async () => {
+      await limpiarCortesVenta(
+        ventaActual.items,
+        user,
+        session
+      );
+
+      venta =
+        await Venta.findByIdAndUpdate(
+          id,
+          {
+            $set: ventaData,
+            $push: {
+              auditoria:
+                entradaAuditoria({
+                  accion: "EDICION",
+                  descripcion: "Venta editada",
+                  user,
+                  cambios,
+                }),
+            },
+          },
+          {
+            new: true,
+            runValidators: true,
+            session,
+          }
+        );
+
+      await actualizarCortesVendidos(
+        ventaData.items,
+        venta,
+        user,
+        session
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  venta = await Venta.findById(venta._id)
+    .populate("items.corteId")
+    .populate("items.corteIds");
+
+  try {
     await sincronizarAlertaVenta(venta);
   } catch (error) {
     await registrarErrorPostVenta(venta, error);

@@ -14,6 +14,8 @@ import {
   getRetazos,
 } from "../../api/retazos.api";
 import ExcelButton from "../../components/ui/ExcelButton";
+import TablePagination from "../../components/ui/TablePagination";
+import { usePagination } from "../../hooks/usePagination";
 import {
   anchoLabel,
   anchoValue,
@@ -186,6 +188,7 @@ function RetazosPage() {
           : acc,
       0
     );
+  const pagination = usePagination(retazos);
 
   const excelColumns = [
     {
@@ -295,7 +298,8 @@ function RetazosPage() {
             No hay retazos registrados.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -309,7 +313,7 @@ function RetazosPage() {
                 </tr>
               </thead>
               <tbody>
-                {retazos.map((retazo) => (
+                {pagination.pageItems.map((retazo) => (
                   <tr
                     key={retazo._id}
                     className="border-t border-slate-200 hover:bg-slate-50"
@@ -347,7 +351,9 @@ function RetazosPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+            <TablePagination pagination={pagination} />
+          </>
         )}
       </div>
 
@@ -542,11 +548,11 @@ function RetazosPage() {
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="metric-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <p className="text-slate-500 text-sm">
         {label}
       </p>
-      <h2 className="text-3xl font-bold mt-1">
+      <h2 className="metric-value font-bold mt-1">
         {value}
       </h2>
     </div>

@@ -2,13 +2,45 @@ import { getCorsOrigins, isProduction } from "../config/security.js";
 
 const loginAttempts = new Map();
 const WINDOW_MS = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 10;
+
+const loginAttemptKey = (req) => {
+  const forwardedFor = String(
+    req.headers["x-forwarded-for"] || ""
+  )
+    .split(",")[0]
+    .trim();
+  const ip = req.ip || forwardedFor || "unknown";
+  const correo = String(req.body?.correo || "")
+    .trim()
+    .toLowerCase();
+
+  return `${ip}:${correo || "sin-correo"}`;
+};
+
+const activeAttempt = (req) => {
+  const key = loginAttemptKey(req);
+  const attempt = loginAttempts.get(key);
+
+  if (
+    attempt &&
+    Date.now() - attempt.firstAttemptAt >= WINDOW_MS
+  ) {
+    loginAttempts.delete(key);
+    return { key, attempt: null };
+  }
+
+  return { key, attempt };
+};
 
 export const corsOptions = {
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  maxAge: 86400,
   origin(origin, callback) {
     const allowed = getCorsOrigins();
 
-    if (!origin && !isProduction) {
+    if (!origin) {
       return callback(null, true);
     }
 
@@ -29,36 +61,51 @@ export const securityHeaders = (req, res, next) => {
     "camera=(), microphone=(), geolocation=()"
   );
 
+  if (isProduction) {
+    res.setHeader(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains"
+    );
+  }
+
   next();
 };
 
 export const loginRateLimiter = (req, res, next) => {
-  const key =
-    req.ip || req.headers["x-forwarded-for"] || "unknown";
-  const now = Date.now();
-  const current =
-    loginAttempts.get(key) || {
-      count: 0,
-      firstAttemptAt: now,
-    };
+  const { attempt } = activeAttempt(req);
 
-  if (now - current.firstAttemptAt > WINDOW_MS) {
-    loginAttempts.set(key, {
-      count: 1,
-      firstAttemptAt: now,
-    });
-    return next();
-  }
+  if (attempt?.count >= MAX_ATTEMPTS) {
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil(
+        (WINDOW_MS -
+          (Date.now() - attempt.firstAttemptAt)) /
+          1000
+      )
+    );
 
-  if (current.count >= MAX_ATTEMPTS) {
+    res.setHeader("Retry-After", retryAfterSeconds);
+
     return res.status(429).json({
       message:
-        "Demasiados intentos de inicio de sesion. Intente nuevamente en unos minutos.",
+        "Demasiados intentos fallidos. Espere unos minutos antes de intentar nuevamente.",
+      retryAfterSeconds,
     });
   }
 
-  current.count += 1;
-  loginAttempts.set(key, current);
-
   next();
+};
+
+export const registrarLoginFallido = (req) => {
+  const { key, attempt } = activeAttempt(req);
+
+  loginAttempts.set(key, {
+    count: Number(attempt?.count || 0) + 1,
+    firstAttemptAt:
+      attempt?.firstAttemptAt || Date.now(),
+  });
+};
+
+export const limpiarIntentosLogin = (req) => {
+  loginAttempts.delete(loginAttemptKey(req));
 };

@@ -16,6 +16,7 @@ import Swal from "sweetalert2";
 import { getCortes } from "../../api/cortes.api";
 import { getVentas } from "../../api/ventas.api";
 import ExcelButton from "../../components/ui/ExcelButton";
+import { currentMonthRange } from "../../hooks/useMonthFilter";
 import { etiquetaDetalle } from "../../utils/materiales";
 
 const formatoCop = new Intl.NumberFormat("es-CO", {
@@ -65,8 +66,12 @@ function AuditoriaPage() {
   const [filtro, setFiltro] = useState("TODOS");
   const [materialFiltro, setMaterialFiltro] = useState("TODOS");
   const [tipoTrabajo, setTipoTrabajo] = useState("TODOS");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
+  const [fechaDesde, setFechaDesde] = useState(
+    () => currentMonthRange().from
+  );
+  const [fechaHasta, setFechaHasta] = useState(
+    () => currentMonthRange().to
+  );
   const [pagina, setPagina] = useState(1);
 
   useEffect(() => {
@@ -563,16 +568,16 @@ function AuditoriaPage() {
 
 function Resumen({ icon: Icon, label, value, color }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="metric-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50">
           <Icon className={color} size={22} />
         </div>
         <p className="text-sm text-slate-500">
           {label}
         </p>
       </div>
-      <p className={`mt-3 text-2xl font-bold ${color}`}>
+      <p className={`metric-value mt-3 font-bold ${color}`}>
         {value}
       </p>
     </div>
@@ -585,11 +590,11 @@ function DatoGrupo({
   color = "text-slate-800",
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+    <div className="metric-card rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
       <p className="text-slate-500">
         {label}
       </p>
-      <p className={`mt-1 font-bold ${color}`}>
+      <p className={`metric-value mt-1 font-bold ${color}`}>
         {value}
       </p>
     </div>
@@ -954,7 +959,7 @@ function crearFilaAuditoria(corte, ventasPorId) {
     cliente:
       venta?.cliente?.nombre || "",
     corte:
-      corte.tipoCorte || "-",
+      descripcionCorteAuditoria(corte),
     tipoServicio:
       corte.tipoServicio || "",
     servicio:
@@ -1218,6 +1223,23 @@ function descripcionMaterial(corte) {
     "Material";
 
   return `${tipo} ${detalle || ""}`.trim();
+}
+
+function descripcionCorteAuditoria(corte) {
+  if (corte.esCortePpf || corte.tipoCorte === "PIEZAS_PPF") {
+    const piezas = (corte.piezasPpf || [])
+      .map(
+        (pieza) =>
+          `${pieza.pieza} x${pieza.cantidad || 1}`
+      )
+      .join(", ");
+
+    return piezas
+      ? `PPF: ${piezas}`
+      : "PIEZAS PPF";
+  }
+
+  return corte.tipoCorte || "-";
 }
 
 export default AuditoriaPage;

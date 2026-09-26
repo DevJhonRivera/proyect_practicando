@@ -9,6 +9,22 @@ import PedidoInfo from "./components/PedidoInfo";
 import PedidoDetalleForm from "./components/PedidoDetalleForm";
 import PedidoDetalleTable from "./components/PedidoDetalleTable";
 import PedidoFooter from "./components/PedidoFooter";
+import {
+  esMaterialPpf,
+  obtenerReferenciaPpf,
+} from "../../utils/materiales";
+
+const detalleInicial = {
+  tipoPolarizado: "",
+  porcentaje: "",
+  unidadMedida: "PORCENTAJE",
+  ancho: "1.52",
+  cantidadRollos: "",
+  esMaterialNuevo: false,
+  clasificacionPersonalizada: false,
+  usaAnchoPersonalizado: false,
+  anchoPersonalizadoPulgadas: "",
+};
 
 function PedidoCreate() {
 
@@ -18,13 +34,7 @@ function PedidoCreate() {
     observaciones: "",
   });
 
-  const [detalle, setDetalle] = useState({
-    tipoPolarizado: "",
-    porcentaje: "",
-    unidadMedida: "PORCENTAJE",
-    ancho: "1.52",
-    cantidadRollos: "",
-  });
+  const [detalle, setDetalle] = useState(detalleInicial);
 
   const [detalles, setDetalles] = useState([]);
 
@@ -36,10 +46,31 @@ function PedidoCreate() {
   const agregarDetalle = () => {
 
     if (
-      !detalle.tipoPolarizado ||
-      detalle.porcentaje === "" ||
-      !detalle.ancho ||
-      !detalle.cantidadRollos
+      esMaterialPpf(detalle.tipoPolarizado) &&
+      !obtenerReferenciaPpf(detalle.tipoPolarizado)
+    ) {
+      return Swal.fire({
+        icon: "warning",
+        title: "Seleccione la referencia PPF",
+      });
+    }
+
+    const ancho = detalle.usaAnchoPersonalizado
+      ? Number(detalle.anchoPersonalizadoPulgadas || 0) * 0.0254
+      : Number(detalle.ancho || 0);
+
+    const porcentaje =
+      detalle.unidadMedida === "NINGUNA"
+        ? 0
+        : Number(detalle.porcentaje);
+
+    if (
+      !detalle.tipoPolarizado.trim() ||
+      !Number.isFinite(porcentaje) ||
+      (detalle.unidadMedida !== "NINGUNA" && porcentaje <= 0) ||
+      !Number.isFinite(ancho) ||
+      ancho <= 0 ||
+      Number(detalle.cantidadRollos || 0) <= 0
     ) {
 
       return Swal.fire({
@@ -49,25 +80,27 @@ function PedidoCreate() {
 
     }
 
+    const detallePedido = { ...detalle };
+    delete detallePedido.esMaterialNuevo;
+    delete detallePedido.clasificacionPersonalizada;
+    delete detallePedido.usaAnchoPersonalizado;
+    delete detallePedido.anchoPersonalizadoPulgadas;
+
     setDetalles([
       ...detalles,
       {
-        ...detalle,
-        porcentaje: Number(detalle.porcentaje),
+        ...detallePedido,
+        tipoPolarizado:
+          detalle.tipoPolarizado.trim().toUpperCase(),
+        porcentaje,
         unidadMedida:
           detalle.unidadMedida || "PORCENTAJE",
-        ancho: Number(detalle.ancho),
+        ancho: Number(ancho.toFixed(2)),
         cantidadRollos: Number(detalle.cantidadRollos),
       },
     ]);
 
-    setDetalle({
-      tipoPolarizado: "",
-      porcentaje: "",
-      unidadMedida: "PORCENTAJE",
-      ancho: "1.52",
-      cantidadRollos: "",
-    });
+    setDetalle(detalleInicial);
 
   };
 
@@ -126,13 +159,7 @@ function PedidoCreate() {
         observaciones: "",
       });
 
-      setDetalle({
-        tipoPolarizado: "",
-        porcentaje: "",
-        unidadMedida: "PORCENTAJE",
-        ancho: "1.52",
-        cantidadRollos: "",
-      });
+      setDetalle(detalleInicial);
 
       setDetalles([]);
 

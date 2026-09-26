@@ -14,9 +14,9 @@ function PedidoFooter({detalles,totalRollos,guardarPedido,}) {
 
         {/* Resumen */}
 
-        <div className="grid grid-cols-2 gap-8">
+        <div className="grid min-w-0 grid-cols-2 gap-4 sm:gap-8">
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
 
             <div className="bg-blue-100 p-3 rounded-xl">
 
@@ -27,13 +27,13 @@ function PedidoFooter({detalles,totalRollos,guardarPedido,}) {
 
             </div>
 
-            <div>
+            <div className="min-w-0">
 
               <p className="text-sm text-slate-500">
                 Referencias
               </p>
 
-              <h2 className="text-3xl font-bold text-slate-800">
+              <h2 className="metric-value font-bold text-slate-800">
                 {detalles.length}
               </h2>
 
@@ -41,7 +41,7 @@ function PedidoFooter({detalles,totalRollos,guardarPedido,}) {
 
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
 
             <div className="bg-green-100 p-3 rounded-xl">
 
@@ -52,13 +52,13 @@ function PedidoFooter({detalles,totalRollos,guardarPedido,}) {
 
             </div>
 
-            <div>
+            <div className="min-w-0">
 
               <p className="text-sm text-slate-500">
                 Total Rollos
               </p>
 
-              <h2 className="text-3xl font-bold text-green-600">
+              <h2 className="metric-value font-bold text-green-600">
                 {totalRollos}
               </h2>
 
@@ -70,7 +70,7 @@ function PedidoFooter({detalles,totalRollos,guardarPedido,}) {
 
         {/* Botones */}
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
 
           <button
             type="button"

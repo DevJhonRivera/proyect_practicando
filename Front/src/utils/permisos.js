@@ -9,6 +9,7 @@ export const permisosPorRolBase = {
     "retazos:*",
     "alertas:*",
     "cortes:*",
+    "piezasPpf:*",
   ],
   VENTAS: [
     "dashboard:read",

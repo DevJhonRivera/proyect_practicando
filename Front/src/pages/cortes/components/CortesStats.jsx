@@ -48,19 +48,19 @@ function KpiCard({ title, value, icon, color }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow p-5">
-      <div className="flex justify-between items-center">
-        <div>
+    <div className="metric-card bg-white rounded-2xl shadow p-5">
+      <div className="flex justify-between items-center gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-slate-500 text-sm">
             {title}
           </p>
 
-          <h2 className="text-2xl font-bold mt-1">
+          <h2 className="metric-value font-bold mt-1">
             {value}
           </h2>
         </div>
 
-        <div className={`p-3 rounded-xl ${colors[color]}`}>
+        <div className={`shrink-0 p-3 rounded-xl ${colors[color]}`}>
           {icon}
         </div>
       </div>

@@ -70,7 +70,7 @@ function PedidoFooter({ pedidos }) {
 
         {/* Pedidos */}
 
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
 
           <div
             className="
@@ -85,13 +85,13 @@ function PedidoFooter({ pedidos }) {
 
           </div>
 
-          <div>
+          <div className="min-w-0">
 
             <p className="text-sm text-slate-500">
               Pedidos
             </p>
 
-            <h2 className="text-2xl font-bold">
+            <h2 className="metric-value font-bold">
               {totalPedidos}
             </h2>
 
@@ -101,7 +101,7 @@ function PedidoFooter({ pedidos }) {
 
         {/* Referencias */}
 
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
 
           <div
             className="
@@ -116,13 +116,13 @@ function PedidoFooter({ pedidos }) {
 
           </div>
 
-          <div>
+          <div className="min-w-0">
 
             <p className="text-sm text-slate-500">
               Referencias
             </p>
 
-            <h2 className="text-2xl font-bold">
+            <h2 className="metric-value font-bold">
               {totalReferencias}
             </h2>
 
@@ -132,7 +132,7 @@ function PedidoFooter({ pedidos }) {
 
         {/* Rollos */}
 
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
 
           <div
             className="
@@ -147,13 +147,13 @@ function PedidoFooter({ pedidos }) {
 
           </div>
 
-          <div>
+          <div className="min-w-0">
 
             <p className="text-sm text-slate-500">
               Rollos Solicitados
             </p>
 
-            <h2 className="text-2xl font-bold text-green-600">
+            <h2 className="metric-value font-bold text-green-600">
               {totalRollos}
             </h2>
 
@@ -163,7 +163,7 @@ function PedidoFooter({ pedidos }) {
 
         {/* Pendientes */}
 
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
 
           <div
             className="
@@ -178,13 +178,13 @@ function PedidoFooter({ pedidos }) {
 
           </div>
 
-          <div>
+          <div className="min-w-0">
 
             <p className="text-sm text-slate-500">
               Pendientes
             </p>
 
-            <h2 className="text-2xl font-bold text-yellow-600">
+            <h2 className="metric-value font-bold text-yellow-600">
               {pendientes}
             </h2>
 

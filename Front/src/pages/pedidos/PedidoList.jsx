@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
 import { getPedidos } from "../../api/pedidos.api";
+import MonthFilter from "../../components/ui/MonthFilter";
+import { useMonthFilter } from "../../hooks/useMonthFilter";
 
 import PedidoHeader from "./componentsList/PedidoHeader";
 import PedidoStats from "./componentsList/PedidoStats";
@@ -18,6 +20,11 @@ function PedidoList() {
   const [search, setSearch] = useState("");
 
   const [estado, setEstado] = useState("TODOS");
+  const {
+    filteredItems: pedidosDelMes,
+    month: mesPedidos,
+    setMonth: setMesPedidos,
+  } = useMonthFilter(pedidos);
 
   const cargarPedidos = async () => {
     try {
@@ -68,7 +75,7 @@ function PedidoList() {
 
   }, []);
 
-  const pedidosFiltrados = pedidos.filter((pedido) => {
+  const pedidosFiltrados = pedidosDelMes.filter((pedido) => {
 
     const coincideBusqueda =
 
@@ -135,6 +142,13 @@ function PedidoList() {
         setEstado={setEstado}
 
       />
+
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <MonthFilter
+          month={mesPedidos}
+          onChange={setMesPedidos}
+        />
+      </div>
 
       <PedidoTable
         pedidos={pedidosFiltrados}

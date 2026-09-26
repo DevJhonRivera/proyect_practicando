@@ -47,11 +47,14 @@ function MainLayout() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="flex min-h-screen flex-col lg:h-screen lg:min-h-0 lg:flex-row lg:overflow-hidden">
 
       <Sidebar />
 
-      <main className="min-w-0 flex-1 p-4 lg:p-6 bg-slate-100">
+      <main
+        data-main-scroll
+        className="min-w-0 flex-1 bg-slate-100 p-4 lg:h-screen lg:overflow-y-auto lg:overscroll-contain lg:p-6"
+      >
         <Outlet />
       </main>
 

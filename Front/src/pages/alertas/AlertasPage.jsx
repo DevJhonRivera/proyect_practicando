@@ -3,6 +3,7 @@ import AlertasHeader from "./components/AlertasHeader";
 import AlertasStats from "./components/AlertasStats";
 import AlertasSummary from "./components/AlertasSummary";
 import AlertasTable from "./components/AlertasTable";
+import MonthFilter from "../../components/ui/MonthFilter";
 import { useAlertasPage } from "./hooks/useAlertasPage";
 
 function AlertasPage() {
@@ -15,9 +16,11 @@ function AlertasPage() {
     excelColumns,
     indicadores,
     loading,
+    month,
     pendientesFiltradas,
     search,
     setEstado,
+    setMonth,
     setSearch,
     setTipo,
     tipo,
@@ -48,6 +51,10 @@ function AlertasPage() {
         tipo={tipo}
         tipos={tipos}
       />
+
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <MonthFilter month={month} onChange={setMonth} />
+      </div>
 
       <AlertasSummary
         indicadores={indicadores}

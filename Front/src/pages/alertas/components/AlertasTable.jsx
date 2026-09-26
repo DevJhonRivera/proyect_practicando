@@ -1,6 +1,8 @@
 import { Check, CheckCircle2, ListChecks } from "lucide-react";
 
 import ExcelButton from "../../../components/ui/ExcelButton";
+import TablePagination from "../../../components/ui/TablePagination";
+import { usePagination } from "../../../hooks/usePagination";
 import {
   EstadoBadge,
   NivelBadge,
@@ -14,6 +16,8 @@ function AlertasTable({
   onAtenderVisibles,
   pendientes,
 }) {
+  const pagination = usePagination(alertas);
+
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/90 p-6">
@@ -66,8 +70,9 @@ function AlertasTable({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px] text-sm">
             <thead className="bg-slate-900 text-xs uppercase text-slate-200">
               <tr>
                 <th className="p-4 text-left font-bold">
@@ -92,7 +97,7 @@ function AlertasTable({
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {alertas.map((alerta) => (
+              {pagination.pageItems.map((alerta) => (
                 <tr
                   key={alerta._id}
                   className="transition hover:bg-red-50/30"
@@ -136,8 +141,10 @@ function AlertasTable({
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+          <TablePagination pagination={pagination} />
+        </>
       )}
     </div>
   );

@@ -49,11 +49,11 @@ function ReporteRentabilidad({ reporte }) {
 
 function Metric({ label, value }) {
   return (
-    <div className="bg-white/10 rounded-xl p-4">
+    <div className="metric-card bg-white/10 rounded-xl p-4">
       <p className="text-sm text-slate-400">
         {label}
       </p>
-      <p className="text-xl font-bold mt-1">
+      <p className="metric-value font-bold mt-1">
         {value}
       </p>
     </div>

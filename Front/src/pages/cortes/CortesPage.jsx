@@ -41,8 +41,11 @@ function CortesPage() {
     guardar,
     indicadores,
     loading,
+    loadingPiezasPpf,
     loadingSugerencias,
     mantenerDatosCarro,
+    esPpfSeleccionado,
+    piezasPpfCatalogo,
     recargar,
     retazoSeleccionado,
     retazosDisponibles,
@@ -93,7 +96,7 @@ function CortesPage() {
               .join("")}
           </select>
           <input id="corte-instalador" class="swal2-input" placeholder="Instalador garantia" value="${escapeHtml(corte.instalador || "")}" />
-          <select id="corte-tipo" class="swal2-input">
+          <select id="corte-tipo" class="swal2-input" ${corte.esCortePpf ? "disabled" : ""}>
             ${Object.entries(tipoCorteLabels)
               .map(
                 ([value, label]) =>
@@ -213,7 +216,9 @@ function CortesPage() {
         <CorteForm
           form={form}
           loadingSugerencias={loadingSugerencias}
+          loadingPiezasPpf={loadingPiezasPpf}
           mantenerDatosCarro={mantenerDatosCarro}
+          esPpfSeleccionado={esPpfSeleccionado}
           onApplySuggestion={aplicarSugerencia}
           onApplyVehicle={aplicarVehiculo}
           onChange={setForm}
@@ -223,6 +228,7 @@ function CortesPage() {
           retazosDisponibles={retazosDisponibles}
           rolloSeleccionado={rolloSeleccionado}
           rollosEnUso={rollosEnUso}
+          piezasPpfCatalogo={piezasPpfCatalogo}
           sugerencias={sugerencias}
           sugerenciasKey={sugerenciasKey}
           vehiculosSugeridos={vehiculosSugeridos}
