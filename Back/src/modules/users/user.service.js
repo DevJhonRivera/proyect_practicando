@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import User from "./user.model.js";
+import { limpiarSuspensionVencida } from "./userSuspension.js";
 
 const ROL_SUPERUSUARIO = "SUPERUSUARIO";
 const ROLES_ACCESO_TOTAL = [ROL_SUPERUSUARIO, "ADMIN"];
@@ -45,6 +46,26 @@ const validarGestionSuperusuario = (currentUser, rol) => {
   }
 };
 
+const validarUsuarioGestionable = (currentUser, user) => {
+  validarGestionSuperusuario(currentUser, user.rol);
+
+  if (
+    !esSuperusuario(currentUser) &&
+    user.creadoPor &&
+    String(user.creadoPor) !== String(currentUser?._id)
+  ) {
+    throw new Error(
+      "Solo puede gestionar usuarios creados por su cuenta"
+    );
+  }
+};
+
+const validarUsuarioDiferente = (currentUser, user) => {
+  if (String(currentUser?._id) === String(user._id)) {
+    throw new Error("No puede aplicar esta accion sobre su propia cuenta");
+  }
+};
+
 export const listarUsuarios = async (currentUser) => {
   const usuarios = await User.find()
     .sort({
@@ -59,6 +80,8 @@ export const listarUsuarios = async (currentUser) => {
         usuario.rol = rolNormalizado;
         await usuario.save();
       }
+
+      await limpiarSuspensionVencida(usuario);
     })
   );
 
@@ -89,7 +112,80 @@ export const crearUsuarioAdmin = async (data, currentUser) => {
     correo: data.correo,
     password: hashedPassword,
     rol,
+    creadoPor: currentUser?._id || null,
   });
+
+  return sanitizeUser(user);
+};
+
+export const cambiarPasswordUsuario = async (
+  id,
+  password,
+  currentUser
+) => {
+  const user = await User.findById(id);
+
+  if (!user) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  validarUsuarioGestionable(currentUser, user);
+  validarUsuarioDiferente(currentUser, user);
+
+  if (typeof password !== "string" || password.length < 8) {
+    throw new Error("La nueva clave debe tener minimo 8 caracteres");
+  }
+
+  user.password = await bcrypt.hash(password, 10);
+  user.tokenVersion = Number(user.tokenVersion || 0) + 1;
+  await user.save();
+
+  return sanitizeUser(user);
+};
+
+export const actualizarSuspensionUsuario = async (
+  id,
+  data,
+  currentUser
+) => {
+  const user = await User.findById(id);
+
+  if (!user) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  validarUsuarioGestionable(currentUser, user);
+  validarUsuarioDiferente(currentUser, user);
+
+  const modo = String(data?.modo || "").toUpperCase();
+
+  if (modo === "REACTIVAR") {
+    user.suspendido = false;
+    user.suspensionIndefinida = false;
+    user.suspendidoHasta = null;
+    user.suspendidoPor = null;
+  } else if (modo === "INDEFINIDA") {
+    user.suspendido = true;
+    user.suspensionIndefinida = true;
+    user.suspendidoHasta = null;
+    user.suspendidoPor = currentUser?._id || null;
+  } else if (modo === "TEMPORAL") {
+    const hasta = new Date(data?.hasta);
+
+    if (Number.isNaN(hasta.getTime()) || hasta.getTime() <= Date.now()) {
+      throw new Error("Seleccione una fecha y hora futura");
+    }
+
+    user.suspendido = true;
+    user.suspensionIndefinida = false;
+    user.suspendidoHasta = hasta;
+    user.suspendidoPor = currentUser?._id || null;
+  } else {
+    throw new Error("Tipo de suspension no valido");
+  }
+
+  user.tokenVersion = Number(user.tokenVersion || 0) + 1;
+  await user.save();
 
   return sanitizeUser(user);
 };
@@ -106,7 +202,8 @@ export const actualizarRolUsuario = async (
 
   const rolNormalizado = normalizarRol(rol);
 
-  validarGestionSuperusuario(currentUser, user.rol);
+  validarUsuarioGestionable(currentUser, user);
+  validarUsuarioDiferente(currentUser, user);
   validarGestionSuperusuario(currentUser, rolNormalizado);
 
   user.rol = rolNormalizado;
@@ -122,7 +219,8 @@ export const eliminarUsuario = async (id, currentUser) => {
     throw new Error("Usuario no encontrado");
   }
 
-  validarGestionSuperusuario(currentUser, user.rol);
+  validarUsuarioGestionable(currentUser, user);
+  validarUsuarioDiferente(currentUser, user);
 
   if (ROLES_ACCESO_TOTAL.includes(user.rol)) {
     const totalUsuariosAccesoTotal = await User.countDocuments({

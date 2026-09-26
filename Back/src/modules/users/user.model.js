@@ -27,6 +27,38 @@ const userSchema = new mongoose.Schema(
         "VENTAS",
       ],
       default: "INVENTARIO"
+    },
+
+    creadoPor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    suspendido: {
+      type: Boolean,
+      default: false
+    },
+
+    suspensionIndefinida: {
+      type: Boolean,
+      default: false
+    },
+
+    suspendidoHasta: {
+      type: Date,
+      default: null
+    },
+
+    suspendidoPor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    tokenVersion: {
+      type: Number,
+      default: 0
     }
   },
   {

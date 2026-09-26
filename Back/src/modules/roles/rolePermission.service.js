@@ -35,6 +35,14 @@ const limpiarPermisos = (permisos = []) =>
     )
   );
 
+const garantizarInicio = (permisos = []) =>
+  Array.from(
+    new Set([
+      "dashboard:read",
+      ...limpiarPermisos(permisos),
+    ])
+  );
+
 const validarSuperusuario = (currentUser) => {
   if (currentUser?.rol !== "SUPERUSUARIO") {
     throw new Error(
@@ -54,8 +62,8 @@ export const obtenerPermisosRol = async (rol) => {
 
   const config = await RolePermission.findOne({ rol });
 
-  return config?.permisos?.length
-    ? config.permisos
+  return config
+    ? garantizarInicio(config.permisos)
     : permisosPorRolBase[rol] || [];
 };
 
@@ -74,10 +82,9 @@ export const listarPermisosRoles = async (currentUser) => {
 
   return rolesConfigurables.map((rol) => ({
     rol,
-    permisos:
-      configPorRol.get(rol) ||
-      permisosPorRolBase[rol] ||
-      [],
+    permisos: configPorRol.has(rol)
+      ? garantizarInicio(configPorRol.get(rol))
+      : permisosPorRolBase[rol] || [],
   }));
 };
 
@@ -92,7 +99,7 @@ export const actualizarPermisosRol = async (
     throw new Error("Rol no configurable");
   }
 
-  const permisosLimpios = limpiarPermisos(permisos);
+  const permisosLimpios = garantizarInicio(permisos);
 
   const config = await RolePermission.findOneAndUpdate(
     { rol },

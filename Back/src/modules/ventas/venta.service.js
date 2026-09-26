@@ -416,6 +416,10 @@ const prepararVenta = async (data, ventaActual = null) => {
     throw new Error("Complete los datos del vehiculo");
   }
 
+  if (vehiculo.placa.length < 5 || vehiculo.placa.length > 10) {
+    throw new Error("La placa debe tener entre 5 y 10 caracteres");
+  }
+
   if (!items.length) {
     throw new Error(
       "Debe agregar al menos un servicio"

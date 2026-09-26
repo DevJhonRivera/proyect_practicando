@@ -1,9 +1,12 @@
 import {
   actualizarRolUsuario,
+  actualizarSuspensionUsuario,
+  cambiarPasswordUsuario,
   crearUsuarioAdmin,
   eliminarUsuario,
   listarUsuarios,
 } from "./user.service.js";
+import { suspensionEstaActiva } from "./userSuspension.js";
 
 export const getUsuarios = async (req, res) => {
   try {
@@ -63,5 +66,41 @@ export const deleteUsuario = async (req, res) => {
     res.status(400).json({
       message: error.message,
     });
+  }
+};
+
+export const updateUsuarioPassword = async (req, res) => {
+  try {
+    const user = await cambiarPasswordUsuario(
+      req.params.id,
+      req.body.password,
+      req.user
+    );
+
+    res.json({
+      message: "Clave actualizada. Las sesiones anteriores fueron cerradas.",
+      user,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateUsuarioSuspension = async (req, res) => {
+  try {
+    const user = await actualizarSuspensionUsuario(
+      req.params.id,
+      req.body,
+      req.user
+    );
+
+    res.json({
+      message: suspensionEstaActiva(user)
+        ? "Usuario suspendido"
+        : "Usuario reactivado",
+      user,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 };

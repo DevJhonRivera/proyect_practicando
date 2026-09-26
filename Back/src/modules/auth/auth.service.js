@@ -5,6 +5,11 @@ import User from "../users/user.model.js";
 import { generateToken } from "../../utils/generateToken.js";
 import { isPublicRegistrationEnabled } from "../../config/security.js";
 import { obtenerPermisosRol } from "../roles/rolePermission.service.js";
+import {
+  limpiarSuspensionVencida,
+  mensajeSuspension,
+  suspensionEstaActiva,
+} from "../users/userSuspension.js";
 
 const ROL_SUPERUSUARIO = "SUPERUSUARIO";
 
@@ -84,7 +89,8 @@ export const registerUser = async (data, currentUser) => {
     nombre: data.nombre,
     correo: data.correo,
     password: hashedPassword,
-    rol
+    rol,
+    creadoPor: currentUser?._id || null
   });
 
   return sanitizeUser(user);
@@ -104,6 +110,12 @@ export const loginUser = async (correo,password) => {
 
   if (!match) {
     throw new Error("Credenciales inválidas");
+  }
+
+  await limpiarSuspensionVencida(user);
+
+  if (suspensionEstaActiva(user)) {
+    throw new Error(mensajeSuspension(user));
   }
 
   const rolNormalizado = normalizarRol(user.rol);

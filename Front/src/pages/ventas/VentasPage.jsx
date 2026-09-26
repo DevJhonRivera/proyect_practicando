@@ -84,6 +84,21 @@ const soloNumeros = (value) =>
 const normalizarPlaca = (value) =>
   mayusculas(value).replace(/\s+/g, "").trim();
 
+const soloDigitos = (value) =>
+  String(value ?? "").replace(/\D/g, "");
+
+const formatearMiles = (value) => {
+  const digitos = soloDigitos(value);
+  return digitos ? Number(digitos).toLocaleString("es-CO") : "";
+};
+
+const numeroDesdeMiles = (value) =>
+  Number(soloDigitos(value) || 0);
+
+const placaValida = (value) =>
+  normalizarPlaca(value).length >= 5 &&
+  normalizarPlaca(value).length <= 10;
+
 function VentasPage() {
   const [ventas, setVentas] = useState([]);
   const [cortes, setCortes] = useState([]);
@@ -253,7 +268,7 @@ function VentasPage() {
       ...actual,
       vehiculo: {
         placa:
-          mayusculas(grupo.placa || actual.vehiculo.placa),
+          normalizarPlaca(grupo.placa || actual.vehiculo.placa).slice(0, 10),
         marca:
           mayusculas(grupo.marca || actual.vehiculo.marca),
         modelo:
@@ -289,6 +304,8 @@ function VentasPage() {
     const nuevoValor =
       field === "modelo"
         ? soloNumeros(value)
+        : field === "placa"
+        ? normalizarPlaca(value).slice(0, 10)
         : mayusculas(value);
 
     setForm({
@@ -413,6 +430,14 @@ function VentasPage() {
         });
       }
 
+      if (!placaValida(form.vehiculo.placa)) {
+        return Swal.fire({
+          icon: "warning",
+          title: "Placa no valida",
+          text: "La placa debe tener entre 5 y 10 caracteres.",
+        });
+      }
+
       if (form.items.length === 0) {
         return Swal.fire({
           icon: "warning",
@@ -473,9 +498,11 @@ function VentasPage() {
               <input
                 class="swal2-input venta-item-valor"
                 data-index="${index}"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 min="0"
-                value="${Number(item.valorUnitario || item.total || 0)}"
+                value="${formatearMiles(item.valorUnitario || item.total || 0)}"
+                placeholder="Ej: 350.000"
               />
             </label>
           `
@@ -486,11 +513,11 @@ function VentasPage() {
       title: "Editar venta",
       html: `
         <div class="grid gap-2">
-          <input id="venta-cliente" class="swal2-input" placeholder="Cliente" value="${escapeHtml(venta.cliente?.nombre || "")}" />
-          <input id="venta-telefono" class="swal2-input" placeholder="Telefono" value="${escapeHtml(venta.cliente?.telefono || "")}" />
-          <input id="venta-placa" class="swal2-input" placeholder="Placa" value="${escapeHtml(venta.vehiculo?.placa || "")}" />
-          <input id="venta-marca" class="swal2-input" placeholder="Marca" value="${escapeHtml(venta.vehiculo?.marca || "")}" />
-          <input id="venta-modelo" class="swal2-input" placeholder="Modelo" inputmode="numeric" value="${escapeHtml(venta.vehiculo?.modelo || "")}" />
+          <input id="venta-cliente" class="swal2-input" placeholder="Ej: JUAN PEREZ" value="${escapeHtml(venta.cliente?.nombre || "")}" />
+          <input id="venta-telefono" class="swal2-input" placeholder="Ej: 3001234567" value="${escapeHtml(venta.cliente?.telefono || "")}" />
+          <input id="venta-placa" class="swal2-input" placeholder="Ej: ABC123" minlength="5" maxlength="10" value="${escapeHtml(venta.vehiculo?.placa || "")}" />
+          <input id="venta-marca" class="swal2-input" placeholder="Ej: TOYOTA" value="${escapeHtml(venta.vehiculo?.marca || "")}" />
+          <input id="venta-modelo" class="swal2-input" placeholder="Ej: 2024" inputmode="numeric" value="${escapeHtml(venta.vehiculo?.modelo || "")}" />
           <select id="venta-estado" class="swal2-input">
             ${["PENDIENTE", "PAGADA", "ANULADA"]
               .map(
@@ -500,14 +527,23 @@ function VentasPage() {
               .join("")}
           </select>
           ${itemsHtml}
-          <input id="venta-descuento" class="swal2-input" type="number" min="0" placeholder="Descuento" value="${Number(venta.descuento || 0)}" />
-          <input id="venta-observaciones" class="swal2-input" placeholder="Observaciones" value="${escapeHtml(venta.observaciones || "")}" />
+          <input id="venta-descuento" class="swal2-input venta-precio" type="text" inputmode="numeric" min="0" placeholder="Ej: 50.000" value="${formatearMiles(venta.descuento || 0)}" />
+          <input id="venta-observaciones" class="swal2-input" placeholder="Ej: Cliente solicita entrega en la tarde" value="${escapeHtml(venta.observaciones || "")}" />
         </div>
       `,
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Guardar",
       cancelButtonText: "Cancelar",
+      didOpen: () => {
+        Swal.getPopup()
+          ?.querySelectorAll(".venta-item-valor, .venta-precio")
+          .forEach((input) => {
+            input.addEventListener("input", () => {
+              input.value = formatearMiles(input.value);
+            });
+          });
+      },
       preConfirm: () => {
         const popup = Swal.getPopup();
         const valueOf = (id) =>
@@ -519,8 +555,9 @@ function VentasPage() {
         const items = (venta.items || []).map((item, index) => {
           const cantidad =
             Math.max(Number(item.cantidad || 1), 1);
-          const valorUnitario =
-            Number(itemInputs[index]?.value || 0);
+          const valorUnitario = numeroDesdeMiles(
+            itemInputs[index]?.value || 0
+          );
 
           return {
             tipoServicio: item.tipoServicio,
@@ -538,12 +575,12 @@ function VentasPage() {
             telefono: valueOf("#venta-telefono"),
           },
           vehiculo: {
-            placa: mayusculas(valueOf("#venta-placa")),
+            placa: normalizarPlaca(valueOf("#venta-placa")).slice(0, 10),
             marca: mayusculas(valueOf("#venta-marca")),
             modelo: soloNumeros(valueOf("#venta-modelo")),
           },
           estado: valueOf("#venta-estado"),
-          descuento: Number(valueOf("#venta-descuento") || 0),
+          descuento: numeroDesdeMiles(valueOf("#venta-descuento")),
           observaciones: mayusculas(valueOf("#venta-observaciones")),
           items,
         };
@@ -556,6 +593,13 @@ function VentasPage() {
         ) {
           Swal.showValidationMessage(
             "Complete cliente, placa, marca y modelo"
+          );
+          return false;
+        }
+
+        if (!placaValida(payload.vehiculo.placa)) {
+          Swal.showValidationMessage(
+            "La placa debe tener entre 5 y 10 caracteres"
           );
           return false;
         }
@@ -710,6 +754,7 @@ function VentasPage() {
               <Field label="Cliente">
                 <Input
                   value={form.cliente.nombre}
+                  placeholder="Ej: JUAN PEREZ"
                   onChange={(value) =>
                     actualizarCliente("nombre", value)
                   }
@@ -718,6 +763,7 @@ function VentasPage() {
               <Field label="Telefono">
                 <Input
                   value={form.cliente.telefono}
+                  placeholder="Ej: 3001234567"
                   onChange={(value) =>
                     actualizarCliente("telefono", value)
                   }
@@ -729,6 +775,9 @@ function VentasPage() {
               <Field label="Placa">
                 <Input
                   value={form.vehiculo.placa}
+                  placeholder="Ej: ABC123"
+                  minLength={5}
+                  maxLength={10}
                   onChange={(value) =>
                     actualizarVehiculo(
                       "placa",
@@ -740,6 +789,7 @@ function VentasPage() {
               <Field label="Marca">
                 <Input
                   value={form.vehiculo.marca}
+                  placeholder="Ej: TOYOTA"
                   onChange={(value) =>
                     actualizarVehiculo("marca", value)
                   }
@@ -748,6 +798,7 @@ function VentasPage() {
               <Field label="Modelo">
                 <Input
                   value={form.vehiculo.modelo}
+                  placeholder="Ej: 2024"
                   onChange={(value) =>
                     actualizarVehiculo("modelo", value)
                   }
@@ -781,7 +832,7 @@ function VentasPage() {
                   <option value="">
                     {placaVenta
                       ? `Cortes pendientes de ${placaVenta}`
-                      : "Seleccione corte..."}
+                      : "Seleccione un corte del carro..."}
                   </option>
                   {gruposSinVentaDelCarro.map((grupo) => (
                     <option
@@ -794,13 +845,14 @@ function VentasPage() {
                 </select>
 
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   min="0"
-                  value={valorCorte}
+                  value={formatearMiles(valorCorte)}
                   onChange={(event) =>
-                    setValorCorte(event.target.value)
+                    setValorCorte(soloDigitos(event.target.value))
                   }
-                  placeholder="Valor"
+                  placeholder="Ej: 350.000"
                   className="rounded-xl border border-slate-200 p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
                 />
 
@@ -894,7 +946,7 @@ function VentasPage() {
                       descripcion: mayusculas(event.target.value),
                     })
                   }
-                  placeholder="Descripcion"
+                  placeholder="Ej: LAVADO COMPLETO"
                   className="min-w-0 rounded-xl border border-slate-200 p-3 outline-none focus:border-green-400 focus:ring-4 focus:ring-green-50"
                 />
 
@@ -912,16 +964,17 @@ function VentasPage() {
                 />
 
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   min="0"
-                  value={itemManual.valorUnitario}
+                  value={formatearMiles(itemManual.valorUnitario)}
                   onChange={(event) =>
                     setItemManual({
                       ...itemManual,
-                      valorUnitario: event.target.value,
+                      valorUnitario: soloDigitos(event.target.value),
                     })
                   }
-                  placeholder="Valor"
+                  placeholder="Ej: 80.000"
                   className="rounded-xl border border-slate-200 p-3 outline-none focus:border-green-400 focus:ring-4 focus:ring-green-50"
                 />
 
@@ -947,6 +1000,7 @@ function VentasPage() {
               <Field label="Observaciones">
                 <Input
                   value={form.observaciones}
+                  placeholder="Ej: Cliente solicita entrega en la tarde"
                   onChange={(value) =>
                     setForm({
                       ...form,
@@ -957,12 +1011,14 @@ function VentasPage() {
               </Field>
               <Field label="Descuento">
                 <Input
-                  type="number"
-                  value={form.descuento}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Ej: 50.000"
+                  value={formatearMiles(form.descuento)}
                   onChange={(value) =>
                     setForm({
                       ...form,
-                      descuento: value,
+                      descuento: soloDigitos(value),
                     })
                   }
                 />

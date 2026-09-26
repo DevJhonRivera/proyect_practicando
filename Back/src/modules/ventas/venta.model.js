@@ -25,6 +25,8 @@ const vehiculoSchema = new mongoose.Schema(
       required: true,
       trim: true,
       uppercase: true,
+      minlength: 5,
+      maxlength: 10,
     },
     marca: {
       type: String,

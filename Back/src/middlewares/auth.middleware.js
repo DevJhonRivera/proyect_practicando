@@ -1,5 +1,10 @@
 import jwt from "jsonwebtoken";
 import User from "../modules/users/user.model.js";
+import {
+  limpiarSuspensionVencida,
+  mensajeSuspension,
+  suspensionEstaActiva,
+} from "../modules/users/userSuspension.js";
 
 const MAX_SESSION_MS =
   8 * 60 * 60 * 1000;
@@ -63,6 +68,25 @@ export const authMiddleware = async (
       });
     }
 
+    if (
+      Number(decoded.tokenVersion || 0) !==
+      Number(user.tokenVersion || 0)
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "La sesion debe iniciarse nuevamente",
+      });
+    }
+
+    await limpiarSuspensionVencida(user);
+
+    if (suspensionEstaActiva(user)) {
+      return res.status(401).json({
+        success: false,
+        message: mensajeSuspension(user),
+      });
+    }
+
     req.user = user;
 
     next();
@@ -101,7 +125,17 @@ export const optionalAuthMiddleware = async (
       decoded.id
     ).select("-password");
 
-    if (user) {
+    if (
+      user &&
+      Number(decoded.tokenVersion || 0) ===
+        Number(user.tokenVersion || 0)
+    ) {
+      await limpiarSuspensionVencida(user);
+
+      if (suspensionEstaActiva(user)) {
+        return next();
+      }
+
       req.user = user;
     }
 

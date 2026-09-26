@@ -11,8 +11,15 @@ const roundMeters = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
 export const crearRetazo = async (data) => {
+  const ancho = roundMeters(data.ancho);
   const largo =
     roundMeters(data.largoDisponible || data.largoOriginal);
+
+  if (ancho <= 0) {
+    throw new Error(
+      "El ancho del retazo debe ser mayor a 0"
+    );
+  }
 
   if (largo <= 0) {
     throw new Error(
@@ -30,8 +37,7 @@ export const crearRetazo = async (data) => {
       Number(data.porcentaje),
     unidadMedida:
       data.unidadMedida || "PORCENTAJE",
-    ancho:
-      Number(data.ancho),
+    ancho,
     largoOriginal:
       roundMeters(data.largoOriginal || largo),
     largoDisponible:

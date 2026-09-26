@@ -36,3 +36,26 @@
   letter-spacing: 0;
   line-height: 1.1;
 }
+
+.app-modal-content input,
+.app-modal-content select,
+.app-modal-content textarea {
+  border-color: rgb(203 213 225);
+  background-color: rgb(255 255 255);
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.app-modal-content input:focus,
+.app-modal-content select:focus,
+.app-modal-content textarea:focus {
+  border-color: rgb(96 165 250);
+  box-shadow: 0 0 0 4px rgb(239 246 255);
+}
+
+.app-modal-content input:disabled,
+.app-modal-content select:disabled,
+.app-modal-content textarea:disabled {
+  background-color: rgb(241 245 249);
+  cursor: not-allowed;
+}

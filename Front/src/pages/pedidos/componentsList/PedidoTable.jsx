@@ -6,7 +6,6 @@ import {
   PackageCheck,
   Save,
   Trash2,
-  X,
 } from "lucide-react";
 
 import { updatePedido } from "../../../api/pedidos.api";
@@ -34,6 +33,7 @@ import {
   UNIDAD_NINGUNA,
   unidadPorMaterial,
 } from "../../../utils/materiales";
+import AppModal from "../../../components/ui/AppModal";
 
 function PedidoTable({ pedidos, onRefresh }) {
   const pagination = usePagination(pedidos);
@@ -1031,27 +1031,14 @@ function PedidoDetalle({ pedido }) {
 
 function PedidoModal({ title, children, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center border-b p-5">
-          <h2 className="text-xl font-bold text-slate-800">
-            {title}
-          </h2>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-100"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-5">
-          {children}
-        </div>
-      </div>
-    </div>
+    <AppModal
+      title={title}
+      subtitle="Consulta y administra la información del pedido"
+      icon={PackageCheck}
+      onClose={onClose}
+    >
+      {children}
+    </AppModal>
   );
 }
 

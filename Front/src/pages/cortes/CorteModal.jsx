@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
+import { Scissors } from "lucide-react";
 import { createCorte } from "../../api/cortes.api";
+import AppModal from "../../components/ui/AppModal";
 
 const mayusculas = (value) =>
   String(value || "").toUpperCase();
@@ -57,34 +59,14 @@ function CorteModal({
   };
 
   return (
-
-    <div
-      className="
-      fixed
-      inset-0
-      bg-black/50
-      flex
-      items-center
-      justify-center
-      p-4
-      z-50"
+    <AppModal
+      title="Registrar corte"
+      subtitle={`Material: ${rollo?.tipoPolarizado || "seleccionado"}`}
+      icon={Scissors}
+      maxWidth="max-w-lg"
+      onClose={onClose}
     >
-
-      <div
-        className="
-        bg-white
-        p-5
-        sm:p-6
-        rounded-xl
-        w-full
-        max-w-[500px]
-        max-h-[90vh]
-        overflow-y-auto"
-      >
-
-        <h2 className="text-xl font-bold mb-5">
-          Registrar corte
-        </h2>
+      <div className="space-y-4">
 
         <input
           placeholder="Placa"
@@ -184,7 +166,7 @@ function CorteModal({
           value={form.metrosUtilizados}
         />
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse justify-end gap-2 border-t border-slate-200 pt-5 sm:flex-row">
 
           <button
             onClick={onClose}
@@ -203,8 +185,7 @@ function CorteModal({
         </div>
 
       </div>
-
-    </div>
+    </AppModal>
   );
 }
 

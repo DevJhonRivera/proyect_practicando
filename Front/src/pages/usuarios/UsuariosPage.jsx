@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import {
+  Ban,
+  KeyRound,
+  PlayCircle,
   Save,
   ShieldCheck,
   SlidersHorizontal,
@@ -14,6 +17,8 @@ import {
   deleteUsuario,
   getUsuarios,
   updateUsuarioRol,
+  updateUsuarioPassword,
+  updateUsuarioSuspension,
 } from "../../api/usuarios.api";
 import {
   getPermisosRoles,
@@ -48,7 +53,6 @@ const modulosConfigurables = [
     key: "usuarios",
     label: "Usuarios y perfiles",
     permisos: ["usuarios:*"],
-    roles: ["ADMIN"],
   },
   {
     key: "pedidos",
@@ -84,7 +88,6 @@ const modulosConfigurables = [
     key: "piezasPpf",
     label: "Piezas PPF",
     permisos: ["piezasPpf:*"],
-    roles: ["ADMIN", "INVENTARIO"],
   },
   {
     key: "ventas",
@@ -104,14 +107,11 @@ const roleLabels = {
   VENTAS: "Ventas",
 };
 
-const modulosPermitidosPorRol = (rol) =>
-  modulosConfigurables.filter(
-    (modulo) => !modulo.roles || modulo.roles.includes(rol)
-  );
+const modulosPermitidosPorRol = () => modulosConfigurables;
 
 const tienePermisoModulo = (permisos, modulo) =>
   permisos.includes("*") ||
-  modulo.permisos.some((permiso) => permisos.includes(permiso));
+  permisos.includes(modulo.permisos[0]);
 
 const permisosDesdeModulos = (rol, modulosActivos) => {
   const activos = new Set(["dashboard", ...modulosActivos]);
@@ -124,6 +124,20 @@ const permisosDesdeModulos = (rol, modulosActivos) => {
   });
 
   return Array.from(new Set(permisos));
+};
+
+const suspensionActiva = (usuario) =>
+  Boolean(usuario?.suspendido) &&
+  (usuario.suspensionIndefinida ||
+    (usuario.suspendidoHasta &&
+      new Date(usuario.suspendidoHasta).getTime() > Date.now()));
+
+const fechaHoraInicial = () => {
+  const fecha = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const ajusteZona = fecha.getTimezoneOffset() * 60 * 1000;
+  return new Date(fecha.getTime() - ajusteZona)
+    .toISOString()
+    .slice(0, 16);
 };
 
 function UsuariosPage() {
@@ -307,6 +321,156 @@ function UsuariosPage() {
     }
   };
 
+  const cambiarPassword = async (usuario) => {
+    const resultado = await Swal.fire({
+      icon: "info",
+      title: `Cambiar clave de ${usuario.nombre}`,
+      html: `
+        <input id="nueva-clave" type="password" class="swal2-input" placeholder="Nueva clave">
+        <input id="confirmar-clave" type="password" class="swal2-input" placeholder="Confirmar clave">
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Cambiar clave",
+      cancelButtonText: "Cancelar",
+      focusConfirm: false,
+      preConfirm: () => {
+        const password = document.getElementById("nueva-clave")?.value || "";
+        const confirmacion =
+          document.getElementById("confirmar-clave")?.value || "";
+
+        if (password.length < 8) {
+          Swal.showValidationMessage("La clave debe tener minimo 8 caracteres");
+          return false;
+        }
+
+        if (password !== confirmacion) {
+          Swal.showValidationMessage("Las claves no coinciden");
+          return false;
+        }
+
+        return password;
+      },
+    });
+
+    if (!resultado.isConfirmed) {
+      return;
+    }
+
+    try {
+      await updateUsuarioPassword(usuario._id, resultado.value);
+      Swal.fire({
+        icon: "success",
+        title: "Clave actualizada",
+        text: "El usuario debera iniciar sesion nuevamente.",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "No fue posible cambiar la clave",
+        text: error.response?.data?.message || "Intente nuevamente.",
+      });
+    }
+  };
+
+  const gestionarSuspension = async (usuario) => {
+    if (suspensionActiva(usuario)) {
+      const resultado = await Swal.fire({
+        icon: "question",
+        title: "Reactivar usuario",
+        text: `${usuario.nombre} podra volver a iniciar sesion.`,
+        showCancelButton: true,
+        confirmButtonText: "Reactivar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#16a34a",
+      });
+
+      if (!resultado.isConfirmed) {
+        return;
+      }
+
+      try {
+        await updateUsuarioSuspension(usuario._id, { modo: "REACTIVAR" });
+        await cargarUsuarios();
+        Swal.fire({
+          icon: "success",
+          title: "Usuario reactivado",
+          timer: 1400,
+          showConfirmButton: false,
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "No fue posible reactivar",
+          text: error.response?.data?.message || "Intente nuevamente.",
+        });
+      }
+      return;
+    }
+
+    const resultado = await Swal.fire({
+      icon: "warning",
+      title: `Suspender a ${usuario.nombre}`,
+      html: `
+        <label for="modo-suspension" style="display:block;text-align:left;margin:0 2.5rem .35rem;color:#475569;font-size:.875rem">Duracion</label>
+        <select id="modo-suspension" class="swal2-select" style="display:block;width:calc(100% - 5rem);margin:.25rem 2.5rem 1rem">
+          <option value="TEMPORAL">Hasta una fecha</option>
+          <option value="INDEFINIDA">Hasta que se reactive manualmente</option>
+        </select>
+        <input id="hasta-suspension" type="datetime-local" class="swal2-input" value="${fechaHoraInicial()}">
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Suspender",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#dc2626",
+      didOpen: () => {
+        const modo = document.getElementById("modo-suspension");
+        const hasta = document.getElementById("hasta-suspension");
+        modo?.addEventListener("change", () => {
+          hasta.style.display = modo.value === "TEMPORAL" ? "block" : "none";
+        });
+      },
+      preConfirm: () => {
+        const modo = document.getElementById("modo-suspension")?.value;
+        const hasta = document.getElementById("hasta-suspension")?.value;
+
+        if (modo === "TEMPORAL") {
+          const fecha = new Date(hasta);
+          if (!hasta || Number.isNaN(fecha.getTime()) || fecha <= new Date()) {
+            Swal.showValidationMessage("Seleccione una fecha y hora futura");
+            return false;
+          }
+          return { modo, hasta: fecha.toISOString() };
+        }
+
+        return { modo: "INDEFINIDA" };
+      },
+    });
+
+    if (!resultado.isConfirmed) {
+      return;
+    }
+
+    try {
+      await updateUsuarioSuspension(usuario._id, resultado.value);
+      await cargarUsuarios();
+      Swal.fire({
+        icon: "success",
+        title: "Usuario suspendido",
+        text: "Su sesion fue cerrada y no podra ingresar durante la suspension.",
+        timer: 2200,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "No fue posible suspender",
+        text: error.response?.data?.message || "Intente nuevamente.",
+      });
+    }
+  };
+
   const cambiarModuloRol = (rol, moduloKey, activo) => {
     setPermisosRoles((actual) =>
       actual.map((config) => {
@@ -471,11 +635,23 @@ function UsuariosPage() {
                     <th className="p-4 text-left">Usuario</th>
                     <th className="p-4 text-left">Correo</th>
                     <th className="p-4 text-left">Perfil</th>
-                    <th className="p-4 text-center">Accion</th>
+                    <th className="p-4 text-left">Estado</th>
+                    <th className="p-4 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pagination.pageItems.map((usuario) => (
+                  {pagination.pageItems.map((usuario) => {
+                    const suspendido = suspensionActiva(usuario);
+                    const esCuentaActual =
+                      String(usuario._id) === String(usuarioActual?._id);
+                    const creadoPor = usuario.creadoPor?._id || usuario.creadoPor;
+                    const puedeGestionar =
+                      !esCuentaActual &&
+                      (esSuperusuario ||
+                        !creadoPor ||
+                        String(creadoPor) === String(usuarioActual?._id));
+
+                    return (
                     <tr
                       key={usuario._id}
                       className="border-t hover:bg-slate-50"
@@ -494,13 +670,14 @@ function UsuariosPage() {
                           />
                           <select
                             value={usuario.rol}
+                            disabled={!puedeGestionar}
                             onChange={(event) =>
                               cambiarRol(
                                 usuario,
                                 event.target.value
                               )
                             }
-                            className="border rounded-lg p-2 bg-white"
+                            className="border rounded-lg p-2 bg-white disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {rolesDisponibles.map(([value, label]) => (
                               <option key={value} value={value}>
@@ -510,21 +687,75 @@ function UsuariosPage() {
                           </select>
                         </div>
                       </td>
-                      <td className="p-4 text-center">
+                      <td className="p-4 min-w-40">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            suspendido
+                              ? "bg-red-100 text-red-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {suspendido ? "Suspendido" : "Activo"}
+                        </span>
+                        {suspendido && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            {usuario.suspensionIndefinida
+                              ? "Sin fecha de regreso"
+                              : `Hasta ${new Date(
+                                  usuario.suspendidoHasta
+                                ).toLocaleString("es-CO")}`}
+                          </p>
+                        )}
+                      </td>
+                      <td className="p-4 text-center min-w-40">
+                        <div className="flex items-center justify-center gap-2">
                         <button
                           type="button"
+                          disabled={!puedeGestionar}
+                          onClick={() => cambiarPassword(usuario)}
+                          className="p-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:cursor-not-allowed disabled:opacity-35"
+                          title={puedeGestionar ? "Cambiar clave" : "No disponible para esta cuenta"}
+                          aria-label="Cambiar clave"
+                        >
+                          <KeyRound size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!puedeGestionar}
+                          onClick={() => gestionarSuspension(usuario)}
+                          className={`p-2 rounded-lg disabled:cursor-not-allowed disabled:opacity-35 ${
+                            suspendido
+                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                              : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                          }`}
+                          title={
+                            puedeGestionar
+                              ? suspendido
+                                ? "Reactivar usuario"
+                                : "Suspender usuario"
+                              : "No disponible para esta cuenta"
+                          }
+                          aria-label={suspendido ? "Reactivar usuario" : "Suspender usuario"}
+                        >
+                          {suspendido ? <PlayCircle size={16} /> : <Ban size={16} />}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!puedeGestionar}
                           onClick={() =>
                             eliminarUsuarioSeleccionado(usuario)
                           }
-                          className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
-                          title="Eliminar usuario"
+                          className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-35"
+                          title={puedeGestionar ? "Eliminar usuario" : "No disponible para esta cuenta"}
                           aria-label="Eliminar usuario"
                         >
                           <Trash2 size={16} />
                         </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
               </div>
@@ -592,6 +823,11 @@ function UsuariosPage() {
                           >
                             <span className="text-sm text-slate-700">
                               {modulo.label}
+                              {modulo.fijo && (
+                                <span className="ml-2 text-[11px] font-medium text-slate-400">
+                                  Siempre activo
+                                </span>
+                              )}
                             </span>
                             <input
                               type="checkbox"

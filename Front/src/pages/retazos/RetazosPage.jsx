@@ -5,7 +5,6 @@ import {
   Plus,
   Save,
   Trash2,
-  X,
 } from "lucide-react";
 
 import {
@@ -32,6 +31,7 @@ import {
   unidadDetalle,
   unidadPorMaterial,
 } from "../../utils/materiales";
+import AppModal from "../../components/ui/AppModal";
 
 function RetazosPage() {
   const [retazos, setRetazos] =
@@ -41,6 +41,9 @@ function RetazosPage() {
     useState(true);
 
   const [open, setOpen] =
+    useState(false);
+
+  const [anchoPersonalizado, setAnchoPersonalizado] =
     useState(false);
 
   const [form, setForm] =
@@ -111,6 +114,7 @@ function RetazosPage() {
       largoOriginal: "",
       observaciones: "",
     });
+    setAnchoPersonalizado(false);
   };
 
   const guardar = async () => {
@@ -119,7 +123,9 @@ function RetazosPage() {
         !form.tipoPolarizado ||
         form.porcentaje === "" ||
         !form.ancho ||
-        !form.largoOriginal
+        !form.largoOriginal ||
+        Number(form.ancho) <= 0 ||
+        Number(form.largoOriginal) <= 0
       ) {
         return Swal.fire({
           icon: "warning",
@@ -134,7 +140,7 @@ function RetazosPage() {
           form.unidadMedida ||
           unidadPorMaterial(form.tipoPolarizado),
         ancho: Number(form.ancho),
-        largoOriginal: Number(form.largoOriginal),
+        largoOriginal: Number(Number(form.largoOriginal).toFixed(2)),
       });
 
       Swal.fire({
@@ -358,21 +364,14 @@ function RetazosPage() {
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
-            <div className="p-5 border-b flex justify-between items-center">
-              <h2 className="text-xl font-bold">
-                Nuevo retazo
-              </h2>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-2 rounded-lg hover:bg-slate-100"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
+        <AppModal
+          title="Nuevo retazo"
+          subtitle="Registra un sobrante disponible para futuros cortes"
+          icon={PackageOpen}
+          maxWidth="max-w-2xl"
+          onClose={() => setOpen(false)}
+        >
+            <div className="space-y-5">
               <div className="grid md:grid-cols-2 gap-4">
                 <Input
                   label="Codigo"
@@ -469,31 +468,58 @@ function RetazosPage() {
                 </label>
                 <label className="block">
                   <span className="text-sm text-slate-500">
-                    Ancho
+                    Ancho del retazo (m)
                   </span>
                   <select
-                    value={form.ancho}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        ancho: event.target.value,
-                      })
-                    }
-                    className="w-full border rounded-lg p-3 mt-1"
+                    value={anchoPersonalizado ? "OTRO" : form.ancho}
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      if (value === "OTRO") {
+                        setAnchoPersonalizado(true);
+                        setForm({ ...form, ancho: "" });
+                        return;
+                      }
+
+                      setAnchoPersonalizado(false);
+                      setForm({ ...form, ancho: value });
+                    }}
+                    className="mt-1 w-full rounded-lg border p-3"
                   >
                     {anchosPulgadas.map((item) => (
                       <option
                         key={item.value}
                         value={anchoValue(item.value)}
                       >
-                        {item.label}
+                        {item.label} ({anchoValue(item.value)} m)
                       </option>
                     ))}
+                    <option value="OTRO">Otro ancho</option>
                   </select>
+                  {anchoPersonalizado && (
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="Ej: 1.45"
+                      value={form.ancho}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          ancho: event.target.value,
+                        })
+                      }
+                      className="mt-2 w-full rounded-lg border p-3"
+                    />
+                  )}
                 </label>
                 <Input
-                  label="Largo disponible"
+                  label="Largo disponible (m)"
                   type="number"
+                  min="0.01"
+                  step="0.01"
+                  inputMode="decimal"
                   value={form.largoOriginal}
                   onChange={(value) =>
                     setForm({
@@ -539,8 +565,7 @@ function RetazosPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </AppModal>
       )}
     </div>
   );
@@ -564,6 +589,9 @@ function Input({
   value,
   onChange,
   type = "text",
+  min,
+  step,
+  inputMode,
 }) {
   return (
     <label className="block">
@@ -572,6 +600,9 @@ function Input({
       </span>
       <input
         type={type}
+        min={min}
+        step={step}
+        inputMode={inputMode}
         value={value}
         onChange={(event) =>
           onChange(event.target.value)

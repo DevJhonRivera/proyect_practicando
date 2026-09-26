@@ -8,7 +8,6 @@ import {
   Save,
   Tags,
   Truck,
-  X,
 } from "lucide-react";
 
 import {
@@ -34,6 +33,7 @@ import {
   UNIDAD_NINGUNA,
   unidadDetalle,
 } from "../../utils/materiales";
+import AppModal from "../../components/ui/AppModal";
 
 const largosRolloOpciones = [
   {
@@ -1294,25 +1294,14 @@ function Field({ label, children }) {
 
 function Modal({ title, children, onClose }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="p-5 border-b flex items-center justify-between">
-          <h2 className="text-xl font-bold">
-            {title}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-100"
-          >
-            <X size={20} />
-          </button>
-        </div>
-        <div className="p-5">
-          {children}
-        </div>
-      </div>
-    </div>
+    <AppModal
+      title={title}
+      subtitle="Registra y organiza la entrada de rollos"
+      icon={Package}
+      onClose={onClose}
+    >
+      {children}
+    </AppModal>
   );
 }
 
