@@ -1,0 +1,53 @@
+--- PAGE 1 ---
+FÍSICA ELECTROMAGNÉTICA
+Diego Javier Gaitán
+diego.gaitan@ibero.edu.co
+Cesión de derechos de autor a la Corporación Universitaria Iberoamericana
+UNIDAD DE APRENDIZAJE II – ACTIVIDAD 4: CAMPO MAGNÉTICO
+1. El campo magnético de la Tierra en cierta ubicación está dirigido verticalmente hacia
+abajo y tiene una magnitud de 50.0 µT. Un protón se encuentra trasladándose
+horizontalmente hacia el oeste en el campo con una rapidez de 6.20 X 106 m/s. a)
+¿Cuáles son la dirección y la magnitud de la fuerza magnética que el campo ejerce
+sobre esta partícula? b) ¿Cuál es el radio del arco circular que ha recorrido el protón?
+2. El campo eléctrico presente en la superficie total de una cubierta esférica delgada de
+0.750 m de radio tiene un valor de 890 N/Cyapuntaradialmentehaciaelcentrodela
+esfera. a) ¿Cuál es la carga neta en el interior de la superficie de la esfera?b)¿Quése
+puede concluir en relación con la naturaleza y distribucióndelacargaenelinteriorde
+la cubierta esférica?
+3. Suponga que la región a la derecha de cierto plano vertical contiene un campo
+magnético vertical de 1.00mT de magnitud y el campo es cero en la región a la
+izquierda del plano. Un electrón, que originalmente viaja perpendicular al plano
+frontera, pasa a la región del campo. a) Determine el intervalo de tiempo requerido
+para que el electrón salga de la región “llena de campo”, y note que su trayectoria es
+un semicírculo. b) Encuentre la energía cinética del electrón, si suponequelamáxima
+profundidad de penetración en el campo es 2.00 cm.
+4. Considere el espectrómetro de masas que se muestra esquemáticamente en la figura.
+La magnitud del campo eléctrico entre las placas del selector de velocidad es 2 500
+V/m, y el campo magnético tanto en el selector de velocidad como en la cámara de
+--- PAGE 2 ---
+deflexióntieneunamagnitudde0.0350T.Calculeelradiodelatrayectoriaparaunion
+−26
+de una sola carga con una masa𝑚 = 2.18 𝑋 10 𝐾𝑔.
+5. a) Un conductor con la forma de una espira cuadrada con un lado𝑙 = 0.400𝑚 lleva
+una corriente𝐼 = 10.0 𝐴, como en la figura.
+Calcule la magnitud y dirección del campo magnético enelcentrodelcuadro.b)¿Qué
+pasaría si? Este conductor toma la forma de una sola vuelta circular y lleva la misma
+corriente, ¿cuál es el valor del campo magnético en el centro?
+6. Una trayectoria de corriente con la forma que se muestra en la figura produce un
+campo magnético en P, el centro del arco.
+Si el arco subtiende un ángulo de 30.0° y el radio del arco es 0.600 m, ¿cuáles son la
+magnitud y la dirección del campo producido en P si la corriente es de 3.00 A?
+7. Tres largos conductores paralelosportancorrientesde𝐼 = 2.00 𝐴.Lafiguraeslavista
+de un extremo de los conductores, donde cada corriente sale de la página.
+8. Si considera 𝑎 = 1.00 𝑐𝑚, determine lamagnitudyladireccióndelcampomagnético
+en los puntos A, B y C.
+9. Un alambre largo y recto yace sobre una mesa horizontalyllevaunacorrientede1.20
+µ𝐴. En el vacío, un protón se mueveparalelamentealalambre(endirecciónopuestaa
+--- PAGE 3 ---
+la corriente) con una rapidez constante de 2.30 X 104 m/s y a una distancia (d) por
+encima del alambre. Determine el valor de d. Puede ignorar el campo magnético
+causado por la Tierra.
+10.Un solenoide largo con un radio de 2.00 cm y de 1.0 X 103 vueltas/metro,
+Está rodeado por una bobina con un radio de 10cmyde15vueltas.Lacorrienteenel
+solenoide cambia según la expresión 𝐼 = (5.00𝐴)sin𝑠𝑖𝑛 120𝑡 . Encuentre la fem
+inducida en la bobina de 15 vueltas en función del tiempo.

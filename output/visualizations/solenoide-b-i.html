@@ -1,0 +1,66 @@
+<div id="solenoide-bi-plot" class="solenoide-plot" role="img" aria-label="Grafica del campo magnetico B en teslas en funcion de la corriente I en amperios. Los puntos forman una linea recta creciente.">
+  <style>
+    #solenoide-bi-plot { color: var(--foreground); width: 100%; max-width: 760px; margin: 0 auto; }
+    #solenoide-bi-plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+    #solenoide-bi-plot .grid { stroke: var(--border); stroke-width: 1; opacity: .55; }
+    #solenoide-bi-plot .axis { stroke: var(--foreground); stroke-width: 1.4; }
+    #solenoide-bi-plot .trend { stroke: var(--viz-series-1); stroke-width: 2.5; fill: none; }
+    #solenoide-bi-plot .point { fill: var(--viz-series-1); stroke: var(--background); stroke-width: 1.5; }
+    #solenoide-bi-plot text { fill: var(--foreground); font-family: system-ui, sans-serif; font-size: 12px; }
+    #solenoide-bi-plot .title { font-size: 16px; font-weight: 500; }
+    #solenoide-bi-plot .axis-title { font-size: 13px; font-weight: 500; }
+    #solenoide-bi-plot .annotation { fill: var(--muted-foreground); font-size: 12px; }
+  </style>
+  <svg viewBox="0 0 760 440" aria-labelledby="solenoide-bi-title solenoide-bi-desc">
+    <title id="solenoide-bi-title">Campo magnetico en funcion de la corriente</title>
+    <desc id="solenoide-bi-desc">Datos experimentales de un solenoide de 200 vueltas y 50 centimetros. La relacion entre B e I es lineal y creciente.</desc>
+    <g id="plot-area"></g>
+  </svg>
+  <script>
+    (() => {
+      const root = document.getElementById("solenoide-bi-plot");
+      const svg = root.querySelector("svg");
+      const plot = root.querySelector("#plot-area");
+      const ns = "http://www.w3.org/2000/svg";
+      const data = [
+        [0.0, 0.0000000], [0.5, 0.00050266], [1.0, 0.00100531], [1.5, 0.00150797],
+        [2.0, 0.00201062], [2.5, 0.00251328], [3.0, 0.00301594], [3.5, 0.00351859],
+        [4.0, 0.00402125], [4.5, 0.00452390], [5.0, 0.00502656], [5.5, 0.00552922],
+        [6.0, 0.00603187], [6.5, 0.00653453], [7.0, 0.00703718], [7.5, 0.00753984],
+        [8.0, 0.00804250]
+      ];
+      const left = 82, right = 700, top = 48, bottom = 360;
+      const xMax = 8.2, yMax = 0.0085;
+      const x = value => left + (value / xMax) * (right - left);
+      const y = value => bottom - (value / yMax) * (bottom - top);
+      const add = (tag, attrs, parent = plot, text = "") => {
+        const node = document.createElementNS(ns, tag);
+        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+        if (text) node.textContent = text;
+        parent.appendChild(node);
+        return node;
+      };
+      add("text", {x: 380, y: 24, "text-anchor": "middle", class: "title"}, plot, "Campo magnetico B en funcion de la corriente I");
+      for (let tick = 0; tick <= 8; tick += 1) {
+        const px = x(tick);
+        add("line", {x1: px, y1: top, x2: px, y2: bottom, class: "grid"});
+        add("text", {x: px, y: bottom + 22, "text-anchor": "middle"}, plot, String(tick));
+      }
+      for (let tick = 0; tick <= 8; tick += 1) {
+        const value = tick / 1000;
+        const py = y(value);
+        add("line", {x1: left, y1: py, x2: right, y2: py, class: "grid"});
+        add("text", {x: left - 12, y: py + 4, "text-anchor": "end"}, plot, value.toFixed(3));
+      }
+      add("line", {x1: left, y1: bottom, x2: right, y2: bottom, class: "axis"});
+      add("line", {x1: left, y1: top, x2: left, y2: bottom, class: "axis"});
+      add("text", {x: (left + right) / 2, y: 410, "text-anchor": "middle", class: "axis-title"}, plot, "Corriente I (A)");
+      const yLabel = add("text", {x: 18, y: (top + bottom) / 2, "text-anchor": "middle", class: "axis-title"}, plot, "Campo B (T)");
+      yLabel.setAttribute("transform", `rotate(-90 18 ${(top + bottom) / 2})`);
+      const trend = data.map(([current]) => `${x(current)},${y(0.00100532 * current)}`).join(" ");
+      add("polyline", {points: trend, class: "trend"});
+      data.forEach(([current, field]) => add("circle", {cx: x(current), cy: y(field), r: 4, class: "point", "data-tooltip": `I = ${current.toFixed(1)} A; B = ${field.toFixed(8)} T`}));
+      add("text", {x: 520, y: 82, class: "annotation"}, plot, "Ajuste lineal: B = 0.0010053 I");
+    })();
+  </script>
+</div>
