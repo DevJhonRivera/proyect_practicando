@@ -5,11 +5,10 @@ import {
 } from "../utils/session";
 
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL?.replace(/\/$/, "") ||
-    (import.meta.env.DEV
-      ? "http://localhost:5001/api"
-      : "https://back-carros.onrender.com/api"),
+  baseURL: import.meta.env.DEV
+    ? "http://localhost:5001/api"
+    : import.meta.env.VITE_API_URL?.replace(/\/$/, "") ||
+      "https://back-carros.onrender.com/api",
 });
 
 api.interceptors.request.use(  (config) => {
