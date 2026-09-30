@@ -33,6 +33,7 @@ const servicioLabels = {
   GARANTIA: "Garantia",
   GARANTIA_INSTALADOR: "Garantia instalador",
   GARANTIA_EMPRESA: "Garantia empresa",
+  GARANTIA_PROVEEDOR: "Garantia proveedor",
 };
 
 const estadoLabels = {
@@ -56,6 +57,7 @@ const filtrosTrabajo = [
   ["TODOS", "Todos"],
   ["GARANTIAS", "Garantias"],
   ["GARANTIA_INSTALADOR", "Garantia instalador"],
+  ["GARANTIA_PROVEEDOR", "Garantia proveedor"],
 ];
 
 function AuditoriaPage() {

@@ -3,6 +3,7 @@ export const servicioLabels = {
   GARANTIA: "Garantia",
   GARANTIA_INSTALADOR: "Garantia instalador",
   GARANTIA_EMPRESA: "Garantia empresa",
+  GARANTIA_PROVEEDOR: "Garantia proveedor",
 };
 
 export const tipoCorteLabels = {

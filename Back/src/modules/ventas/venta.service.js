@@ -206,6 +206,15 @@ const actualizarCortesVendidos = async (
           );
         }
 
+        if (venta.asesoriaId) {
+          const corteAjeno = cortes.find(
+            (corte) => String(corte.asesoriaId || "") !== String(venta.asesoriaId)
+          );
+          if (corteAjeno) {
+            throw new Error("Uno de los cortes no pertenece a esta orden de servicio");
+          }
+        }
+
         const corteVendido = cortes.find(
           (corte) =>
             corte.ventaId &&
@@ -332,7 +341,7 @@ const limpiarCortesVenta = async (
 };
 
 const sincronizarAlertaVenta = async (venta) => {
-  if (venta.estado === "PENDIENTE") {
+  if (["PENDIENTE", "PARCIAL"].includes(venta.estado)) {
     await crearAlertaVentaPendiente(venta);
     return;
   }
@@ -479,7 +488,16 @@ const prepararVenta = async (data, ventaActual = null) => {
 };
 
 export const crearVenta = async (data, user) => {
+  let asesoria = null;
   if (data.asesoriaId) {
+    if (!mongoose.Types.ObjectId.isValid(data.asesoriaId)) {
+      throw new Error("La orden de servicio no es valida");
+    }
+    asesoria = await Asesoria.findById(data.asesoriaId).lean();
+    if (!asesoria) throw new Error("La orden de servicio no existe");
+    if (asesoria.flujo?.etapa !== "PENDIENTE_PAGO") {
+      throw new Error("La orden no esta disponible para registrar el pago");
+    }
     const existente = await Venta.findOne({ asesoriaId: data.asesoriaId });
     if (existente) {
       throw new Error(`Esta orden ya tiene la venta ${existente.codigoVenta}`);
@@ -487,6 +505,20 @@ export const crearVenta = async (data, user) => {
   }
   const ventaData =
     await prepararVenta(data);
+  if (!["PENDIENTE", "PAGADA"].includes(ventaData.estado)) {
+    throw new Error("El estado inicial de la venta no es valido");
+  }
+  if (ventaData.estado === "PAGADA" && ventaData.total > 0 && ventaData.metodoPago === "POR_DEFINIR") {
+    throw new Error("Seleccione la forma de pago");
+  }
+  if (asesoria) {
+    if (ventaData.vehiculo.placa !== String(asesoria.vehiculo?.placa || "").toUpperCase()) {
+      throw new Error("La placa de la venta no coincide con la orden de servicio");
+    }
+    if (roundMoney(ventaData.total) !== roundMoney(asesoria.comercial?.totalAcordado)) {
+      throw new Error("El total de la venta no coincide con el valor acordado por el asesor");
+    }
+  }
   const session =
     await mongoose.startSession();
   let venta;
@@ -497,6 +529,17 @@ export const crearVenta = async (data, user) => {
         [
           {
             ...ventaData,
+            valorPagado: ventaData.estado === "PAGADA" ? ventaData.total : 0,
+            valorDevuelto: 0,
+            saldoPendiente: ventaData.estado === "PAGADA" ? 0 : ventaData.total,
+            pagos: ventaData.estado === "PAGADA" ? [{
+              tipo: "PAGO",
+              valor: ventaData.total,
+              metodoPago: ventaData.metodoPago,
+              observacion: "PAGO TOTAL AL REGISTRAR LA VENTA",
+              ...usuarioAuditoria(user),
+              fecha: new Date(),
+            }] : [],
             auditoria: [
               entradaAuditoria({
                 accion: "CREACION",
@@ -579,6 +622,12 @@ export const obtenerVentaPorId = async (id) => {
 
 export const actualizarEstadoVenta =
   async (id, estado, user, metodoPago) => {
+    if (["PAGADA", "PARCIAL"].includes(estado)) {
+      throw new Error("Registre un movimiento de pago para actualizar el estado de la venta");
+    }
+    if (!["PENDIENTE", "ANULADA"].includes(estado)) {
+      throw new Error("El estado solicitado no es valido");
+    }
     const ventaActual =
       await Venta.findById(id);
 
@@ -691,6 +740,89 @@ export const actualizarEstadoVenta =
     return venta;
   };
 
+export const registrarMovimientoPago = async (id, data, user) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Venta no valida");
+  const venta = await Venta.findById(id);
+  if (!venta) throw new Error("Venta no encontrada");
+  if (venta.estado === "ANULADA") throw new Error("No se pueden registrar movimientos en una venta anulada");
+
+  const tipo = normalizarMayusculas(data.tipo || "PAGO");
+  const metodoPago = normalizarMayusculas(data.metodoPago);
+  const valor = roundMoney(data.valor);
+  const metodos = ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "MIXTO"];
+  if (!["PAGO", "DEVOLUCION"].includes(tipo)) throw new Error("Tipo de movimiento no valido");
+  if (!metodos.includes(metodoPago)) throw new Error("Seleccione la forma de pago");
+  if (!Number.isFinite(valor) || valor <= 0) throw new Error("Ingrese un valor mayor a cero");
+  if (tipo === "DEVOLUCION" && !["ADMIN", "SUPERUSUARIO"].includes(user.rol)) {
+    throw new Error("Solo administracion puede registrar devoluciones");
+  }
+
+  const pagosAnteriores = Number(venta.valorPagado || (venta.estado === "PAGADA" && !venta.pagos.length ? venta.total : 0));
+  const devolucionesAnteriores = Number(venta.valorDevuelto || 0);
+  const netoAnterior = Math.max(pagosAnteriores - devolucionesAnteriores, 0);
+  const saldoAnterior = Math.max(Number(venta.total || 0) - netoAnterior, 0);
+
+  if (tipo === "PAGO" && valor > saldoAnterior) {
+    throw new Error(`El pago supera el saldo pendiente de ${saldoAnterior.toLocaleString("es-CO")} COP`);
+  }
+  if (tipo === "DEVOLUCION" && valor > netoAnterior) {
+    throw new Error("La devolucion supera el valor neto recibido");
+  }
+  if (tipo === "DEVOLUCION" && normalizarTexto(data.observacion).length < 5) {
+    throw new Error("Indique el motivo de la devolucion");
+  }
+
+  venta.pagos.push({
+    tipo,
+    valor,
+    metodoPago,
+    referencia: normalizarMayusculas(data.referencia),
+    observacion: normalizarMayusculas(data.observacion),
+    ...usuarioAuditoria(user),
+    fecha: new Date(),
+  });
+  venta.valorPagado = tipo === "PAGO" ? pagosAnteriores + valor : pagosAnteriores;
+  venta.valorDevuelto = tipo === "DEVOLUCION" ? devolucionesAnteriores + valor : devolucionesAnteriores;
+  const neto = Math.max(venta.valorPagado - venta.valorDevuelto, 0);
+  venta.saldoPendiente = Math.max(venta.total - neto, 0);
+  venta.estado = venta.saldoPendiente <= 0 ? "PAGADA" : neto > 0 ? "PARCIAL" : "PENDIENTE";
+  if (tipo === "PAGO") {
+    const metodosUsados = new Set(
+      venta.pagos.filter((item) => item.tipo === "PAGO").map((item) => item.metodoPago)
+    );
+    venta.metodoPago = metodosUsados.size > 1 ? "MIXTO" : metodoPago;
+  }
+  venta.auditoria.push(entradaAuditoria({
+    accion: tipo,
+    descripcion: `${tipo === "PAGO" ? "Pago recibido" : "Devolucion registrada"} por ${valor.toLocaleString("es-CO")} COP`,
+    user,
+    cambios: { valor, metodoPago, saldoPendiente: venta.saldoPendiente },
+  }));
+  await venta.save();
+
+  await Corte.updateMany({ ventaId: venta._id }, { $set: { ventaEstado: venta.estado } });
+  if (venta.asesoriaId) {
+    await Asesoria.findByIdAndUpdate(venta.asesoriaId, {
+      $set: {
+        "pago.estado": venta.estado === "PAGADA" ? "PAGADO" : venta.estado === "PARCIAL" ? "PARCIAL" : "PENDIENTE",
+        "pago.valorRecibido": neto,
+        "pago.recibidoPor": user._id,
+        "pago.recibidoPorNombre": normalizarMayusculas(user.nombre || user.rol),
+        "pago.metodoPagoFinal": venta.metodoPago,
+        "pago.fechaPago": venta.estado === "PAGADA" ? new Date() : null,
+        "flujo.etapa": venta.estado === "PAGADA" ? "FINALIZADA" : "PENDIENTE_PAGO",
+        "flujo.fechaFinalizacion": venta.estado === "PAGADA" ? new Date() : null,
+      },
+    });
+  }
+  try {
+    await sincronizarAlertaVenta(venta);
+  } catch (error) {
+    await registrarErrorPostVenta(venta, error);
+  }
+  return Venta.findById(venta._id).populate("items.corteId").populate("items.corteIds");
+};
+
 export const actualizarVenta = async (id, data, user) => {
   const ventaActual =
     await Venta.findById(id);
@@ -700,7 +832,7 @@ export const actualizarVenta = async (id, data, user) => {
   }
 
   const ventaData =
-    await prepararVenta(data, ventaActual);
+    await prepararVenta({ ...data, estado: ventaActual.estado }, ventaActual);
   const cambios =
     cambiosVenta(ventaActual, ventaData);
   const session =

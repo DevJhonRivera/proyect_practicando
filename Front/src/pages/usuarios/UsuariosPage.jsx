@@ -114,6 +114,19 @@ const roleLabels = {
   ASESOR: "Asesor",
 };
 
+const configuracionesRolBase = {
+  ADMIN: ["*"],
+  INVENTARIO: ["dashboard:read", "pedidos:*", "recepciones:*", "rollos:*", "retazos:*", "alertas:*", "cortes:*", "piezasPpf:*"],
+  VENTAS: ["dashboard:read", "ventas:*", "cortes:read", "alertas:*"],
+  ASESOR: ["dashboard:read", "asesores:*", "cortes:read", "piezasPpf:read"],
+};
+
+const normalizarConfiguracionesRoles = (configuraciones = []) =>
+  ["ADMIN", "INVENTARIO", "VENTAS", "ASESOR"].map((rol) => {
+    const encontrada = configuraciones.find((config) => config.rol === rol);
+    return encontrada || { rol, permisos: configuracionesRolBase[rol] };
+  });
+
 const modulosPermitidosPorRol = () => modulosConfigurables;
 
 const tienePermisoModulo = (permisos, modulo) =>
@@ -200,7 +213,7 @@ function UsuariosPage() {
     try {
       setLoadingPermisos(true);
       const res = await getPermisosRoles();
-      setPermisosRoles(res.data || []);
+      setPermisosRoles(normalizarConfiguracionesRoles(res.data || []));
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -779,7 +792,7 @@ function UsuariosPage() {
               <SlidersHorizontal className="text-blue-600" />
               <div>
                 <h2 className="font-bold text-slate-800">
-                  Permisos por rol
+                  Permisos por rol · 4 perfiles
                 </h2>
                 <p className="text-sm text-slate-500">
                   Elige que modulos puede ver y usar cada perfil.
@@ -793,7 +806,7 @@ function UsuariosPage() {
               Cargando permisos...
             </div>
           ) : (
-            <div className="grid lg:grid-cols-3 gap-4 p-5">
+            <div className="grid gap-4 p-5 lg:grid-cols-2 2xl:grid-cols-4">
               {permisosRoles.map((config) => {
                 const modulos = modulosPermitidosPorRol(config.rol);
 

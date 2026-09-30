@@ -20,7 +20,7 @@ import {
   createVenta,
   getVentas,
   updateVenta,
-  updateEstadoVenta,
+  createMovimientoPago,
 } from "../../api/ventas.api";
 import ExcelButton from "../../components/ui/ExcelButton";
 import MonthFilter from "../../components/ui/MonthFilter";
@@ -69,6 +69,7 @@ const ventaInicial = {
   estado: "PENDIENTE",
   descuento: "",
   metodoPago: "POR_DEFINIR",
+  valorPago: "",
   observaciones: "",
   items: [],
 };
@@ -105,7 +106,8 @@ const placaValida = (value) =>
   normalizarPlaca(value).length <= 10;
 
 function VentasPage() {
-  const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(obtenerUsuarioActual()?.rol);
+  const usuario = obtenerUsuarioActual();
+  const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(usuario?.rol);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const asesoriaCargadaRef = useRef("");
@@ -225,6 +227,7 @@ function VentasPage() {
           metodoPago: orden.comercial?.metodoPagoPrevisto || "POR_DEFINIR",
           observaciones: `ORDEN ${orden.codigo}`,
           items,
+          valorPago: String(Math.max(items.reduce((suma, item) => suma + Number(item.total || 0), 0) - Number(orden.comercial?.descuento || 0), 0)),
         });
         setVistaVentas("nueva");
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -527,18 +530,30 @@ function VentasPage() {
     if (form.metodoPago === "POR_DEFINIR") {
       return Swal.fire({ icon: "warning", title: "Seleccione la forma de pago" });
     }
+    const valorPago = Number(form.valorPago || 0);
+    if (valorPago <= 0 || valorPago > total) {
+      return Swal.fire({ icon: "warning", title: "El pago debe ser mayor a cero y no superar el total" });
+    }
     const confirmacion = await Swal.fire({
       icon: "question",
       title: "¿Confirmar pago?",
-      text: `Se registrará un pago por ${formatoCop.format(total)}.`,
+      text: `Se registrará un pago por ${formatoCop.format(valorPago)}${valorPago < total ? ` y quedará un saldo de ${formatoCop.format(total - valorPago)}` : ""}.`,
       showCancelButton: true,
       confirmButtonText: "Sí, registrar pago",
       cancelButtonText: "Cancelar",
     });
     if (!confirmacion.isConfirmed) return;
     try {
-      await createVenta({ ...form, estado: "PAGADA", descuento });
-      await Swal.fire({ icon: "success", title: "Pago registrado", text: "La orden quedó finalizada." });
+      const ventaResponse = await createVenta({ ...form, estado: valorPago === total ? "PAGADA" : "PENDIENTE", descuento });
+      if (valorPago < total) {
+        await createMovimientoPago(ventaResponse.data._id, {
+          tipo: "PAGO",
+          valor: valorPago,
+          metodoPago: form.metodoPago,
+          observacion: "ABONO INICIAL",
+        });
+      }
+      await Swal.fire({ icon: "success", title: valorPago === total ? "Pago registrado" : "Abono registrado", text: valorPago === total ? "La orden quedó finalizada." : `Queda pendiente ${formatoCop.format(total - valorPago)}.` });
       setForm(ventaInicial);
       setVistaVentas("historial");
       navigate("/ventas", { replace: true });
@@ -548,25 +563,70 @@ function VentasPage() {
     }
   };
 
-  const marcarPagada = async (venta) => {
-    let metodoPago = venta.metodoPago || "POR_DEFINIR";
-    if (metodoPago === "POR_DEFINIR") {
-      const resultado = await Swal.fire({
-        icon: "question",
-        title: "¿Cómo pagó el cliente?",
-        input: "select",
-        inputOptions: { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", TARJETA: "Tarjeta", CREDITO: "Crédito", MIXTO: "Mixto" },
-        inputPlaceholder: "Seleccione la forma de pago",
-        showCancelButton: true,
-        confirmButtonText: "Confirmar pago",
-        cancelButtonText: "Cancelar",
-        inputValidator: (value) => !value ? "Seleccione la forma de pago" : undefined,
-      });
-      if (!resultado.isConfirmed) return;
-      metodoPago = resultado.value;
+  const registrarPago = async (venta) => {
+    const saldo = Number(venta.saldoPendiente ?? (venta.estado === "PAGADA" ? 0 : Number(venta.total || 0)));
+    const resultado = await Swal.fire({
+      title: "Registrar abono",
+      html: `<div class="grid gap-3 text-left"><p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">Saldo pendiente: <strong>${formatoCop.format(saldo)}</strong></p><label class="text-sm font-semibold text-slate-600">Valor recibido<input id="pago-valor" class="swal2-input venta-precio" inputmode="numeric" value="${formatearMiles(saldo)}" placeholder="Ej: 300.000" /></label><label class="text-sm font-semibold text-slate-600">Forma de pago<select id="pago-metodo" class="swal2-input"><option value="">Seleccione...</option><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option><option value="CREDITO">Crédito</option></select></label><input id="pago-referencia" class="swal2-input" placeholder="Referencia o comprobante (opcional)" /><input id="pago-observacion" class="swal2-input" placeholder="Observación (opcional)" /></div>`,
+      showCancelButton: true,
+      confirmButtonText: "Registrar abono",
+      cancelButtonText: "Cancelar",
+      didOpen: () => {
+        const input = Swal.getPopup()?.querySelector("#pago-valor");
+        input?.addEventListener("input", () => { input.value = formatearMiles(input.value); });
+      },
+      preConfirm: () => {
+        const popup = Swal.getPopup();
+        const valor = numeroDesdeMiles(popup.querySelector("#pago-valor")?.value || 0);
+        const metodoPago = popup.querySelector("#pago-metodo")?.value || "";
+        if (valor <= 0 || valor > saldo) return Swal.showValidationMessage("El valor debe ser mayor a cero y no superar el saldo");
+        if (!metodoPago) return Swal.showValidationMessage("Seleccione la forma de pago");
+        return { tipo: "PAGO", valor, metodoPago, referencia: popup.querySelector("#pago-referencia")?.value || "", observacion: popup.querySelector("#pago-observacion")?.value || "" };
+      },
+    });
+    if (!resultado.isConfirmed) return;
+    try {
+      await createMovimientoPago(venta._id, resultado.value);
+      await Swal.fire({ icon: "success", title: resultado.value.valor === saldo ? "Pago completado" : "Abono registrado", timer: 1600, showConfirmButton: false });
+      await cargar();
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No fue posible registrar el pago", text: error.response?.data?.message || "Intente nuevamente." });
     }
-    await updateEstadoVenta(venta._id, "PAGADA", metodoPago);
-    await cargar();
+  };
+
+  const registrarDevolucion = async (venta) => {
+    const disponible = Math.max(Number(venta.valorPagado || (venta.estado === "PAGADA" ? venta.total : 0)) - Number(venta.valorDevuelto || 0), 0);
+    const resultado = await Swal.fire({
+      icon: "warning",
+      title: "Registrar devolución",
+      html: `<div class="grid gap-3 text-left"><p class="rounded-lg bg-red-50 p-3 text-sm text-red-800">Máximo disponible: <strong>${formatoCop.format(disponible)}</strong></p><input id="devolucion-valor" class="swal2-input venta-precio" inputmode="numeric" placeholder="Valor a devolver" /><select id="devolucion-metodo" class="swal2-input"><option value="">Forma de devolución...</option><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option><option value="CREDITO">Crédito</option></select><input id="devolucion-referencia" class="swal2-input" placeholder="Referencia (opcional)" /><textarea id="devolucion-observacion" class="swal2-textarea" placeholder="Motivo obligatorio"></textarea></div>`,
+      showCancelButton: true,
+      confirmButtonText: "Registrar devolución",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#dc2626",
+      didOpen: () => {
+        const input = Swal.getPopup()?.querySelector("#devolucion-valor");
+        input?.addEventListener("input", () => { input.value = formatearMiles(input.value); });
+      },
+      preConfirm: () => {
+        const popup = Swal.getPopup();
+        const valor = numeroDesdeMiles(popup.querySelector("#devolucion-valor")?.value || 0);
+        const metodoPago = popup.querySelector("#devolucion-metodo")?.value || "";
+        const observacion = popup.querySelector("#devolucion-observacion")?.value || "";
+        if (valor <= 0 || valor > disponible) return Swal.showValidationMessage("Ingrese un valor válido que no supere lo recibido");
+        if (!metodoPago) return Swal.showValidationMessage("Seleccione la forma de devolución");
+        if (observacion.trim().length < 5) return Swal.showValidationMessage("Indique el motivo de la devolución");
+        return { tipo: "DEVOLUCION", valor, metodoPago, referencia: popup.querySelector("#devolucion-referencia")?.value || "", observacion };
+      },
+    });
+    if (!resultado.isConfirmed) return;
+    try {
+      await createMovimientoPago(venta._id, resultado.value);
+      await Swal.fire({ icon: "success", title: "Devolución registrada", timer: 1600, showConfirmButton: false });
+      await cargar();
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No fue posible registrar la devolución", text: error.response?.data?.message || "Intente nuevamente." });
+    }
   };
 
   const editarVenta = async (venta) => {
@@ -614,14 +674,6 @@ function VentasPage() {
           <input id="venta-placa" class="swal2-input" placeholder="Ej: ABC123" minlength="5" maxlength="10" value="${escapeHtml(venta.vehiculo?.placa || "")}" />
           <input id="venta-marca" class="swal2-input" placeholder="Ej: TOYOTA" value="${escapeHtml(venta.vehiculo?.marca || "")}" />
           <input id="venta-modelo" class="swal2-input" placeholder="Ej: 2024" inputmode="numeric" value="${escapeHtml(venta.vehiculo?.modelo || "")}" />
-          <select id="venta-estado" class="swal2-input">
-            ${["PENDIENTE", "PAGADA", "ANULADA"]
-              .map(
-                (estado) =>
-                  `<option value="${estado}" ${venta.estado === estado ? "selected" : ""}>${estado}</option>`
-              )
-              .join("")}
-          </select>
           ${itemsHtml}
           <input id="venta-descuento" class="swal2-input venta-precio" type="text" inputmode="numeric" min="0" placeholder="Ej: 50.000" value="${formatearMiles(venta.descuento || 0)}" />
           <input id="venta-observaciones" class="swal2-input" placeholder="Ej: Cliente solicita entrega en la tarde" value="${escapeHtml(venta.observaciones || "")}" />
@@ -675,7 +727,7 @@ function VentasPage() {
             marca: mayusculas(valueOf("#venta-marca")),
             modelo: soloNumeros(valueOf("#venta-modelo")),
           },
-          estado: valueOf("#venta-estado"),
+          estado: venta.estado,
           descuento: numeroDesdeMiles(valueOf("#venta-descuento")),
           observaciones: mayusculas(valueOf("#venta-observaciones")),
           items,
@@ -768,6 +820,14 @@ function VentasPage() {
       value: (venta) => Number(venta.total || 0),
     },
     {
+      header: "Recibido neto",
+      value: (venta) => Math.max(Number(venta.valorPagado || (venta.estado === "PAGADA" ? venta.total : 0)) - Number(venta.valorDevuelto || 0), 0),
+    },
+    {
+      header: "Saldo pendiente",
+      value: (venta) => Number(venta.saldoPendiente ?? (venta.estado === "PAGADA" ? 0 : venta.total || 0)),
+    },
+    {
       header: "Estado",
       value: (venta) => venta.estado,
     },
@@ -835,6 +895,7 @@ function VentasPage() {
           descuento={descuento}
           total={total}
           onMetodoPagoChange={(metodoPago) => setForm({ ...form, metodoPago })}
+          onValorPagoChange={(valorPago) => setForm({ ...form, valorPago })}
           onConfirm={registrarPagoOrden}
         />
       )}
@@ -1209,7 +1270,8 @@ function VentasPage() {
                 <VentaCard
                   key={venta._id}
                   venta={venta}
-                  onMarkPaid={marcarPagada}
+                  onMarkPaid={registrarPago}
+                  onRefund={registrarDevolucion}
                   onEdit={editarVenta}
                   canEdit={puedeEditar}
                 />
@@ -1223,7 +1285,7 @@ function VentasPage() {
   );
 }
 
-function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onConfirm }) {
+function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onValorPagoChange, onConfirm }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 bg-slate-50 p-5">
@@ -1238,11 +1300,12 @@ function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onCo
           <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase text-slate-500">Servicios vendidos</div>
           <div className="divide-y divide-slate-100">{form.items.map((item, index) => <div key={`${item.descripcion}-${index}`} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-800">{servicioLabels[item.tipoServicio] || item.tipoServicio}</p><p className="text-xs text-slate-500">{item.descripcion}</p></div><p className="font-black text-slate-900">{formatoCop.format(item.total || 0)}</p></div>)}</div>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_220px] lg:items-end">
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4"><div className="flex justify-between text-sm text-blue-800"><span>Subtotal</span><strong>{formatoCop.format(subtotal)}</strong></div><div className="mt-1 flex justify-between text-sm text-blue-800"><span>Descuento</span><strong>- {formatoCop.format(descuento)}</strong></div><div className="mt-3 flex justify-between border-t border-blue-200 pt-3 text-xl font-black text-blue-900"><span>Total a cobrar</span><span>{formatoCop.format(total)}</span></div></div>
           <Field label="Forma de pago confirmada"><select value={form.metodoPago} onChange={(event) => onMetodoPagoChange(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3"><option value="POR_DEFINIR">Seleccione...</option><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option><option value="CREDITO">Crédito</option><option value="MIXTO">Mixto</option></select></Field>
+          <Field label="Valor recibido"><input value={formatearMiles(form.valorPago)} onChange={(event) => onValorPagoChange(soloDigitos(event.target.value))} inputMode="numeric" placeholder="Ej: 500.000" className="w-full rounded-xl border border-slate-200 bg-white p-3" /></Field>
         </div>
-        <div className="flex justify-end border-t border-slate-200 pt-5"><button type="button" onClick={onConfirm} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-bold text-white hover:bg-emerald-700 sm:w-auto"><CheckCircle2 size={18} />Registrar pago y finalizar</button></div>
+        <div className="flex justify-end border-t border-slate-200 pt-5"><button type="button" onClick={onConfirm} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-bold text-white hover:bg-emerald-700 sm:w-auto"><CheckCircle2 size={18} />Registrar pago</button></div>
       </div>
     </section>
   );
@@ -1632,7 +1695,11 @@ function ItemsVenta({ items, onDelete }) {
   );
 }
 
-function VentaCard({ venta, onMarkPaid, onEdit, canEdit }) {
+function VentaCard({ venta, onMarkPaid, onRefund, onEdit, canEdit }) {
+  const valorPagado = Number(venta.valorPagado || (venta.estado === "PAGADA" && !venta.pagos?.length ? venta.total : 0));
+  const valorDevuelto = Number(venta.valorDevuelto || 0);
+  const netoRecibido = Math.max(valorPagado - valorDevuelto, 0);
+  const saldoPendiente = Number(venta.saldoPendiente ?? Math.max(Number(venta.total || 0) - netoRecibido, 0));
   return (
     <article className="p-5 space-y-4 hover:bg-slate-50/70">
       <div className="flex flex-wrap justify-between gap-3">
@@ -1681,21 +1748,26 @@ function VentaCard({ venta, onMarkPaid, onEdit, canEdit }) {
       </div>
 
       <div className="flex flex-wrap justify-between items-center gap-3 border-t border-slate-200 pt-3">
-        <p className="text-xl font-bold text-blue-700">
-          {formatoCop.format(venta.total || 0)}
-        </p>
-        <span className="text-xs font-bold text-slate-500">{(venta.metodoPago || "POR_DEFINIR").replaceAll("_", " ")}</span>
-        {venta.estado !== "PAGADA" && (
+        <div className="grid min-w-0 gap-1 text-sm sm:grid-cols-3 sm:gap-4">
+          <p><span className="block text-xs text-slate-500">Total</span><strong className="text-blue-700">{formatoCop.format(venta.total || 0)}</strong></p>
+          <p><span className="block text-xs text-slate-500">Recibido neto</span><strong className="text-emerald-700">{formatoCop.format(netoRecibido)}</strong></p>
+          <p><span className="block text-xs text-slate-500">Saldo</span><strong className="text-amber-700">{formatoCop.format(saldoPendiente)}</strong></p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+        {venta.estado !== "PAGADA" && venta.estado !== "ANULADA" && saldoPendiente > 0 && (
           <button
             type="button"
             onClick={() => onMarkPaid(venta)}
             className="px-3 py-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 flex items-center gap-2 text-sm font-semibold"
           >
             <CheckCircle2 size={16} />
-            Marcar pagada
+            Registrar abono
           </button>
         )}
+        {canEdit && venta.estado !== "ANULADA" && netoRecibido > 0 && <button type="button" onClick={() => onRefund(venta)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">Registrar devolución</button>}
+        </div>
       </div>
+      {venta.pagos?.length > 0 && <details className="rounded-xl border border-slate-200 bg-white"><summary className="cursor-pointer px-3 py-2 text-xs font-bold text-slate-600">Ver movimientos ({venta.pagos.length})</summary><div className="divide-y divide-slate-100">{[...venta.pagos].reverse().map((movimiento) => <div key={movimiento._id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs"><div><p className={`font-bold ${movimiento.tipo === "DEVOLUCION" ? "text-red-700" : "text-emerald-700"}`}>{movimiento.tipo} · {movimiento.metodoPago.replaceAll("_", " ")}</p><p className="text-slate-500">{new Date(movimiento.fecha).toLocaleString("es-CO")} · {movimiento.usuarioNombre || "Usuario"}{movimiento.observacion ? ` · ${movimiento.observacion}` : ""}</p></div><strong>{movimiento.tipo === "DEVOLUCION" ? "- " : "+ "}{formatoCop.format(movimiento.valor)}</strong></div>)}</div></details>}
     </article>
   );
 }
@@ -1727,6 +1799,7 @@ function ItemCortesRelacionados({ item }) {
 function EstadoBadge({ estado }) {
   const styles = {
     PAGADA: "bg-green-100 text-green-700",
+    PARCIAL: "bg-blue-100 text-blue-700",
     ANULADA: "bg-red-100 text-red-700",
     PENDIENTE: "bg-yellow-100 text-yellow-700",
   };

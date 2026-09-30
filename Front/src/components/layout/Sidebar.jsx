@@ -15,8 +15,10 @@ import {
   ShoppingCart,
   Truck,
   UserPlus,
+  X,
 } from "lucide-react";
 
+import { useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import logo from "../../assets/polarizadosya.png";
 import {
@@ -25,7 +27,7 @@ import {
 } from "../../utils/permisos";
 import { cerrarSesion as cerrarSesionUsuario } from "../../utils/session";
 
-function Sidebar() {
+function Sidebar({ open = false, onClose = () => {} }) {
   const navigate = useNavigate();
   const usuario = obtenerUsuarioActual();
   const iniciales = String(usuario?.nombre || "U")
@@ -200,14 +202,40 @@ function Sidebar() {
     navigate("/login");
   };
 
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const cerrarConEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", cerrarConEscape);
+
+    return () => {
+      document.body.style.overflow = overflowAnterior;
+      window.removeEventListener("keydown", cerrarConEscape);
+    };
+  }, [open, onClose]);
+
   return (
+    <>
+    {open && (
+      <button
+        type="button"
+        className="fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-[1px] lg:hidden"
+        onClick={onClose}
+        aria-label="Cerrar menú"
+      />
+    )}
     <aside
-      className="
-      w-full
-      lg:w-72
-      lg:h-screen
-      lg:min-h-0
-      lg:overflow-hidden
+      className={`
+      fixed inset-y-0 left-0 z-50
+      h-dvh w-[min(86vw,20rem)]
+      transition-transform duration-200 ease-out
+      ${open ? "visible translate-x-0" : "invisible -translate-x-full"}
+      lg:visible lg:static lg:z-auto lg:h-screen lg:w-72 lg:translate-x-0
+      min-h-0 overflow-hidden
       bg-slate-950
       text-white
       flex
@@ -215,8 +243,9 @@ function Sidebar() {
       shrink-0
       border-r
       border-white/[0.08]
-      shadow-xl
-      shadow-slate-950/10"
+      shadow-2xl shadow-slate-950/30
+      lg:shadow-xl lg:shadow-slate-950/10`}
+      aria-label="Navegación principal"
     >
       <div
         className="
@@ -243,6 +272,15 @@ function Sidebar() {
               Control operativo
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-white/[0.08] hover:text-white lg:hidden"
+            aria-label="Cerrar menú"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         <div className="mt-4 flex items-center gap-3 border-t border-white/[0.08] pt-3">
@@ -260,12 +298,10 @@ function Sidebar() {
 
       <nav
         className="
-        lg:flex-1
+        flex-1
         min-h-0
         overflow-y-auto
         overscroll-contain
-        max-h-[60vh]
-        lg:max-h-none
         px-3
         py-4
         space-y-5
@@ -294,6 +330,7 @@ function Sidebar() {
                   <NavLink
                     key={item.url}
                     to={item.url}
+                    onClick={onClose}
                     className={({ isActive }) =>
                       `
                       flex
@@ -361,6 +398,7 @@ function Sidebar() {
         </p>
       </div>
     </aside>
+    </>
   );
 }
 

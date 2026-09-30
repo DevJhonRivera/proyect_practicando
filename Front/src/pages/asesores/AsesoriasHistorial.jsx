@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, Download, Eye, Filter, Pencil, ReceiptText, Search, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Download, Eye, Filter, Pencil, ReceiptText, Search, TriangleAlert, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
-import { getAsesorias } from "../../api/asesores.api";
+import { getAsesorias, reviewGarantiaAsesoria, reviewNovedadAsesoria } from "../../api/asesores.api";
 import AppModal from "../../components/ui/AppModal";
 import { obtenerUsuarioActual } from "../../utils/permisos";
 import { descargarExcel } from "../../utils/excelExport";
 import AsesoriaFormModal from "./AsesoriaFormModal";
+import NovedadAsesoriaModal from "./NovedadAsesoriaModal";
 
 const inicial = {
   buscar: "",
@@ -17,6 +18,8 @@ const inicial = {
   estado: "",
   estadoPago: "",
   metodoPago: "",
+  situacion: "",
+  garantia: "",
 };
 
 const cop = new Intl.NumberFormat("es-CO", {
@@ -60,6 +63,10 @@ const columnasExcel = [
   { header: "Valor recibido", value: (item) => Number(item.pago?.valorRecibido || 0), width: 18, numFmt: "$#,##0" },
   { header: "Estado", value: (item) => item.estado || "", width: 16 },
   { header: "Etapa", value: (item) => (item.flujo?.etapa || "PENDIENTE_INVENTARIO").replaceAll("_", " "), width: 24 },
+  { header: "Situación", value: (item) => (item.situacionActual || "NORMAL").replaceAll("_", " "), width: 22 },
+  { header: "Garantía", value: (item) => item.garantia?.esGarantia ? (item.garantia.estado || "PENDIENTE") : "NO APLICA", width: 18 },
+  { header: "Responsable garantía", value: (item) => item.garantia?.responsable?.replaceAll("_", " ") || "", width: 22 },
+  { header: "Última novedad", value: (item) => item.novedades?.at(-1)?.descripcion || "", width: 42 },
 ];
 
 function AsesoriasHistorial({ refreshKey = 0 }) {
@@ -79,7 +86,9 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
   const [alcanceExcel, setAlcanceExcel] = useState("FILTRADO");
   const [seleccionada, setSeleccionada] = useState(null);
   const [editando, setEditando] = useState(null);
+  const [reportandoNovedad, setReportandoNovedad] = useState(null);
   const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(usuario?.rol);
+  const puedeReportarNovedad = puedeEditar;
 
   const cargar = async (page = 1, filtrosActuales = aplicados) => {
     try {
@@ -161,6 +170,91 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
     }
   };
 
+  const revisarNovedad = async (asesoria, novedad, decision) => {
+    const esAprobacion = decision === "APROBAR";
+    const confirmacion = await Swal.fire({
+      icon: esAprobacion ? "question" : "warning",
+      title: esAprobacion ? "¿Aprobar solicitud?" : "¿Rechazar solicitud?",
+      text: novedad.descripcion,
+      input: "textarea",
+      inputLabel: "Observación de administración",
+      inputPlaceholder: esAprobacion ? "Ej: CAMBIO AUTORIZADO" : "Indique por qué se rechaza",
+      showCancelButton: true,
+      confirmButtonText: esAprobacion ? "Aprobar" : "Rechazar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: esAprobacion ? "#16a34a" : "#dc2626",
+      inputValidator: (value) => !esAprobacion && !value.trim() ? "Indique el motivo del rechazo" : undefined,
+    });
+    if (!confirmacion.isConfirmed) return;
+
+    try {
+      const response = await reviewNovedadAsesoria(asesoria._id, novedad._id, {
+        decision,
+        observacion: confirmacion.value || "",
+      });
+      setSeleccionada(response.data?.data || null);
+      await cargar(resultado.pagination.page);
+      Swal.fire({
+        icon: "success",
+        title: esAprobacion ? "Solicitud aprobada" : "Solicitud rechazada",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "No fue posible revisar la solicitud",
+        text: error.response?.data?.message || "Intente nuevamente.",
+      });
+    }
+  };
+
+  const revisarGarantia = async (asesoria, decision) => {
+    const aprobar = decision === "APROBAR";
+    const resultadoRevision = await Swal.fire({
+      icon: aprobar ? "question" : "warning",
+      title: aprobar ? "Aprobar garantía" : "Rechazar garantía",
+      html: aprobar ? `
+        <select id="garantia-responsable" class="swal2-select" style="display:flex;width:80%;margin:1rem auto">
+          <option value="EMPRESA">Responde la empresa</option>
+          <option value="INSTALADOR">Responde el instalador</option>
+          <option value="PROVEEDOR">Responde el proveedor</option>
+          <option value="CLIENTE">Asume el cliente</option>
+        </select>
+        <input id="garantia-instalador" class="swal2-input" placeholder="Nombre del instalador (si aplica)" />
+        <textarea id="garantia-observacion" class="swal2-textarea" placeholder="Observación administrativa"></textarea>
+      ` : `<textarea id="garantia-observacion" class="swal2-textarea" placeholder="Motivo del rechazo"></textarea>`,
+      showCancelButton: true,
+      confirmButtonText: aprobar ? "Aprobar y enviar a Inventario" : "Rechazar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: aprobar ? "#16a34a" : "#dc2626",
+      preConfirm: () => {
+        const responsable = document.getElementById("garantia-responsable")?.value || "CLIENTE";
+        const instalador = document.getElementById("garantia-instalador")?.value?.trim() || "";
+        const observacion = document.getElementById("garantia-observacion")?.value?.trim() || "";
+        if (aprobar && responsable === "INSTALADOR" && !instalador) {
+          Swal.showValidationMessage("Ingrese el nombre del instalador responsable");
+          return false;
+        }
+        if (!aprobar && observacion.length < 5) {
+          Swal.showValidationMessage("Indique el motivo del rechazo");
+          return false;
+        }
+        return { decision, responsable, instalador, observacion };
+      },
+    });
+    if (!resultadoRevision.isConfirmed) return;
+
+    try {
+      const response = await reviewGarantiaAsesoria(asesoria._id, resultadoRevision.value);
+      setSeleccionada(response.data?.data || null);
+      await cargar(resultado.pagination.page);
+      Swal.fire({ icon: "success", title: aprobar ? "Garantía aprobada" : "Garantía rechazada", timer: 1600, showConfirmButton: false });
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No fue posible revisar la garantía", text: error.response?.data?.message || "Intente nuevamente." });
+    }
+  };
+
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 bg-slate-50/80 p-5">
@@ -197,6 +291,13 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
           </Select>
           <Select value={filtros.metodoPago} onChange={(v) => cambiar("metodoPago", v)} placeholder="Cualquier forma de pago">
             {['POR_DEFINIR','EFECTIVO','TRANSFERENCIA','TARJETA','CREDITO','MIXTO'].map((v) => <option key={v}>{v.replaceAll('_', ' ')}</option>)}
+          </Select>
+          <Select value={filtros.situacion} onChange={(v) => cambiar("situacion", v)} placeholder="Cualquier situación">
+            {['NORMAL','NOVEDAD_ABIERTA','ESPERANDO_MATERIAL','PENDIENTE_CLIENTE','TRABAJO_PENDIENTE','CANCELADA'].map((v) => <option key={v} value={v}>{v.replaceAll('_', ' ')}</option>)}
+          </Select>
+          <Select value={filtros.garantia} onChange={(v) => cambiar("garantia", v)} placeholder="Todas las garantías">
+            <option value="NO_APLICA">Sin garantía</option>
+            {['PENDIENTE','APROBADA','RECHAZADA','FINALIZADA'].map((v) => <option key={v} value={v}>Garantía {v.toLowerCase()}</option>)}
           </Select>
         </div>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -237,8 +338,8 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
                   <td className="p-4"><p className="font-semibold text-slate-700">{item.vehiculo?.placa}</p><p className="text-xs text-slate-500">{item.vehiculo?.marca} {item.vehiculo?.modelo}</p></td>
                   <td className="p-4 text-slate-600">{item.asesorNombre}</td>
                   <td className="p-4 font-bold text-blue-700">{cop.format(item.comercial?.totalAcordado || 0)}</td>
-                  <td className="p-4"><EtapaBadge etapa={item.flujo?.etapa} /></td>
-                  <td className="p-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => setSeleccionada(item)} className="rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200" title="Ver detalles"><Eye size={17} /></button>{puedeEditar && <button type="button" onClick={() => setEditando(item)} className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100" title="Corregir servicio"><Pencil size={17} /></button>}<AccionFlujo item={item} rol={usuario?.rol} onNavigate={navigate} /></div></td>
+                  <td className="p-4"><EtapaBadge etapa={item.flujo?.etapa} /><SituacionBadge situacion={item.situacionActual} /></td>
+                  <td className="p-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => setSeleccionada(item)} className="rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200" title="Ver detalles"><Eye size={17} /></button>{puedeReportarNovedad && <button type="button" onClick={() => setReportandoNovedad(item)} className="rounded-lg bg-amber-50 p-2 text-amber-700 hover:bg-amber-100" title="Reportar novedad"><TriangleAlert size={17} /></button>}{puedeEditar && <button type="button" onClick={() => setEditando(item)} className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100" title="Corregir servicio"><Pencil size={17} /></button>}<AccionFlujo item={item} rol={usuario?.rol} onNavigate={navigate} /></div></td>
                 </tr>
               ))}
             </tbody>
@@ -254,11 +355,19 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
         </div>
       </div>
 
-      {seleccionada && <Detalle asesoria={seleccionada} onClose={() => setSeleccionada(null)} />}
+      {seleccionada && <Detalle asesoria={seleccionada} puedeRevisar={puedeEditar} onReview={revisarNovedad} onReviewGarantia={revisarGarantia} onClose={() => setSeleccionada(null)} />}
       {editando && (
         <AsesoriaFormModal
           asesoria={editando}
           onClose={() => setEditando(null)}
+          onSaved={() => cargar(resultado.pagination.page)}
+        />
+      )}
+      {reportandoNovedad && (
+        <NovedadAsesoriaModal
+          asesoria={reportandoNovedad}
+          usuario={usuario}
+          onClose={() => setReportandoNovedad(null)}
           onSaved={() => cargar(resultado.pagination.page)}
         />
       )}
@@ -274,7 +383,7 @@ function Metric({ label, value }) {
   return <div className="min-w-0 rounded-xl bg-slate-50 p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 break-words text-lg font-bold text-slate-800">{value}</p></div>;
 }
 
-function Detalle({ asesoria, onClose }) {
+function Detalle({ asesoria, puedeRevisar, onReview, onReviewGarantia, onClose }) {
   return (
     <AppModal title={asesoria.codigo} subtitle={`${asesoria.vehiculo?.placa} · ${asesoria.cliente?.nombre}`} icon={ReceiptText} maxWidth="max-w-2xl" onClose={onClose}>
       <FlujoVisual etapa={asesoria.flujo?.etapa} />
@@ -292,16 +401,33 @@ function Detalle({ asesoria, onClose }) {
         <Info label="Total acordado" value={cop.format(asesoria.comercial?.totalAcordado || 0)} />
         <Info label="Pago previsto" value={`${(asesoria.comercial?.metodoPagoPrevisto || 'POR DEFINIR').replaceAll('_', ' ')} · ${asesoria.pago?.estado || 'PENDIENTE'}`} />
       </div>
+      {asesoria.garantia?.esGarantia && <div className="mt-5 rounded-xl border border-violet-200 bg-violet-50 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-violet-900">Solicitud de garantía</p><EstadoGarantia estado={asesoria.garantia.estado} /></div><p className="mt-2 text-sm text-slate-700">{asesoria.garantia.motivo}</p><p className="mt-2 text-xs text-slate-600">Tipo: {(asesoria.garantia.tipo || 'GARANTIA_EMPRESA').replaceAll('_', ' ')} · Responsable: {(asesoria.garantia.responsable || 'POR_DEFINIR').replaceAll('_', ' ')}</p>{asesoria.garantia.instalador && <p className="mt-1 text-xs text-slate-600">Instalador: {asesoria.garantia.instalador}</p>}{asesoria.garantia.fechaRevision && <p className="mt-1 text-xs text-slate-500">Revisó: {asesoria.garantia.revisadoPorNombre} · {asesoria.garantia.observacionRevision || 'Sin observación'}</p>}{puedeRevisar && asesoria.garantia.estado === 'PENDIENTE' && <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onReviewGarantia(asesoria, 'APROBAR')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Aprobar garantía</button><button type="button" onClick={() => onReviewGarantia(asesoria, 'RECHAZAR')} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Rechazar</button></div>}</div>}
       <div className="mt-5 space-y-2"><p className="text-xs font-bold uppercase text-slate-500">Servicios cotizados</p>{[...(asesoria.polarizados || []).map((item) => `${item.material} ${item.porcentaje} · ${(item.partes || []).join(', ')} · ${cop.format(item.valor || 0)}`), ...(asesoria.ppf || []).map((item) => `PPF ${item.referencia} · ${item.aplicacion} · ${cop.format(item.valor || 0)}`), ...(asesoria.serviciosAdicionales || []).map((item) => `${item.tipo} ${item.detalle || ''} · ${cop.format(item.valor || 0)}`)].map((texto, index) => <div key={`${texto}-${index}`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">{texto}</div>)}</div>
+      {asesoria.novedades?.length > 0 && <div className="mt-5 space-y-2"><p className="text-xs font-bold uppercase text-amber-700">Historial de novedades</p>{[...asesoria.novedades].reverse().map((novedad, index) => <div key={`${novedad.fecha}-${index}`} className="rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-bold text-amber-900">{novedad.tipo.replaceAll('_', ' ')}</p><EstadoNovedad estado={novedad.estado} /></div><p className="text-xs text-amber-700">{new Date(novedad.fecha).toLocaleString('es-CO')}</p></div><p className="mt-1 text-sm text-slate-700">{novedad.descripcion}</p><p className="mt-2 text-xs text-slate-500">Reportó: {novedad.usuarioNombre || 'Usuario'} · Costo: {(novedad.responsableCosto || 'NO_APLICA').replaceAll('_', ' ')}{novedad.valorImpacto ? ` · ${cop.format(novedad.valorImpacto)}` : ''}</p>{novedad.fechaRevision && <p className="mt-1 text-xs text-slate-500">Revisó: {novedad.revisadoPorNombre} · {novedad.observacionRevision || 'Sin observación'}</p>}{puedeRevisar && novedad.estado === 'PENDIENTE' && <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onReview(asesoria, novedad, 'APROBAR')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Aprobar solicitud</button><button type="button" onClick={() => onReview(asesoria, novedad, 'RECHAZAR')} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Rechazar</button></div>}</div>)}</div>}
     </AppModal>
   );
 }
 
-const ETAPAS = ["PENDIENTE_INVENTARIO", "EN_PROCESO", "PENDIENTE_PAGO", "FINALIZADA"];
+const ETAPAS = ["PENDIENTE_GARANTIA", "PENDIENTE_INVENTARIO", "EN_PROCESO", "PENDIENTE_PAGO", "FINALIZADA"];
 
 function EtapaBadge({ etapa = "PENDIENTE_INVENTARIO" }) {
-  const estilos = etapa === "FINALIZADA" ? "bg-emerald-100 text-emerald-700" : etapa === "PENDIENTE_PAGO" ? "bg-violet-100 text-violet-700" : etapa === "EN_PROCESO" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700";
+  const estilos = etapa === "CANCELADA" ? "bg-red-100 text-red-700" : etapa === "FINALIZADA" ? "bg-emerald-100 text-emerald-700" : etapa === "PENDIENTE_PAGO" ? "bg-violet-100 text-violet-700" : etapa === "EN_PROCESO" ? "bg-blue-100 text-blue-700" : etapa === "PENDIENTE_GARANTIA" ? "bg-fuchsia-100 text-fuchsia-700" : "bg-amber-100 text-amber-700";
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${estilos}`}>{etapa.replaceAll("_", " ")}</span>;
+}
+
+function SituacionBadge({ situacion = "NORMAL" }) {
+  if (!situacion || situacion === "NORMAL" || situacion === "CANCELADA") return null;
+  return <span className="mt-1 block w-fit rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700">{situacion.replaceAll("_", " ")}</span>;
+}
+
+function EstadoNovedad({ estado = "APROBADA" }) {
+  const estilos = estado === "PENDIENTE" ? "bg-amber-200 text-amber-900" : estado === "RECHAZADA" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700";
+  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${estilos}`}>{estado}</span>;
+}
+
+function EstadoGarantia({ estado = "PENDIENTE" }) {
+  const estilos = estado === "PENDIENTE" ? "bg-amber-200 text-amber-900" : estado === "RECHAZADA" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700";
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${estilos}`}>{estado}</span>;
 }
 
 function AccionFlujo({ item, rol, onNavigate }) {
@@ -313,14 +439,16 @@ function AccionFlujo({ item, rol, onNavigate }) {
     : etapa === "PENDIENTE_PAGO" && puedeVentas
     ? `/ventas?asesoria=${item._id}`
     : "";
-  if (!destino) return <span className="self-center text-xs text-slate-400">{etapa === "FINALIZADA" ? "Completada" : "Esperando siguiente área"}</span>;
+  if (!destino) return <span className="self-center text-xs text-slate-400">{etapa === "FINALIZADA" ? "Completada" : etapa === "CANCELADA" ? "Cancelada" : "Esperando siguiente área"}</span>;
   return <button type="button" onClick={() => onNavigate(destino)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Continuar <ArrowRight size={14} /></button>;
 }
 
 function FlujoVisual({ etapa = "PENDIENTE_INVENTARIO" }) {
-  const indice = ETAPAS.indexOf(etapa);
-  const nombres = ["Inventario", "Trabajo", "Pago", "Finalizada"];
-  return <div className="grid grid-cols-4 gap-1">{nombres.map((nombre, posicion) => <div key={nombre} className="min-w-0 text-center"><div className={`mx-auto h-2 rounded-full ${posicion <= indice ? "bg-blue-600" : "bg-slate-200"}`} /><p className={`mt-2 truncate text-[11px] font-bold ${posicion <= indice ? "text-blue-700" : "text-slate-400"}`}>{nombre}</p></div>)}</div>;
+  const esGarantia = etapa === "PENDIENTE_GARANTIA";
+  const etapas = esGarantia ? ETAPAS : ETAPAS.slice(1);
+  const indice = etapas.indexOf(etapa);
+  const nombres = esGarantia ? ["Garantía", "Inventario", "Trabajo", "Pago", "Finalizada"] : ["Inventario", "Trabajo", "Pago", "Finalizada"];
+  return <div className={`grid gap-1 ${esGarantia ? "grid-cols-5" : "grid-cols-4"}`}>{nombres.map((nombre, posicion) => <div key={nombre} className="min-w-0 text-center"><div className={`mx-auto h-2 rounded-full ${posicion <= indice ? "bg-blue-600" : "bg-slate-200"}`} /><p className={`mt-2 truncate text-[11px] font-bold ${posicion <= indice ? "text-blue-700" : "text-slate-400"}`}>{nombre}</p></div>)}</div>;
 }
 
 function Info({ label, value }) {

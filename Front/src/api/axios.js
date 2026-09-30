@@ -3,6 +3,7 @@ import {
   cerrarSesion,
   tokenExpirado,
 } from "../utils/session";
+import { finishActivity, startActivity } from "../utils/activityIndicator";
 
 const api = axios.create({
   baseURL: import.meta.env.DEV
@@ -11,7 +12,16 @@ const api = axios.create({
       "https://back-carros.onrender.com/api",
 });
 
-api.interceptors.request.use(  (config) => {
+const mutatingMethods = new Set(["post", "put", "patch", "delete"]);
+
+const finishRequestActivity = (config) => {
+  if (config?.activityStarted) {
+    config.activityStarted = false;
+    finishActivity();
+  }
+};
+
+api.interceptors.request.use((config) => {
 
     const token =
       localStorage.getItem(
@@ -31,12 +41,24 @@ api.interceptors.request.use(  (config) => {
         `Bearer ${token}`;
     }
 
+    if (mutatingMethods.has(String(config.method || "").toLowerCase())) {
+      config.activityStarted = true;
+      startActivity();
+    }
+
     return config;
+  }, (error) => {
+    finishRequestActivity(error.config);
+    return Promise.reject(error);
   }
 );
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    finishRequestActivity(response.config);
+    return response;
+  },
   (error) => {
+    finishRequestActivity(error.config);
     if (error.response?.status === 401) {
       cerrarSesion();
     }

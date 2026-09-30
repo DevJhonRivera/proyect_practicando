@@ -132,6 +132,25 @@ const auditoriaSchema = new mongoose.Schema(
   }
 );
 
+const movimientoPagoSchema = new mongoose.Schema(
+  {
+    tipo: { type: String, enum: ["PAGO", "DEVOLUCION"], required: true },
+    valor: { type: Number, required: true, min: 0.01 },
+    metodoPago: {
+      type: String,
+      enum: ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "MIXTO"],
+      required: true,
+    },
+    referencia: { type: String, default: "", trim: true, uppercase: true },
+    observacion: { type: String, default: "", trim: true, uppercase: true },
+    usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    usuarioNombre: { type: String, default: "" },
+    usuarioRol: { type: String, default: "" },
+    fecha: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const ventaSchema = new mongoose.Schema(
   {
     asesoriaId: {
@@ -160,6 +179,7 @@ const ventaSchema = new mongoose.Schema(
       type: String,
       enum: [
         "PENDIENTE",
+        "PARCIAL",
         "PAGADA",
         "ANULADA",
       ],
@@ -191,6 +211,10 @@ const ventaSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    pagos: { type: [movimientoPagoSchema], default: [] },
+    valorPagado: { type: Number, default: 0, min: 0 },
+    valorDevuelto: { type: Number, default: 0, min: 0 },
+    saldoPendiente: { type: Number, default: 0, min: 0 },
     observaciones: {
       type: String,
       default: "",

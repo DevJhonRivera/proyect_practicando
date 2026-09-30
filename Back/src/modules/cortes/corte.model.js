@@ -146,7 +146,8 @@ const corteSchema = new mongoose.Schema(
                 "VENTA",
                 "GARANTIA",
                 "GARANTIA_INSTALADOR",
-                "GARANTIA_EMPRESA"
+                "GARANTIA_EMPRESA",
+                "GARANTIA_PROVEEDOR"
             ]
         },
 
@@ -227,6 +228,7 @@ const corteSchema = new mongoose.Schema(
             type: String,
             enum: [
                 "PENDIENTE",
+                "PARCIAL",
                 "PAGADA",
                 "ANULADA",
                 ""
@@ -254,6 +256,17 @@ corteSchema.index({
     modelo: 1,
     createdAt: -1
 });
+
+corteSchema.index(
+    { asesoriaId: 1, asesoriaLinea: 1 },
+    {
+        unique: true,
+        partialFilterExpression: {
+            asesoriaId: { $exists: true },
+            asesoriaLinea: { $type: "string", $gt: "" }
+        }
+    }
+);
 
 export default mongoose.model(
     "Corte",

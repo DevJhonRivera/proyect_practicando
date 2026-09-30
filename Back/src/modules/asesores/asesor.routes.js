@@ -6,10 +6,14 @@ import {
   createBorradorAsesoria,
   getCatalogoDisponible,
   getClienteAsesoria,
+  searchClientesAsesoria,
   getAsesorias,
   getAsesoriaPorId,
   sendAsesoriaToSales,
   updateAsesoria,
+  createNovedadAsesoria,
+  reviewNovedadAsesoria,
+  reviewGarantiaAsesoria,
 } from "./asesor.controller.js";
 
 const router = Router();
@@ -26,6 +30,27 @@ router.put(
   authMiddleware,
   requireRole("ADMIN", "SUPERUSUARIO"),
   updateAsesoria
+);
+
+router.post(
+  "/servicios/:id/novedades",
+  authMiddleware,
+  requireRole("ADMIN", "SUPERUSUARIO", "INVENTARIO"),
+  createNovedadAsesoria
+);
+
+router.patch(
+  "/servicios/:id/novedades/:novedadId",
+  authMiddleware,
+  requireRole("ADMIN", "SUPERUSUARIO"),
+  reviewNovedadAsesoria
+);
+
+router.patch(
+  "/servicios/:id/garantia",
+  authMiddleware,
+  requireRole("ADMIN", "SUPERUSUARIO"),
+  reviewGarantiaAsesoria
 );
 
 router.get(
@@ -47,6 +72,13 @@ router.patch(
   authMiddleware,
   requirePermission("cortes", "write"),
   sendAsesoriaToSales
+);
+
+router.get(
+  "/clientes",
+  authMiddleware,
+  requirePermission("asesores", "read"),
+  searchClientesAsesoria
 );
 
 router.get(

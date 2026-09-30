@@ -16,6 +16,7 @@ import {
 } from "./cortes.constants";
 import { useCortesPage } from "./hooks/useCortesPage";
 import { obtenerUsuarioActual } from "../../utils/permisos";
+import NovedadAsesoriaModal from "../asesores/NovedadAsesoriaModal";
 
 const mayusculas = (value) =>
   String(value || "").toUpperCase();
@@ -33,9 +34,11 @@ function escapeHtml(value) {
 }
 
 function CortesPage() {
-  const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(obtenerUsuarioActual()?.rol);
+  const usuario = obtenerUsuarioActual();
+  const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(usuario?.rol);
   const [searchParams] = useSearchParams();
   const [ordenAsesoria, setOrdenAsesoria] = useState(null);
+  const [reportandoNovedad, setReportandoNovedad] = useState(false);
   const [vistaCortes, setVistaCortes] =
     useState("registrar");
 
@@ -89,6 +92,10 @@ function CortesPage() {
   }, [searchParams]);
 
   const cargarLineaAsesoria = (linea) => {
+    if (ordenAsesoria?.garantia?.esGarantia && ordenAsesoria.garantia.estado !== "APROBADA") {
+      Swal.fire({ icon: "warning", title: "Garantía pendiente", text: "Administración debe aprobar la garantía antes de consumir material." });
+      return;
+    }
     const yaRegistrado = cortes.some((corte) =>
       String(corte.asesoriaId || "") === String(ordenAsesoria?._id || "") &&
       corte.asesoriaLinea === linea.etiqueta
@@ -153,19 +160,22 @@ function CortesPage() {
   };
 
   const finalizarTrabajo = async () => {
+    const garantiaSinCobro = Boolean(ordenAsesoria?.garantia?.esGarantia) && Number(ordenAsesoria?.comercial?.totalAcordado || 0) <= 0;
     const confirmacion = await Swal.fire({
       icon: "question",
-      title: "¿Enviar la orden a Ventas?",
+      title: garantiaSinCobro ? "¿Finalizar la garantía?" : "¿Enviar la orden a Ventas?",
       text: "Confirme que ya registró todos los cortes necesarios.",
       showCancelButton: true,
-      confirmButtonText: "Sí, enviar a Ventas",
+      confirmButtonText: garantiaSinCobro ? "Sí, finalizar garantía" : "Sí, enviar a Ventas",
       cancelButtonText: "Seguir trabajando",
     });
     if (!confirmacion.isConfirmed) return;
     try {
       const response = await enviarAsesoriaAVentas(ordenAsesoria._id);
       setOrdenAsesoria(response.data?.data || ordenAsesoria);
-      await Swal.fire({ icon: "success", title: "Orden enviada a Ventas", text: "Ventas recibió una notificación para continuar con el pago." });
+      await Swal.fire(garantiaSinCobro
+        ? { icon: "success", title: "Garantía finalizada", text: "El trabajo quedó cerrado sin cobro pendiente." }
+        : { icon: "success", title: "Orden enviada a Ventas", text: "Ventas recibió una notificación para continuar con el pago." });
     } catch (error) {
       Swal.fire({ icon: "error", title: "No se pudo enviar", text: error.response?.data?.message || "Revise los cortes registrados." });
     }
@@ -321,7 +331,7 @@ function CortesPage() {
 
       {vistaCortes === "registrar" && (
         <>
-        {ordenAsesoria && <OrdenAsesoriaPanel orden={ordenAsesoria} cortes={cortes} onLoad={cargarLineaAsesoria} onFinish={finalizarTrabajo} />}
+        {ordenAsesoria && <OrdenAsesoriaPanel orden={ordenAsesoria} cortes={cortes} onLoad={cargarLineaAsesoria} onFinish={finalizarTrabajo} onReport={() => setReportandoNovedad(true)} />}
         <CorteForm
           form={form}
           loadingSugerencias={loadingSugerencias}
@@ -364,25 +374,40 @@ function CortesPage() {
           />
         </>
       )}
+
+      {reportandoNovedad && ordenAsesoria && (
+        <NovedadAsesoriaModal
+          asesoria={ordenAsesoria}
+          usuario={usuario}
+          onClose={() => setReportandoNovedad(false)}
+          onSaved={async () => {
+            const response = await getAsesoriaPorId(ordenAsesoria._id);
+            setOrdenAsesoria(response.data?.data || ordenAsesoria);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function OrdenAsesoriaPanel({ orden, cortes, onLoad, onFinish }) {
+function OrdenAsesoriaPanel({ orden, cortes, onLoad, onFinish, onReport }) {
+  const solicitudPendiente = orden.novedades?.some((item) => item.estado === "PENDIENTE");
+  const garantiaBloqueada = orden.garantia?.esGarantia && orden.garantia.estado !== "APROBADA";
+  const garantiaSinCobro = orden.garantia?.esGarantia && Number(orden.comercial?.totalAcordado || 0) <= 0;
   const lineas = [
     ...(orden.polarizados || []).map((item, index) => ({ ...item, clase: "POLARIZADO", etiqueta: `POLARIZADO ${index + 1}` })),
     ...(orden.ppf || []).map((item, index) => ({ ...item, clase: "PPF", material: item.referencia, partes: item.aplicacion === "PIEZAS" ? item.piezas : [item.aplicacion], etiqueta: `PPF ${index + 1}` })),
   ];
   return <section className="mb-5 overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
-    <div className="flex items-start gap-3 bg-blue-50 p-4"><ClipboardList className="mt-0.5 text-blue-700" size={22} /><div><h2 className="font-black text-slate-900">Servicio {orden.codigo}</h2><p className="text-sm text-slate-600">{orden.vehiculo?.placa} · {orden.vehiculo?.marca} {orden.vehiculo?.modelo} {orden.vehiculo?.anio} · Asesor: {orden.asesorNombre}</p></div></div>
+    <div className="flex items-start gap-3 bg-blue-50 p-4"><ClipboardList className="mt-0.5 text-blue-700" size={22} /><div><h2 className="font-black text-slate-900">Servicio {orden.codigo}</h2><p className="text-sm text-slate-600">{orden.vehiculo?.placa} · {orden.vehiculo?.marca} {orden.vehiculo?.modelo} {orden.vehiculo?.anio} · Asesor: {orden.asesorNombre}</p>{orden.garantia?.esGarantia && <p className="mt-1 text-xs font-bold text-violet-700">Garantía {orden.garantia.estado} · {(orden.garantia.responsable || "POR_DEFINIR").replaceAll("_", " ")} · {orden.garantia.motivo}</p>}</div></div>
     <div className="divide-y divide-slate-100">
       {lineas.map((linea) => {
         const registrado = cortes.some((corte) => String(corte.asesoriaId || "") === String(orden._id) && corte.asesoriaLinea === linea.etiqueta);
-        return <div key={linea.etiqueta} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-500">{(linea.partes || []).join(" + ") || linea.aplicacion} · Venta: ${Number(linea.valor || 0).toLocaleString("es-CO")}</p></div><button type="button" disabled={registrado} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : "bg-blue-600 text-white hover:bg-blue-700"}`}>{registrado ? "Corte registrado" : "Cargar corte agrupado"}</button></div>;
+        return <div key={linea.etiqueta} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-500">{(linea.partes || []).join(" + ") || linea.aplicacion} · Venta: ${Number(linea.valor || 0).toLocaleString("es-CO")}</p></div><button type="button" disabled={registrado || garantiaBloqueada} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : garantiaBloqueada ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}>{registrado ? "Corte registrado" : garantiaBloqueada ? "Esperando aprobación" : "Cargar corte agrupado"}</button></div>;
       })}
       {!lineas.length && <p className="p-4 text-sm text-slate-500">Esta orden solo contiene servicios que no requieren corte.</p>}
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 p-4"><p className="text-sm font-semibold text-slate-600">Estado: {(orden.flujo?.etapa || "PENDIENTE_INVENTARIO").replaceAll("_", " ")}</p>{orden.flujo?.etapa !== "PENDIENTE_PAGO" && orden.flujo?.etapa !== "FINALIZADA" && <button type="button" onClick={onFinish} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">Finalizar trabajo y enviar a Ventas</button>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 p-4"><div><p className="text-sm font-semibold text-slate-600">Estado: {(orden.flujo?.etapa || "PENDIENTE_INVENTARIO").replaceAll("_", " ")}</p>{(solicitudPendiente || garantiaBloqueada) && <p className="mt-1 text-xs font-bold text-amber-700">Tiene una aprobación pendiente de administración</p>}</div><div className="flex flex-wrap gap-2"><button type="button" onClick={onReport} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100">Reportar problema</button>{orden.flujo?.etapa !== "PENDIENTE_PAGO" && orden.flujo?.etapa !== "FINALIZADA" && orden.flujo?.etapa !== "CANCELADA" && <button type="button" onClick={onFinish} disabled={solicitudPendiente || garantiaBloqueada} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{solicitudPendiente || garantiaBloqueada ? "Esperando aprobación" : garantiaSinCobro ? "Finalizar garantía" : "Finalizar trabajo y enviar a Ventas"}</button>}</div></div>
   </section>;
 }
 

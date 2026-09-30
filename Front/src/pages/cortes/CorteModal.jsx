@@ -114,6 +114,7 @@ function CorteModal({
           <option value="GARANTIA">Garantia</option>
           <option value="GARANTIA_INSTALADOR">Garantia instalador</option>
           <option value="GARANTIA_EMPRESA">Garantia empresa</option>
+          <option value="GARANTIA_PROVEEDOR">Garantia proveedor</option>
         </select>
 
         {form.tipoServicio === "GARANTIA_INSTALADOR" && (

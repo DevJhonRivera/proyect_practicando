@@ -6,6 +6,7 @@ import {
   getVentas,
   updateVenta,
   updateEstadoVenta,
+  createMovimientoPago,
 } from "./venta.controller.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import { requirePermission, requireRole } from "../../middlewares/permission.middleware.js";
@@ -43,8 +44,15 @@ router.put(
 router.patch(
   "/:id/estado",
   authMiddleware,
-  requirePermission("ventas", "write"),
+  requireRole("ADMIN", "SUPERUSUARIO"),
   updateEstadoVenta
+);
+
+router.post(
+  "/:id/pagos",
+  authMiddleware,
+  requirePermission("ventas", "write"),
+  createMovimientoPago
 );
 
 export default router;

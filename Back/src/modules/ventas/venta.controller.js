@@ -4,7 +4,16 @@ import {
   crearVenta,
   obtenerVentaPorId,
   obtenerVentas,
+  registrarMovimientoPago,
 } from "./venta.service.js";
+
+export const createMovimientoPago = async (req, res) => {
+  try {
+    res.status(201).json(await registrarMovimientoPago(req.params.id, req.body, req.user));
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
 
 export const createVenta =
   async (req, res) => {

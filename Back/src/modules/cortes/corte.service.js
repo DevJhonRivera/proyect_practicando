@@ -288,10 +288,35 @@ const calcularRentabilidad = ({
 
 export const registrarCorte =
   async (data, user) => {
+    let asesoria = null;
     if (data.asesoriaId && data.asesoriaLinea) {
+      if (!mongoose.Types.ObjectId.isValid(data.asesoriaId)) {
+        throw new Error("La orden de servicio no es valida");
+      }
+      asesoria = await Asesoria.findById(data.asesoriaId).lean();
+      if (!asesoria) throw new Error("La orden de servicio no existe");
+      if (!["PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(asesoria.flujo?.etapa)) {
+        throw new Error("La orden no esta disponible para registrar cortes");
+      }
+      if (asesoria.garantia?.esGarantia && asesoria.garantia.estado !== "APROBADA") {
+        throw new Error("La garantia debe estar aprobada antes de consumir material");
+      }
+
+      const lineasValidas = [
+        ...(asesoria.polarizados || []).map((_, index) => `POLARIZADO ${index + 1}`),
+        ...(asesoria.ppf || []).map((_, index) => `PPF ${index + 1}`),
+      ];
+      const lineaNormalizada = normalizarMayusculas(data.asesoriaLinea);
+      if (!lineasValidas.includes(lineaNormalizada)) {
+        throw new Error("El corte no pertenece a los materiales solicitados en la orden");
+      }
+      if (normalizarPlaca(data.placa) !== normalizarPlaca(asesoria.vehiculo?.placa)) {
+        throw new Error("La placa del corte no coincide con la orden de servicio");
+      }
+
       const corteExistente = await Corte.findOne({
         asesoriaId: data.asesoriaId,
-        asesoriaLinea: normalizarMayusculas(data.asesoriaLinea),
+        asesoriaLinea: lineaNormalizada,
       }).select("_id");
 
       if (corteExistente) {
@@ -520,7 +545,10 @@ export const registrarCorte =
     }
 
     if (corteCreado?.asesoriaId) {
-      await Asesoria.findByIdAndUpdate(corteCreado.asesoriaId, {
+      await Asesoria.findOneAndUpdate({
+        _id: corteCreado.asesoriaId,
+        "flujo.etapa": { $in: ["PENDIENTE_INVENTARIO", "EN_PROCESO"] },
+      }, {
         $set: {
           "flujo.etapa": "EN_PROCESO",
           "flujo.fechaInicioTrabajo": new Date(),

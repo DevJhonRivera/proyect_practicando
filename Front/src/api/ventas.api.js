@@ -14,3 +14,6 @@ export const updateEstadoVenta = (id, estado, metodoPago) =>
     estado,
     metodoPago,
   });
+
+export const createMovimientoPago = (id, data) =>
+  api.post(`/ventas/${id}/pagos`, data);

@@ -6,6 +6,7 @@ import {
   createBorradorAsesoria,
   getCatalogoDisponible,
   getClienteAsesoria,
+  searchClientesAsesoria,
   updateAsesoria,
 } from "../../api/asesores.api";
 import AppModal from "../../components/ui/AppModal";
@@ -107,6 +108,8 @@ const prepararFormulario = (asesoria) => {
 function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   const [form, setForm] = useState(() => prepararFormulario(asesoria));
   const [buscando, setBuscando] = useState(false);
+  const [clientesSugeridos, setClientesSugeridos] = useState([]);
+  const [mostrarClientes, setMostrarClientes] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [catalogoMateriales, setCatalogoMateriales] = useState([]);
   const [cargandoMateriales, setCargandoMateriales] = useState(true);
@@ -117,6 +120,30 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       .reduce((total, item) => total + Number(item.valor || 0), 0),
     [form.polarizados, form.ppf, form.serviciosAdicionales]
   );
+
+  useEffect(() => {
+    const cedula = soloDigitos(form.cliente.cedula);
+    if (asesoria || cedula.length < 3) {
+      setClientesSugeridos([]);
+      return undefined;
+    }
+
+    let activo = true;
+    const temporizador = setTimeout(() => {
+      searchClientesAsesoria(cedula)
+        .then((response) => {
+          if (activo) setClientesSugeridos(response.data?.data || []);
+        })
+        .catch(() => {
+          if (activo) setClientesSugeridos([]);
+        });
+    }, 300);
+
+    return () => {
+      activo = false;
+      clearTimeout(temporizador);
+    };
+  }, [asesoria, form.cliente.cedula]);
 
   useEffect(() => {
     let activo = true;
@@ -306,6 +333,23 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
     }
   };
 
+  const seleccionarCliente = (registro) => {
+    setForm((actual) => ({
+      ...actual,
+      cliente: { ...actual.cliente, ...registro.cliente },
+      vehiculo: { ...actual.vehiculo, ...registro.vehiculo },
+    }));
+    setMostrarClientes(false);
+    setClientesSugeridos([]);
+    Swal.fire({
+      icon: "success",
+      title: "Cliente autocompletado",
+      text: "Se cargaron sus datos y el último vehículo registrado.",
+      timer: 1400,
+      showConfirmButton: false,
+    });
+  };
+
   const guardar = async () => {
     const placa = form.vehiculo.placa.trim();
     if (soloDigitos(form.cliente.cedula).length < 5) {
@@ -343,17 +387,20 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
     if (!polarizadosValidos || !ppfValido) {
       return Swal.fire({ icon: "warning", title: "Complete los materiales y partes solicitadas" });
     }
-    if (!preciosValidos) {
+    if (!form.garantia.esGarantia && !preciosValidos) {
       return Swal.fire({ icon: "warning", title: "Ingrese el precio de cada servicio" });
     }
     if (form.garantia.esGarantia && !form.garantia.motivo.trim()) {
       return Swal.fire({ icon: "warning", title: "Indique el motivo de la garantía" });
     }
+    if (form.garantia.esGarantia && form.garantia.tipo === "GARANTIA_INSTALADOR" && !form.garantia.instalador.trim()) {
+      return Swal.fire({ icon: "warning", title: "Ingrese el instalador relacionado con la garantía" });
+    }
     const valorVenta = valorServicios;
     const descuento = form.comercial.aplicaDescuento
       ? Number(form.comercial.descuento || 0)
       : 0;
-    if (valorVenta <= 0) {
+    if (!form.garantia.esGarantia && valorVenta <= 0) {
       return Swal.fire({ icon: "warning", title: "Ingrese el valor acordado de la venta" });
     }
     if (descuento < 0 || descuento > valorVenta) {
@@ -401,15 +448,42 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
         <FormSection title="Datos del cliente">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Cédula">
-              <input
-                value={form.cliente.cedula}
-                inputMode="numeric"
-                maxLength={15}
-                placeholder="Ej: 1023456789"
-                onChange={(e) => cambiar("cliente", "cedula", soloDigitos(e.target.value))}
-                onBlur={buscarCliente}
-                className="w-full rounded-xl border p-3"
-              />
+              <div className="relative">
+                <input
+                  value={form.cliente.cedula}
+                  inputMode="numeric"
+                  maxLength={15}
+                  autoComplete="off"
+                  placeholder="Ej: 1023456789"
+                  onFocus={() => setMostrarClientes(true)}
+                  onChange={(e) => {
+                    cambiar("cliente", "cedula", soloDigitos(e.target.value));
+                    setMostrarClientes(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setMostrarClientes(false), 150);
+                    buscarCliente();
+                  }}
+                  className="w-full rounded-xl border p-3"
+                />
+                {mostrarClientes && clientesSugeridos.length > 0 && (
+                  <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+                    {clientesSugeridos.map((registro) => (
+                      <button
+                        key={registro.cliente.cedula}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => seleccionarCliente(registro)}
+                        className="block w-full rounded-lg px-3 py-2.5 text-left hover:bg-blue-50"
+                      >
+                        <span className="block text-sm font-bold text-slate-800">{registro.cliente.nombre}</span>
+                        <span className="block text-xs text-slate-500">CC {registro.cliente.cedula} · {registro.cliente.telefono || "Sin teléfono"}</span>
+                        <span className="block text-xs text-blue-700">{registro.vehiculo?.placa} · {registro.vehiculo?.marca} {registro.vehiculo?.modelo}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {buscando && <span className="mt-1 block text-xs text-blue-600">Buscando cliente...</span>}
             </Field>
             <Field label="Nombre completo">
@@ -582,9 +656,10 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
 
           <Inspection label="El cliente viene por garantía" checked={form.garantia.esGarantia} onChange={(checked) => cambiar("garantia", "esGarantia", checked)}>
             {form.garantia.esGarantia && <div className="mt-3 grid gap-3 md:grid-cols-3">
-              <select value={form.garantia.tipo} onChange={(e) => cambiar("garantia", "tipo", e.target.value)} className="rounded-xl border bg-white p-3"><option value="GARANTIA_EMPRESA">Garantía empresa</option><option value="GARANTIA_INSTALADOR">Garantía instalador</option></select>
+              <select value={form.garantia.tipo} onChange={(e) => cambiar("garantia", "tipo", e.target.value)} className="rounded-xl border bg-white p-3"><option value="GARANTIA_EMPRESA">Garantía empresa</option><option value="GARANTIA_INSTALADOR">Garantía instalador</option><option value="GARANTIA_PROVEEDOR">Garantía proveedor</option></select>
               <input value={form.garantia.motivo} placeholder="Motivo de la garantía" onChange={(e) => cambiar("garantia", "motivo", mayusculas(e.target.value))} className="rounded-xl border p-3" />
-              <input value={form.garantia.instalador} placeholder="Instalador (si aplica)" onChange={(e) => cambiar("garantia", "instalador", mayusculas(e.target.value))} className="rounded-xl border p-3" />
+              {form.garantia.tipo === "GARANTIA_INSTALADOR" && <input value={form.garantia.instalador} placeholder="Nombre del instalador" onChange={(e) => cambiar("garantia", "instalador", mayusculas(e.target.value))} className="rounded-xl border p-3" />}
+              <p className="text-xs text-slate-500 md:col-span-3">La solicitud quedará pendiente de aprobación administrativa. Si no habrá cobro, puede dejar los precios en cero.</p>
             </div>}
           </Inspection>
         </FormSection>

@@ -15,6 +15,10 @@ export const TIPO_VENTA_PENDIENTE =
   "VENTA_PENDIENTE";
 export const TIPO_VENTA_REVISION_CORTES =
   "VENTA_REVISION_CORTES";
+export const TIPO_SOLICITUD_NOVEDAD =
+  "SOLICITUD_NOVEDAD";
+export const TIPO_SOLICITUD_GARANTIA =
+  "SOLICITUD_GARANTIA";
 
 const TIPOS_STOCK_RESERVA = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
@@ -304,6 +308,46 @@ export const crearAlertaServicioListoPago = async (asesoria) =>
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
 
+export const crearAlertaSolicitudNovedad = async (asesoria, novedad) =>
+  Alerta.findOneAndUpdate(
+    { clave: `solicitud-novedad:${asesoria._id}:${novedad._id}` },
+    {
+      tipo: TIPO_SOLICITUD_NOVEDAD,
+      mensaje: `Inventario reportó ${String(novedad.tipo || "una novedad").replaceAll("_", " ")} en el servicio ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}.`,
+      referenciaId: asesoria._id,
+      accionUrl: "/asesores",
+      atendida: false,
+      activa: true,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+export const crearAlertaSolicitudGarantia = async (asesoria) =>
+  Alerta.findOneAndUpdate(
+    { clave: `solicitud-garantia:${asesoria._id}` },
+    {
+      tipo: TIPO_SOLICITUD_GARANTIA,
+      mensaje: `Revisar garantía ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}: ${asesoria.garantia?.motivo || "SIN MOTIVO"}.`,
+      referenciaId: asesoria._id,
+      accionUrl: "/asesores",
+      atendida: false,
+      activa: true,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+export const cerrarAlertaSolicitudGarantia = async (asesoriaId) =>
+  Alerta.updateMany(
+    { clave: `solicitud-garantia:${asesoriaId}` },
+    { atendida: true, activa: false }
+  );
+
+export const cerrarAlertaSolicitudNovedad = async (asesoriaId, novedadId) =>
+  Alerta.updateMany(
+    { clave: `solicitud-novedad:${asesoriaId}:${novedadId}` },
+    { atendida: true, activa: false }
+  );
+
 export const cerrarAlertaServicioListoPago = async (asesoriaId) =>
   Alerta.updateMany(
     { clave: `servicio-listo-pago:${asesoriaId}` },
@@ -321,7 +365,7 @@ export const crearAlertaVentaPendiente =
         tipo:
           TIPO_VENTA_PENDIENTE,
         mensaje:
-          `La venta ${venta.codigoVenta} de ${venta.cliente?.nombre || "cliente"} por ${Number(venta.total || 0).toLocaleString("es-CO")} COP esta pendiente de pago.`,
+          `La venta ${venta.codigoVenta} de ${venta.cliente?.nombre || "cliente"} tiene un saldo pendiente de ${Number(venta.saldoPendiente ?? venta.total ?? 0).toLocaleString("es-CO")} COP.`,
         referenciaId:
           venta._id,
         atendida:
