@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
   BadgeDollarSign,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { getCortes } from "../../api/cortes.api";
+import { getAsesoriaPorId } from "../../api/asesores.api";
 import {
   createVenta,
   getVentas,
@@ -26,6 +28,7 @@ import TablePagination from "../../components/ui/TablePagination";
 import { useMonthFilter } from "../../hooks/useMonthFilter";
 import { usePagination } from "../../hooks/usePagination";
 import { etiquetaDetalle } from "../../utils/materiales";
+import { obtenerUsuarioActual } from "../../utils/permisos";
 
 const formatoCop = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -53,6 +56,7 @@ const serviciosAdicionales = [
 ];
 
 const ventaInicial = {
+  asesoriaId: "",
   cliente: {
     nombre: "",
     telefono: "",
@@ -64,6 +68,7 @@ const ventaInicial = {
   },
   estado: "PENDIENTE",
   descuento: "",
+  metodoPago: "POR_DEFINIR",
   observaciones: "",
   items: [],
 };
@@ -100,6 +105,10 @@ const placaValida = (value) =>
   normalizarPlaca(value).length <= 10;
 
 function VentasPage() {
+  const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(obtenerUsuarioActual()?.rol);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const asesoriaCargadaRef = useRef("");
   const [ventas, setVentas] = useState([]);
   const [cortes, setCortes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -176,6 +185,52 @@ function VentasPage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const asesoriaId = searchParams.get("asesoria");
+    if (!asesoriaId || loading || asesoriaCargadaRef.current === asesoriaId) return;
+    asesoriaCargadaRef.current = asesoriaId;
+    getAsesoriaPorId(asesoriaId)
+      .then((response) => {
+        const orden = response.data?.data;
+        if (!orden) return;
+        const cortesOrden = cortes.filter((corte) => String(corte.asesoriaId || "") === asesoriaId);
+        const cortesLinea = (etiqueta) => cortesOrden.filter((corte) => corte.asesoriaLinea === etiqueta).map((corte) => corte._id);
+        const items = [
+          ...(orden.polarizados || []).map((item, index) => {
+            const ids = cortesLinea(`POLARIZADO ${index + 1}`);
+            return {
+              tipoServicio: String(item.porcentaje || "").includes("MICRAS") ? "PELICULA_SEGURIDAD" : "POLARIZADO",
+              descripcion: `${item.material} ${item.porcentaje} - ${(item.partes || []).join(", ")}`,
+              corteId: ids[0], corteIds: ids, cantidad: 1,
+              valorUnitario: Number(item.valor || 0), total: Number(item.valor || 0),
+            };
+          }),
+          ...(orden.ppf || []).map((item, index) => {
+            const ids = cortesLinea(`PPF ${index + 1}`);
+            return { tipoServicio: "PPF", descripcion: `PPF ${item.referencia} - ${(item.piezas || []).join(", ") || item.aplicacion}`, corteId: ids[0], corteIds: ids, cantidad: 1, valorUnitario: Number(item.valor || 0), total: Number(item.valor || 0) };
+          }),
+          ...(orden.serviciosAdicionales || []).map((item) => ({
+            tipoServicio: ["LAVADO", "POLICHADA", "PDR", "ASEGURADA"].includes(item.tipo) ? item.tipo : "OTRO",
+            descripcion: `${item.tipo}${item.detalle ? ` - ${item.detalle}` : ""}`,
+            cantidad: 1, valorUnitario: Number(item.valor || 0), total: Number(item.valor || 0),
+          })),
+        ];
+        setForm({
+          ...ventaInicial,
+          asesoriaId,
+          cliente: { nombre: orden.cliente?.nombre || "", telefono: orden.cliente?.telefono || "" },
+          vehiculo: { placa: orden.vehiculo?.placa || "", marca: orden.vehiculo?.marca || "", modelo: orden.vehiculo?.anio || "" },
+          descuento: orden.comercial?.descuento || "",
+          metodoPago: orden.comercial?.metodoPagoPrevisto || "POR_DEFINIR",
+          observaciones: `ORDEN ${orden.codigo}`,
+          items,
+        });
+        setVistaVentas("nueva");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      })
+      .catch((error) => Swal.fire({ icon: "error", title: "No se pudo cargar la orden", text: error.response?.data?.message || "Intente nuevamente." }));
+  }, [cortes, loading, searchParams]);
 
   const ventasFiltradas = useMemo(() => {
     const texto = search.toLowerCase();
@@ -468,8 +523,49 @@ function VentasPage() {
     }
   };
 
+  const registrarPagoOrden = async () => {
+    if (form.metodoPago === "POR_DEFINIR") {
+      return Swal.fire({ icon: "warning", title: "Seleccione la forma de pago" });
+    }
+    const confirmacion = await Swal.fire({
+      icon: "question",
+      title: "¿Confirmar pago?",
+      text: `Se registrará un pago por ${formatoCop.format(total)}.`,
+      showCancelButton: true,
+      confirmButtonText: "Sí, registrar pago",
+      cancelButtonText: "Cancelar",
+    });
+    if (!confirmacion.isConfirmed) return;
+    try {
+      await createVenta({ ...form, estado: "PAGADA", descuento });
+      await Swal.fire({ icon: "success", title: "Pago registrado", text: "La orden quedó finalizada." });
+      setForm(ventaInicial);
+      setVistaVentas("historial");
+      navigate("/ventas", { replace: true });
+      await cargar();
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No fue posible registrar el pago", text: error.response?.data?.message || "Revise la orden." });
+    }
+  };
+
   const marcarPagada = async (venta) => {
-    await updateEstadoVenta(venta._id, "PAGADA");
+    let metodoPago = venta.metodoPago || "POR_DEFINIR";
+    if (metodoPago === "POR_DEFINIR") {
+      const resultado = await Swal.fire({
+        icon: "question",
+        title: "¿Cómo pagó el cliente?",
+        input: "select",
+        inputOptions: { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", TARJETA: "Tarjeta", CREDITO: "Crédito", MIXTO: "Mixto" },
+        inputPlaceholder: "Seleccione la forma de pago",
+        showCancelButton: true,
+        confirmButtonText: "Confirmar pago",
+        cancelButtonText: "Cancelar",
+        inputValidator: (value) => !value ? "Seleccione la forma de pago" : undefined,
+      });
+      if (!resultado.isConfirmed) return;
+      metodoPago = resultado.value;
+    }
+    await updateEstadoVenta(venta._id, "PAGADA", metodoPago);
     await cargar();
   };
 
@@ -732,7 +828,18 @@ function VentasPage() {
         />
       )}
 
-      {vistaVentas === "nueva" && (
+      {vistaVentas === "nueva" && form.asesoriaId && (
+        <CobroOrden
+          form={form}
+          subtotal={subtotal}
+          descuento={descuento}
+          total={total}
+          onMetodoPagoChange={(metodoPago) => setForm({ ...form, metodoPago })}
+          onConfirm={registrarPagoOrden}
+        />
+      )}
+
+      {vistaVentas === "nueva" && !form.asesoriaId && (
       <div className="grid items-start gap-6">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 bg-slate-50/80 p-5 flex items-center gap-3">
@@ -996,7 +1103,7 @@ function VentasPage() {
               onDelete={eliminarItem}
             />
 
-            <div className="grid md:grid-cols-[1fr_180px] gap-4">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_200px]">
               <Field label="Observaciones">
                 <Input
                   value={form.observaciones}
@@ -1022,6 +1129,11 @@ function VentasPage() {
                     })
                   }
                 />
+              </Field>
+              <Field label="Forma de pago">
+                <select value={form.metodoPago} onChange={(event) => setForm({ ...form, metodoPago: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white p-3">
+                  <option value="POR_DEFINIR">Por definir</option><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option><option value="CREDITO">Crédito</option><option value="MIXTO">Mixto</option>
+                </select>
               </Field>
             </div>
 
@@ -1099,6 +1211,7 @@ function VentasPage() {
                   venta={venta}
                   onMarkPaid={marcarPagada}
                   onEdit={editarVenta}
+                  canEdit={puedeEditar}
                 />
               ))
             )}
@@ -1107,6 +1220,31 @@ function VentasPage() {
         </section>
       )}
     </div>
+  );
+}
+
+function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onConfirm }) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 bg-slate-50 p-5">
+        <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><BadgeDollarSign size={22} /></div><div><h2 className="text-lg font-black text-slate-900">Verificar y recibir pago</h2><p className="text-sm text-slate-500">La cotización fue creada por el asesor. Ventas solamente confirma el cobro.</p></div></div>
+      </div>
+      <div className="space-y-5 p-5">
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 p-4"><p className="text-xs font-bold uppercase text-slate-500">Cliente</p><p className="mt-1 font-bold text-slate-900">{form.cliente.nombre}</p><p className="text-sm text-slate-500">{form.cliente.telefono || "Sin teléfono"}</p></div>
+          <div className="rounded-xl border border-slate-200 p-4"><p className="text-xs font-bold uppercase text-slate-500">Vehículo</p><p className="mt-1 font-bold text-slate-900">{form.vehiculo.placa}</p><p className="text-sm text-slate-500">{form.vehiculo.marca} {form.vehiculo.modelo}</p></div>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-slate-200">
+          <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase text-slate-500">Servicios vendidos</div>
+          <div className="divide-y divide-slate-100">{form.items.map((item, index) => <div key={`${item.descripcion}-${index}`} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-800">{servicioLabels[item.tipoServicio] || item.tipoServicio}</p><p className="text-xs text-slate-500">{item.descripcion}</p></div><p className="font-black text-slate-900">{formatoCop.format(item.total || 0)}</p></div>)}</div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4"><div className="flex justify-between text-sm text-blue-800"><span>Subtotal</span><strong>{formatoCop.format(subtotal)}</strong></div><div className="mt-1 flex justify-between text-sm text-blue-800"><span>Descuento</span><strong>- {formatoCop.format(descuento)}</strong></div><div className="mt-3 flex justify-between border-t border-blue-200 pt-3 text-xl font-black text-blue-900"><span>Total a cobrar</span><span>{formatoCop.format(total)}</span></div></div>
+          <Field label="Forma de pago confirmada"><select value={form.metodoPago} onChange={(event) => onMetodoPagoChange(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3"><option value="POR_DEFINIR">Seleccione...</option><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option><option value="CREDITO">Crédito</option><option value="MIXTO">Mixto</option></select></Field>
+        </div>
+        <div className="flex justify-end border-t border-slate-200 pt-5"><button type="button" onClick={onConfirm} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-bold text-white hover:bg-emerald-700 sm:w-auto"><CheckCircle2 size={18} />Registrar pago y finalizar</button></div>
+      </div>
+    </section>
   );
 }
 
@@ -1494,7 +1632,7 @@ function ItemsVenta({ items, onDelete }) {
   );
 }
 
-function VentaCard({ venta, onMarkPaid, onEdit }) {
+function VentaCard({ venta, onMarkPaid, onEdit, canEdit }) {
   return (
     <article className="p-5 space-y-4 hover:bg-slate-50/70">
       <div className="flex flex-wrap justify-between gap-3">
@@ -1513,7 +1651,7 @@ function VentaCard({ venta, onMarkPaid, onEdit }) {
         </div>
         <div className="flex items-start gap-2">
           <EstadoBadge estado={venta.estado} />
-          <button
+          {canEdit && <button
             type="button"
             onClick={() => onEdit(venta)}
             title="Editar venta"
@@ -1521,7 +1659,7 @@ function VentaCard({ venta, onMarkPaid, onEdit }) {
             className="p-1.5 rounded-lg text-slate-300 hover:text-blue-600 hover:bg-blue-50"
           >
             <Pencil size={14} />
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -1546,6 +1684,7 @@ function VentaCard({ venta, onMarkPaid, onEdit }) {
         <p className="text-xl font-bold text-blue-700">
           {formatoCop.format(venta.total || 0)}
         </p>
+        <span className="text-xs font-bold text-slate-500">{(venta.metodoPago || "POR_DEFINIR").replaceAll("_", " ")}</span>
         {venta.estado !== "PAGADA" && (
           <button
             type="button"

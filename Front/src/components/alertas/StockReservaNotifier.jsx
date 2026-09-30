@@ -20,10 +20,15 @@ const TIPO_STOCK_RESERVA_DOS_ROLLOS =
   "STOCK_RESERVA_DOS_ROLLOS";
 const TIPO_RECEPCION_NUEVA =
   "RECEPCION_NUEVA";
+const TIPO_SERVICIO_ASESOR_NUEVO =
+  "SERVICIO_ASESOR_NUEVO";
+const TIPO_SERVICIO_LISTO_PAGO =
+  "SERVICIO_LISTO_PAGO";
 const TIPOS_NOTIFICABLES = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
   TIPO_STOCK_RESERVA_DOS_ROLLOS,
-  TIPO_RECEPCION_NUEVA
+  TIPO_RECEPCION_NUEVA,
+  TIPO_SERVICIO_ASESOR_NUEVO
 ];
 
 function StockReservaNotifier() {
@@ -49,7 +54,7 @@ function StockReservaNotifier() {
   );
 
   useEffect(() => {
-    if (usuario?.rol !== "INVENTARIO") {
+    if (!["INVENTARIO", "VENTAS"].includes(usuario?.rol)) {
       setAlertas([]);
       return undefined;
     }
@@ -63,9 +68,12 @@ function StockReservaNotifier() {
         const data =
           res.data.data || res.data || [];
 
+        const tiposRol = usuario?.rol === "VENTAS"
+          ? [TIPO_SERVICIO_LISTO_PAGO]
+          : TIPOS_NOTIFICABLES;
         const pendientes = data.filter(
           (alerta) =>
-            TIPOS_NOTIFICABLES.includes(
+            tiposRol.includes(
               alerta.tipo
             ) &&
             !alerta.atendida &&
@@ -99,7 +107,11 @@ function StockReservaNotifier() {
             position: "top-end",
             icon: "warning",
             title:
-              nueva.tipo === TIPO_RECEPCION_NUEVA
+              nueva.tipo === TIPO_SERVICIO_LISTO_PAGO
+                ? "Servicio listo para pago"
+                : nueva.tipo === TIPO_SERVICIO_ASESOR_NUEVO
+                ? "Nuevo servicio para corte"
+                : nueva.tipo === TIPO_RECEPCION_NUEVA
                 ? "Nueva recepcion"
                 : "Alerta de bodega",
             text: nueva.mensaje,
@@ -128,7 +140,7 @@ function StockReservaNotifier() {
   }, [usuario?.rol]);
 
   if (
-    usuario?.rol !== "INVENTARIO" ||
+    !["INVENTARIO", "VENTAS"].includes(usuario?.rol) ||
     alertas.length === 0
   ) {
     return null;
@@ -139,6 +151,10 @@ function StockReservaNotifier() {
     alertas.length - 1;
   const esRecepcion =
     principal.tipo === TIPO_RECEPCION_NUEVA;
+  const esServicio =
+    principal.tipo === TIPO_SERVICIO_ASESOR_NUEVO;
+  const esPago =
+    principal.tipo === TIPO_SERVICIO_LISTO_PAGO;
 
   const quitarPrincipal = async () => {
     try {
@@ -177,7 +193,7 @@ function StockReservaNotifier() {
   return (
     <div className="fixed right-5 bottom-5 z-50 w-[min(360px,calc(100vw-2.5rem))]">
       <div className="rounded-2xl border border-red-200 bg-white shadow-2xl overflow-hidden">
-        <div className={`${esRecepcion ? "bg-blue-600" : "bg-red-600"} text-white px-4 py-3 flex items-center justify-between gap-3`}>
+        <div className={`${esRecepcion || esServicio || esPago ? "bg-blue-600" : "bg-red-600"} text-white px-4 py-3 flex items-center justify-between gap-3`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="bg-white/20 rounded-xl p-2">
               <Bell size={18} />
@@ -185,12 +201,20 @@ function StockReservaNotifier() {
 
             <div className="min-w-0">
               <p className="font-bold">
-                {esRecepcion
+                {esPago
+                  ? "Servicio listo para pago"
+                  : esServicio
+                  ? "Nuevo servicio para corte"
+                  : esRecepcion
                   ? "Nueva recepcion"
                   : "Alerta de bodega"}
               </p>
-              <p className={`${esRecepcion ? "text-blue-100" : "text-red-100"} text-xs`}>
-                {esRecepcion
+              <p className={`${esRecepcion || esServicio || esPago ? "text-blue-100" : "text-red-100"} text-xs`}>
+                {esPago
+                  ? "Continúe la orden en Ventas"
+                  : esServicio
+                  ? "Orden enviada por un asesor"
+                  : esRecepcion
                   ? "Entrada pendiente por clasificar"
                   : "Stock minimo por material"}
               </p>
@@ -209,7 +233,7 @@ function StockReservaNotifier() {
 
         <div className="p-4">
           <div className="flex gap-3">
-            <AlertTriangle className={`${esRecepcion ? "text-blue-600" : "text-red-600"} shrink-0 mt-0.5`} />
+            <AlertTriangle className={`${esRecepcion || esServicio || esPago ? "text-blue-600" : "text-red-600"} shrink-0 mt-0.5`} />
 
             <div className="min-w-0">
               <p className="text-sm text-slate-700">
@@ -238,10 +262,10 @@ function StockReservaNotifier() {
             </button>
 
             <Link
-              to="/alertas"
-              className={`${esRecepcion ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"} inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold text-white transition`}
+              to={principal.accionUrl || "/alertas"}
+              className={`${esRecepcion || esServicio || esPago ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"} inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold text-white transition`}
             >
-              Ver alertas
+              {esPago ? "Abrir venta" : esServicio ? "Abrir corte" : "Ver alertas"}
             </Link>
           </div>
         </div>

@@ -149,6 +149,19 @@ function CorteForm({
     ultimoTextoMaterial,
   ]);
 
+  useEffect(() => {
+    const material = (form.origenMaterial || "ROLLO") === "RETAZO"
+      ? retazoSeleccionado
+      : rolloSeleccionado;
+    if (!material) return;
+
+    const texto = (form.origenMaterial || "ROLLO") === "RETAZO"
+      ? textoRetazo(material)
+      : textoRollo(material);
+    setBusquedaMaterial(texto);
+    setUltimoTextoMaterial(texto);
+  }, [form.origenMaterial, form.retazoId, form.rolloId, retazoSeleccionado, rolloSeleccionado]);
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center gap-3 mb-5">
@@ -363,7 +376,19 @@ function CorteForm({
           </CampoGuia>
         )}
 
-        {esPpfSeleccionado ? (
+        {esPpfSeleccionado && form.asesoriaId ? (
+          <section className="border-y border-blue-100 bg-blue-50 px-4 py-5 md:col-span-2 xl:col-span-4">
+            <p className="font-bold text-slate-900">Piezas PPF solicitadas por el asesor</p>
+            <p className="mt-1 text-sm text-slate-600">Estas piezas ya pertenecen a la orden. Seleccione el rollo e indique únicamente los metros de la tira utilizada.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(form.piezasPpf || []).map((pieza, index) => (
+                <span key={`${pieza.pieza}-${index}`} className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-800">
+                  {pieza.pieza}{Number(pieza.cantidad || 1) > 1 ? ` × ${pieza.cantidad}` : ""}
+                </span>
+              ))}
+            </div>
+          </section>
+        ) : esPpfSeleccionado ? (
           <PiezasPpfSelector
             loading={loadingPiezasPpf}
             piezas={piezasPpfCatalogo}

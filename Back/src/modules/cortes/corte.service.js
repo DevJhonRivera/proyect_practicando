@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
+import { mongoSoportaTransacciones } from "../../config/db.js";
 import Corte from "./corte.model.js";
 import Rollo from "../rollos/rollo.model.js";
 import PiezaPpf from "../piezasPpf/piezaPpf.model.js";
+import Asesoria from "../asesores/asesoria.model.js";
 import { crearAlerta }
 from "../alertas/alerta.service.js";
 import {
@@ -286,6 +288,19 @@ const calcularRentabilidad = ({
 
 export const registrarCorte =
   async (data, user) => {
+    if (data.asesoriaId && data.asesoriaLinea) {
+      const corteExistente = await Corte.findOne({
+        asesoriaId: data.asesoriaId,
+        asesoriaLinea: normalizarMayusculas(data.asesoriaLinea),
+      }).select("_id");
+
+      if (corteExistente) {
+        throw new Error(
+          "Este corte agrupado ya fue registrado para la orden. Edite el corte existente si necesita corregirlo"
+        );
+      }
+    }
+
     const metrosUtilizados =
       validarMetrosDosDecimales(data.metrosUtilizados);
     const datosVehiculo =
@@ -293,6 +308,7 @@ export const registrarCorte =
 
     const corteData = {
       ...data,
+      asesoriaLinea: normalizarMayusculas(data.asesoriaLinea),
       ...datosVehiculo,
       instalador:
         requiereInstalador(data.tipoServicio)
@@ -319,7 +335,7 @@ export const registrarCorte =
     let rolloConStockBajo;
 
     try {
-      await session.withTransaction(async () => {
+      const guardarCorte = async () => {
         if (data.retazoId) {
           const retazo =
             await consumirRetazo(
@@ -423,6 +439,7 @@ export const registrarCorte =
 
         if (rollo.largoDisponible <= 0) {
           rollo.estado = "AGOTADO";
+          rollo.fechaAgotado = rollo.fechaAgotado || new Date();
         }
 
         await rollo.save({ session });
@@ -476,7 +493,13 @@ export const registrarCorte =
             codigoRollo: rollo.codigoRollo,
           };
         }
-      });
+      };
+
+      if (mongoSoportaTransacciones()) {
+        await session.withTransaction(guardarCorte);
+      } else {
+        await guardarCorte();
+      }
     } finally {
       await session.endSession();
     }
@@ -494,6 +517,15 @@ export const registrarCorte =
           error
         );
       }
+    }
+
+    if (corteCreado?.asesoriaId) {
+      await Asesoria.findByIdAndUpdate(corteCreado.asesoriaId, {
+        $set: {
+          "flujo.etapa": "EN_PROCESO",
+          "flujo.fechaInicioTrabajo": new Date(),
+        },
+      });
     }
 
     return corteCreado;

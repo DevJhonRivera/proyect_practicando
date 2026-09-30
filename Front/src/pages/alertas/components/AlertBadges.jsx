@@ -1,6 +1,8 @@
 import {
   nivelAlerta,
   TIPO_RECEPCION_NUEVA,
+  TIPO_SERVICIO_ASESOR_NUEVO,
+  TIPO_SERVICIO_LISTO_PAGO,
   TIPO_STOCK_RESERVA_DOS_ROLLOS,
   TIPO_STOCK_RESERVA_UN_ROLLO,
   TIPO_VENTA_PENDIENTE,
@@ -18,7 +20,7 @@ export function TipoBadge({ tipo }) {
       : tipo === TIPO_STOCK_RESERVA_DOS_ROLLOS ||
         upper.includes("BAJO")
       ? "border-amber-200 bg-amber-50 text-amber-700"
-      : tipo === TIPO_RECEPCION_NUEVA ||
+      : tipo === TIPO_RECEPCION_NUEVA || tipo === TIPO_SERVICIO_ASESOR_NUEVO || tipo === TIPO_SERVICIO_LISTO_PAGO ||
         upper.includes("RECEPCION")
       ? "border-blue-200 bg-blue-50 text-blue-700"
       : tipo === TIPO_VENTA_REVISION_CORTES

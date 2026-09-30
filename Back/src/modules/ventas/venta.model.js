@@ -134,6 +134,11 @@ const auditoriaSchema = new mongoose.Schema(
 
 const ventaSchema = new mongoose.Schema(
   {
+    asesoriaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Asesoria",
+      default: null,
+    },
     codigoVenta: {
       type: String,
       unique: true,
@@ -177,6 +182,11 @@ const ventaSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    metodoPago: {
+      type: String,
+      enum: ["POR_DEFINIR", "EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "MIXTO"],
+      default: "POR_DEFINIR",
+    },
     total: {
       type: Number,
       default: 0,
@@ -193,6 +203,11 @@ const ventaSchema = new mongoose.Schema(
   {
     timestamps: true,
   }
+);
+
+ventaSchema.index(
+  { asesoriaId: 1 },
+  { unique: true, sparse: true }
 );
 
 export default mongoose.model(

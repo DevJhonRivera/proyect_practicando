@@ -15,6 +15,11 @@ const alertaSchema =
       referenciaId:
         mongoose.Schema.Types.ObjectId,
 
+      accionUrl: {
+        type: String,
+        default: ""
+      },
+
       atendida: {
         type: Boolean,
         default: false

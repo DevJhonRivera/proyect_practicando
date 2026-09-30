@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { ClipboardList } from "lucide-react";
 import Swal from "sweetalert2";
 
 import { updateCorte } from "../../api/cortes.api";
+import { enviarAsesoriaAVentas, getAsesoriaPorId } from "../../api/asesores.api";
 import CorteForm from "./components/CorteForm";
 import CortesHeader from "./components/CortesHeader";
 import CortesSearch from "./components/CortesSearch";
@@ -12,6 +15,7 @@ import {
   tipoCorteLabels,
 } from "./cortes.constants";
 import { useCortesPage } from "./hooks/useCortesPage";
+import { obtenerUsuarioActual } from "../../utils/permisos";
 
 const mayusculas = (value) =>
   String(value || "").toUpperCase();
@@ -29,12 +33,16 @@ function escapeHtml(value) {
 }
 
 function CortesPage() {
+  const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(obtenerUsuarioActual()?.rol);
+  const [searchParams] = useSearchParams();
+  const [ordenAsesoria, setOrdenAsesoria] = useState(null);
   const [vistaCortes, setVistaCortes] =
     useState("registrar");
 
   const {
     aplicarSugerencia,
     aplicarVehiculo,
+    cortes,
     cortesFiltrados,
     excelColumns,
     form,
@@ -63,6 +71,105 @@ function CortesPage() {
     sugerenciasKey,
     vehiculosSugeridos,
   } = useCortesPage();
+
+  useEffect(() => {
+    const asesoriaId = searchParams.get("asesoria");
+    if (!asesoriaId) return;
+    let activa = true;
+    getAsesoriaPorId(asesoriaId)
+      .then((response) => {
+        if (activa) setOrdenAsesoria(response.data?.data || null);
+      })
+      .catch((error) => Swal.fire({
+        icon: "error",
+        title: "No se pudo abrir el servicio",
+        text: error.response?.data?.message || "La orden ya no está disponible.",
+      }));
+    return () => { activa = false; };
+  }, [searchParams]);
+
+  const cargarLineaAsesoria = (linea) => {
+    const yaRegistrado = cortes.some((corte) =>
+      String(corte.asesoriaId || "") === String(ordenAsesoria?._id || "") &&
+      corte.asesoriaLinea === linea.etiqueta
+    );
+    if (yaRegistrado) {
+      Swal.fire({ icon: "warning", title: "Corte ya registrado", text: "Esta línea de material ya fue descontada. Use el historial si necesita corregirla." });
+      return;
+    }
+    const materialSolicitado = String(linea.material || linea.referencia || "").trim().toUpperCase();
+    const clasificacionSolicitada = Number(String(linea.porcentaje || "").match(/[\d.]+/)?.[0] || 0);
+    const unidadSolicitada = String(linea.porcentaje || "").toUpperCase().includes("MICRAS")
+      ? "MICRAS"
+      : linea.clase === "PPF" ? "NINGUNA" : "PORCENTAJE";
+    const rollo = rollosEnUso.find((item) => {
+      const tipoRollo = String(item.tipoPolarizado || "").toUpperCase();
+      const coincideMaterial = tipoRollo === materialSolicitado ||
+        tipoRollo.includes(materialSolicitado) ||
+        materialSolicitado.includes(tipoRollo);
+      const coincideUnidad = (item.unidadMedida || "PORCENTAJE") === unidadSolicitada;
+      const coincideClasificacion = unidadSolicitada === "NINGUNA" ||
+        Number(item.porcentaje || 0) === clasificacionSolicitada;
+      return coincideMaterial && coincideUnidad && coincideClasificacion;
+    });
+    const partes = linea.partes || [];
+    const parte = partes[0] || "";
+    const tipos = ["PANORAMICO", "LUNETA", "DELANTERAS", "TRASERAS", "FIJOS", "SUNROOF", "COMPLETO"];
+    const tipoCorte = linea.clase === "PPF"
+      ? "PIEZAS_PPF"
+      : partes.length > 1 ? "OTROS" : tipos.includes(parte) ? parte : parte ? "OTROS" : "COMPLETO";
+    const piezasPpf = linea.clase === "PPF"
+      ? (partes.length ? partes : [linea.aplicacion || "PPF COMPLETO"]).map((pieza) => ({
+          pieza,
+          ubicacion: linea.aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR",
+          cantidad: 1,
+          anchoCm: 0,
+          largoCm: 0,
+          rotada: false,
+        }))
+      : [];
+    setForm((actual) => ({
+      ...actual,
+      asesoriaId: ordenAsesoria._id,
+      asesoriaLinea: linea.etiqueta,
+      partesServicio: partes,
+      placa: ordenAsesoria.vehiculo?.placa || "",
+      marca: ordenAsesoria.vehiculo?.marca || "",
+      modelo: ordenAsesoria.vehiculo?.anio || String(ordenAsesoria.vehiculo?.modelo || "").replace(/\D/g, ""),
+      tipoServicio: ordenAsesoria.garantia?.esGarantia
+        ? ordenAsesoria.garantia.tipo || "GARANTIA"
+        : "VENTA",
+      instalador: ordenAsesoria.garantia?.instalador || "",
+      tipoCorte,
+      tipoCorteDetalle: tipoCorte === "OTROS" ? partes.join(" + ") : "",
+      rolloId: rollo?._id || "",
+      origenMaterial: "ROLLO",
+      piezasPpf,
+    }));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (!rollo) {
+      Swal.fire({ icon: "info", title: "Datos del carro cargados", text: "Seleccione el rollo disponible que corresponda al material solicitado." });
+    }
+  };
+
+  const finalizarTrabajo = async () => {
+    const confirmacion = await Swal.fire({
+      icon: "question",
+      title: "¿Enviar la orden a Ventas?",
+      text: "Confirme que ya registró todos los cortes necesarios.",
+      showCancelButton: true,
+      confirmButtonText: "Sí, enviar a Ventas",
+      cancelButtonText: "Seguir trabajando",
+    });
+    if (!confirmacion.isConfirmed) return;
+    try {
+      const response = await enviarAsesoriaAVentas(ordenAsesoria._id);
+      setOrdenAsesoria(response.data?.data || ordenAsesoria);
+      await Swal.fire({ icon: "success", title: "Orden enviada a Ventas", text: "Ventas recibió una notificación para continuar con el pago." });
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No se pudo enviar", text: error.response?.data?.message || "Revise los cortes registrados." });
+    }
+  };
 
   const editarCorte = async (corte) => {
     if (corte.ventaEstado === "PAGADA") {
@@ -213,6 +320,8 @@ function CortesPage() {
       />
 
       {vistaCortes === "registrar" && (
+        <>
+        {ordenAsesoria && <OrdenAsesoriaPanel orden={ordenAsesoria} cortes={cortes} onLoad={cargarLineaAsesoria} onFinish={finalizarTrabajo} />}
         <CorteForm
           form={form}
           loadingSugerencias={loadingSugerencias}
@@ -233,6 +342,7 @@ function CortesPage() {
           sugerenciasKey={sugerenciasKey}
           vehiculosSugeridos={vehiculosSugeridos}
         />
+        </>
       )}
 
       {vistaCortes === "historial" && (
@@ -250,11 +360,30 @@ function CortesPage() {
             cortes={cortesFiltrados}
             excelColumns={excelColumns}
             onEdit={editarCorte}
+            canEdit={puedeEditar}
           />
         </>
       )}
     </div>
   );
+}
+
+function OrdenAsesoriaPanel({ orden, cortes, onLoad, onFinish }) {
+  const lineas = [
+    ...(orden.polarizados || []).map((item, index) => ({ ...item, clase: "POLARIZADO", etiqueta: `POLARIZADO ${index + 1}` })),
+    ...(orden.ppf || []).map((item, index) => ({ ...item, clase: "PPF", material: item.referencia, partes: item.aplicacion === "PIEZAS" ? item.piezas : [item.aplicacion], etiqueta: `PPF ${index + 1}` })),
+  ];
+  return <section className="mb-5 overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
+    <div className="flex items-start gap-3 bg-blue-50 p-4"><ClipboardList className="mt-0.5 text-blue-700" size={22} /><div><h2 className="font-black text-slate-900">Servicio {orden.codigo}</h2><p className="text-sm text-slate-600">{orden.vehiculo?.placa} · {orden.vehiculo?.marca} {orden.vehiculo?.modelo} {orden.vehiculo?.anio} · Asesor: {orden.asesorNombre}</p></div></div>
+    <div className="divide-y divide-slate-100">
+      {lineas.map((linea) => {
+        const registrado = cortes.some((corte) => String(corte.asesoriaId || "") === String(orden._id) && corte.asesoriaLinea === linea.etiqueta);
+        return <div key={linea.etiqueta} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-500">{(linea.partes || []).join(" + ") || linea.aplicacion} · Venta: ${Number(linea.valor || 0).toLocaleString("es-CO")}</p></div><button type="button" disabled={registrado} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : "bg-blue-600 text-white hover:bg-blue-700"}`}>{registrado ? "Corte registrado" : "Cargar corte agrupado"}</button></div>;
+      })}
+      {!lineas.length && <p className="p-4 text-sm text-slate-500">Esta orden solo contiene servicios que no requieren corte.</p>}
+    </div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 p-4"><p className="text-sm font-semibold text-slate-600">Estado: {(orden.flujo?.etapa || "PENDIENTE_INVENTARIO").replaceAll("_", " ")}</p>{orden.flujo?.etapa !== "PENDIENTE_PAGO" && orden.flujo?.etapa !== "FINALIZADA" && <button type="button" onClick={onFinish} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">Finalizar trabajo y enviar a Ventas</button>}</div>
+  </section>;
 }
 
 function CortesTabs({ vista, onChange, total }) {

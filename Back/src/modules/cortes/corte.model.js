@@ -80,6 +80,23 @@ const piezaCortePpfSchema = new mongoose.Schema(
 
 const corteSchema = new mongoose.Schema(
     {
+        asesoriaId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Asesoria",
+            default: null
+        },
+
+        asesoriaLinea: {
+            type: String,
+            default: "",
+            trim: true
+        },
+
+        partesServicio: {
+            type: [String],
+            default: []
+        },
+
         rolloId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Rollo"

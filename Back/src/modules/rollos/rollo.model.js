@@ -84,6 +84,11 @@ const rolloSchema = new mongoose.Schema(
         "AGOTADO"
       ],
       default: "RECEPCION"
+    },
+
+    fechaAgotado: {
+      type: Date,
+      default: null
     }
   },
   {

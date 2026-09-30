@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { BadgeDollarSign, Boxes, Search, ShoppingCart } from "lucide-react";
+import { BadgeDollarSign, Boxes, ClipboardPlus, Search } from "lucide-react";
 import Swal from "sweetalert2";
 
 import { getCatalogoDisponible } from "../../api/asesores.api";
 import { anchoLabel } from "../../utils/anchos";
 import { usePagination } from "../../hooks/usePagination";
 import TablePagination from "../../components/ui/TablePagination";
-import { useNavigate } from "react-router-dom";
+import AsesoriaFormModal from "./AsesoriaFormModal";
+import AsesoriasHistorial from "./AsesoriasHistorial";
 
 const formatoMetros = (value) => `${Number(value || 0).toFixed(2)} m`;
 
@@ -19,10 +20,11 @@ const etiquetaClasificacion = (material) => {
 };
 
 function AsesoresPage() {
-  const navigate = useNavigate();
   const [materiales, setMateriales] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [loading, setLoading] = useState(true);
+  const [nuevaRecepcion, setNuevaRecepcion] = useState(false);
+  const [historialVersion, setHistorialVersion] = useState(0);
 
   const cargar = async () => {
     try {
@@ -82,14 +84,16 @@ function AsesoresPage() {
               <p className="text-sm text-slate-500">Consulta qué material está disponible para ofrecer al cliente.</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/ventas")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 sm:w-auto"
-          >
-            <ShoppingCart size={18} />
-            Registrar venta
-          </button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => setNuevaRecepcion(true)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white shadow-sm hover:bg-slate-800"
+            >
+              <ClipboardPlus size={18} />
+              Nueva recepción
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 p-5">
           <div className="relative min-w-[240px] flex-1">
@@ -149,10 +153,19 @@ function AsesoresPage() {
         )}
       </section>
 
+      <AsesoriasHistorial refreshKey={historialVersion} />
+
       <div className="flex items-center gap-2 text-xs text-slate-500">
         <BadgeDollarSign size={16} className="text-blue-600" />
         Los precios se registran desde el módulo de ventas según el servicio ofrecido.
       </div>
+
+      {nuevaRecepcion && (
+        <AsesoriaFormModal
+          onClose={() => setNuevaRecepcion(false)}
+          onSaved={() => setHistorialVersion((value) => value + 1)}
+        />
+      )}
     </div>
   );
 }

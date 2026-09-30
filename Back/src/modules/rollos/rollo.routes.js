@@ -7,6 +7,7 @@ import {
   moverRolloUso,
   getRollosPorEstado,
   cerrarRollo,
+  getReabastecimiento,
 } from "./rollo.controller.js";
 
 import {
@@ -28,6 +29,13 @@ router.get(
   authMiddleware,
   requirePermission("rollos", "read"),
   getRollos
+);
+
+router.get(
+  "/reabastecimiento",
+  authMiddleware,
+  requirePermission("rollos", "read"),
+  getReabastecimiento
 );
 
 router.get(

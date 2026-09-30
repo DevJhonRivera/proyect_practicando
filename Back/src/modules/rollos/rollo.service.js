@@ -14,6 +14,7 @@ import {
 import {
   crearRetazo,
 } from "../retazos/retazo.service.js";
+import Corte from "../cortes/corte.model.js";
 
 const roundMeters = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -334,6 +335,7 @@ export const cerrarRolloAgotado =
 
     rollo.largoDisponible = 0;
     rollo.estado = "AGOTADO";
+    rollo.fechaAgotado = rollo.fechaAgotado || new Date();
 
     await rollo.save();
 
@@ -368,3 +370,95 @@ export const obtenerRolloPorId =
       estado,
     });
   };
+
+export const obtenerReabastecimiento = async () => {
+  const desde = new Date();
+  desde.setDate(desde.getDate() - 90);
+
+  const [rollos, cortes] = await Promise.all([
+    Rollo.find().populate("pedidoId", "fechaPedido").lean(),
+    Corte.find({ createdAt: { $gte: desde }, rolloId: { $ne: null } })
+      .select("rolloId metrosUtilizados createdAt")
+      .lean(),
+  ]);
+
+  const rolloPorId = new Map(rollos.map((rollo) => [String(rollo._id), rollo]));
+  const grupos = new Map();
+  const claveDe = (item) => [
+    item.tipoPolarizado,
+    item.unidadMedida || "PORCENTAJE",
+    Number(item.porcentaje || 0),
+    Number(item.ancho || 0).toFixed(4),
+  ].join("|");
+
+  rollos.forEach((rollo) => {
+    const clave = claveDe(rollo);
+    const grupo = grupos.get(clave) || {
+      clave,
+      tipoPolarizado: rollo.tipoPolarizado,
+      unidadMedida: rollo.unidadMedida || "PORCENTAJE",
+      porcentaje: Number(rollo.porcentaje || 0),
+      ancho: Number(rollo.ancho || 0),
+      stockMetros: 0,
+      rollosReserva: 0,
+      rollosUso: 0,
+      largosOriginales: [],
+      leadTimes: [],
+      consumo90Dias: 0,
+      ultimaFechaAgotado: null,
+    };
+    if (["RESERVA", "USO"].includes(rollo.estado)) {
+      grupo.stockMetros += Number(rollo.largoDisponible || 0);
+      grupo.rollosReserva += rollo.estado === "RESERVA" ? 1 : 0;
+      grupo.rollosUso += rollo.estado === "USO" ? 1 : 0;
+    }
+    if (Number(rollo.largoOriginal || 0) > 0) grupo.largosOriginales.push(Number(rollo.largoOriginal));
+    const fechaPedido = rollo.pedidoId?.fechaPedido;
+    if (fechaPedido && rollo.createdAt) {
+      const dias = Math.max(1, Math.ceil((new Date(rollo.createdAt) - new Date(fechaPedido)) / 86400000));
+      if (Number.isFinite(dias) && dias <= 365) grupo.leadTimes.push(dias);
+    }
+    if (rollo.fechaAgotado && (!grupo.ultimaFechaAgotado || new Date(rollo.fechaAgotado) > new Date(grupo.ultimaFechaAgotado))) {
+      grupo.ultimaFechaAgotado = rollo.fechaAgotado;
+    }
+    grupos.set(clave, grupo);
+  });
+
+  cortes.forEach((corte) => {
+    const rollo = rolloPorId.get(String(corte.rolloId));
+    if (!rollo) return;
+    const grupo = grupos.get(claveDe(rollo));
+    if (grupo) grupo.consumo90Dias += Number(corte.metrosUtilizados || 0);
+  });
+
+  return Array.from(grupos.values()).map((grupo) => {
+    const consumoDiario = grupo.consumo90Dias / 90;
+    const leadTimeDias = grupo.leadTimes.length
+      ? Math.ceil(grupo.leadTimes.reduce((total, dias) => total + dias, 0) / grupo.leadTimes.length)
+      : 30;
+    const puntoPedidoMetros = consumoDiario * (leadTimeDias + 7);
+    const coberturaDias = consumoDiario > 0 ? grupo.stockMetros / consumoDiario : null;
+    const largoPromedio = grupo.largosOriginales.length
+      ? grupo.largosOriginales.reduce((total, largo) => total + largo, 0) / grupo.largosOriginales.length
+      : 30;
+    const objetivoMetros = consumoDiario * (leadTimeDias + 37);
+    const faltante = Math.max(objetivoMetros - grupo.stockMetros, 0);
+    const cantidadSugerida = Math.max(Math.ceil(faltante / Math.max(largoPromedio, 1)), 1);
+    const pedirAhora = grupo.rollosReserva <= 1 || grupo.stockMetros <= puntoPedidoMetros;
+    const pedirPronto = !pedirAhora && (grupo.rollosReserva <= 2 || grupo.stockMetros <= puntoPedidoMetros + consumoDiario * 14);
+    return {
+      ...grupo,
+      stockMetros: roundMeters(grupo.stockMetros),
+      consumoDiario: roundMeters(consumoDiario),
+      leadTimeDias,
+      leadTimeEstimado: grupo.leadTimes.length === 0,
+      puntoPedidoMetros: roundMeters(puntoPedidoMetros),
+      coberturaDias: coberturaDias === null ? null : Math.round(coberturaDias),
+      cantidadSugerida: pedirAhora || pedirPronto ? cantidadSugerida : 0,
+      estado: pedirAhora ? "PEDIR_AHORA" : pedirPronto ? "PEDIR_PRONTO" : consumoDiario <= 0 ? "SIN_HISTORIAL" : "SUFICIENTE",
+    };
+  }).sort((a, b) => {
+    const prioridad = { PEDIR_AHORA: 0, PEDIR_PRONTO: 1, SIN_HISTORIAL: 2, SUFICIENTE: 3 };
+    return prioridad[a.estado] - prioridad[b.estado] || a.tipoPolarizado.localeCompare(b.tipoPolarizado);
+  });
+};

@@ -4,6 +4,10 @@ export const TIPO_STOCK_RESERVA_DOS_ROLLOS =
   "STOCK_RESERVA_DOS_ROLLOS";
 export const TIPO_RECEPCION_NUEVA =
   "RECEPCION_NUEVA";
+export const TIPO_SERVICIO_ASESOR_NUEVO =
+  "SERVICIO_ASESOR_NUEVO";
+export const TIPO_SERVICIO_LISTO_PAGO =
+  "SERVICIO_LISTO_PAGO";
 export const TIPO_VENTA_PENDIENTE =
   "VENTA_PENDIENTE";
 export const TIPO_VENTA_REVISION_CORTES =
@@ -27,7 +31,7 @@ export function nivelAlerta(tipo) {
     return "PREVENTIVO";
   }
 
-  if (tipo === TIPO_RECEPCION_NUEVA) {
+  if (tipo === TIPO_RECEPCION_NUEVA || tipo === TIPO_SERVICIO_ASESOR_NUEVO || tipo === TIPO_SERVICIO_LISTO_PAGO) {
     return "INFORMATIVO";
   }
 

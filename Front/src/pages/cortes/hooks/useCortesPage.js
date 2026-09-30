@@ -610,6 +610,7 @@ export function useCortesPage() {
   };
 
   return {
+    cortes,
     cortesFiltrados,
     excelColumns: getCortesExcelColumns(),
     form,

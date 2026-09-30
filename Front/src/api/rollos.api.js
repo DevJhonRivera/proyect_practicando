@@ -28,3 +28,6 @@ api.patch(
 export const getRollos =
   () =>
     api.get("/rollos");
+
+export const getReabastecimiento = () =>
+  api.get("/rollos/reabastecimiento");

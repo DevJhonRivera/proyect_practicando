@@ -8,7 +8,7 @@ import {
   updateEstadoVenta,
 } from "./venta.controller.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { requirePermission } from "../../middlewares/permission.middleware.js";
+import { requirePermission, requireRole } from "../../middlewares/permission.middleware.js";
 
 const router = Router();
 
@@ -36,7 +36,7 @@ router.get(
 router.put(
   "/:id",
   authMiddleware,
-  requirePermission("ventas", "write"),
+  requireRole("ADMIN", "SUPERUSUARIO"),
   updateVenta
 );
 

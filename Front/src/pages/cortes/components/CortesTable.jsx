@@ -23,6 +23,7 @@ function CortesTable({
   cortes,
   excelColumns,
   onEdit,
+  canEdit = false,
 }) {
   const pagination = usePagination(cortes);
 
@@ -163,7 +164,7 @@ function CortesTable({
                   </td>
 
                   <td className="p-4 text-center">
-                    <button
+                    {canEdit && <button
                       type="button"
                       onClick={() => onEdit(corte)}
                       title="Editar corte"
@@ -171,7 +172,7 @@ function CortesTable({
                       className="p-1.5 rounded-lg text-slate-300 hover:text-blue-600 hover:bg-blue-50"
                     >
                       <Pencil size={14} />
-                    </button>
+                    </button>}
                   </td>
                 </tr>
               ))}

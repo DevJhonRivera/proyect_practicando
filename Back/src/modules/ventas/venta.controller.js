@@ -79,7 +79,8 @@ export const updateEstadoVenta =
         await actualizarEstadoVenta(
           req.params.id,
           req.body.estado,
-          req.user
+          req.user,
+          req.body.metodoPago
         );
 
       res.json(venta);

@@ -7,6 +7,10 @@ export const TIPO_STOCK_RESERVA_DOS_ROLLOS =
   "STOCK_RESERVA_DOS_ROLLOS";
 export const TIPO_RECEPCION_NUEVA =
   "RECEPCION_NUEVA";
+export const TIPO_SERVICIO_ASESOR_NUEVO =
+  "SERVICIO_ASESOR_NUEVO";
+export const TIPO_SERVICIO_LISTO_PAGO =
+  "SERVICIO_LISTO_PAGO";
 export const TIPO_VENTA_PENDIENTE =
   "VENTA_PENDIENTE";
 export const TIPO_VENTA_REVISION_CORTES =
@@ -20,12 +24,14 @@ const TIPOS_STOCK_RESERVA = [
 const TIPOS_INVENTARIO = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
   TIPO_STOCK_RESERVA_DOS_ROLLOS,
-  TIPO_RECEPCION_NUEVA
+  TIPO_RECEPCION_NUEVA,
+  TIPO_SERVICIO_ASESOR_NUEVO
 ];
 
 const TIPOS_VENTAS = [
   TIPO_VENTA_PENDIENTE,
-  TIPO_VENTA_REVISION_CORTES
+  TIPO_VENTA_REVISION_CORTES,
+  TIPO_SERVICIO_LISTO_PAGO
 ];
 
 const rolesConTodasLasAlertas = [
@@ -267,6 +273,42 @@ export const crearAlertaRecepcion =
       `recepcion-nueva:${recepcion._id}`
     );
   };
+
+export const crearAlertaServicioAsesor = async (asesoria) => {
+  const placa = asesoria.vehiculo?.placa || "SIN PLACA";
+  return Alerta.findOneAndUpdate(
+    { clave: `servicio-asesor:${asesoria._id}` },
+    {
+      tipo: TIPO_SERVICIO_ASESOR_NUEVO,
+      mensaje: `Nuevo servicio ${asesoria.codigo} para ${placa}. Revise los materiales y registre los cortes.`,
+      referenciaId: asesoria._id,
+      accionUrl: `/cortes?asesoria=${asesoria._id}`,
+      atendida: false,
+      activa: true,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+};
+
+export const crearAlertaServicioListoPago = async (asesoria) =>
+  Alerta.findOneAndUpdate(
+    { clave: `servicio-listo-pago:${asesoria._id}` },
+    {
+      tipo: TIPO_SERVICIO_LISTO_PAGO,
+      mensaje: `El servicio ${asesoria.codigo} del vehiculo ${asesoria.vehiculo?.placa || ""} esta listo para registrar el pago.`,
+      referenciaId: asesoria._id,
+      accionUrl: `/ventas?asesoria=${asesoria._id}`,
+      atendida: false,
+      activa: true,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+export const cerrarAlertaServicioListoPago = async (asesoriaId) =>
+  Alerta.updateMany(
+    { clave: `servicio-listo-pago:${asesoriaId}` },
+    { atendida: true, activa: false }
+  );
 
 export const crearAlertaVentaPendiente =
   async (venta) => {

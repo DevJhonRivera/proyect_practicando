@@ -1,11 +1,14 @@
 import mongoose from "mongoose";
+import { mongoSoportaTransacciones } from "../../config/db.js";
 import Corte from "../cortes/corte.model.js";
 import {
   cerrarAlertaVentaPendiente,
   crearAlertaRevisionVenta,
   crearAlertaVentaPendiente,
+  cerrarAlertaServicioListoPago,
 } from "../alertas/alerta.service.js";
 import Venta from "./venta.model.js";
+import Asesoria from "../asesores/asesoria.model.js";
 
 const roundMoney = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -377,12 +380,13 @@ const prepararVenta = async (data, ventaActual = null) => {
   const items =
     prepararItems(data.items);
 
-  const idsCortes = normalizarIds(
-    items.flatMap((item) => [
-      item.corteId,
-      ...(item.corteIds || []),
-    ])
-  );
+  const idsCortes = items.flatMap((item) => {
+    const idsItem = item.corteIds?.length
+      ? normalizarIds(item.corteIds)
+      : normalizarIds([item.corteId]);
+
+    return [...new Set(idsItem)];
+  });
 
   if (new Set(idsCortes).size !== idsCortes.length) {
     throw new Error(
@@ -455,6 +459,7 @@ const prepararVenta = async (data, ventaActual = null) => {
     roundMoney(Math.max(subtotal - descuento, 0));
 
   return {
+    asesoriaId: data.asesoriaId || ventaActual?.asesoriaId || undefined,
     codigoVenta:
       ventaActual?.codigoVenta || `VEN-${Date.now()}`,
     cliente,
@@ -465,12 +470,21 @@ const prepararVenta = async (data, ventaActual = null) => {
     subtotal,
     descuento,
     total,
+    metodoPago: ["POR_DEFINIR", "EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "MIXTO"].includes(data.metodoPago)
+      ? data.metodoPago
+      : ventaActual?.metodoPago || "POR_DEFINIR",
     observaciones:
       normalizarMayusculas(data.observaciones),
   };
 };
 
 export const crearVenta = async (data, user) => {
+  if (data.asesoriaId) {
+    const existente = await Venta.findOne({ asesoriaId: data.asesoriaId });
+    if (existente) {
+      throw new Error(`Esta orden ya tiene la venta ${existente.codigoVenta}`);
+    }
+  }
   const ventaData =
     await prepararVenta(data);
   const session =
@@ -478,7 +492,7 @@ export const crearVenta = async (data, user) => {
   let venta;
 
   try {
-    await session.withTransaction(async () => {
+    const guardarVenta = async () => {
       [venta] = await Venta.create(
         [
           {
@@ -507,7 +521,13 @@ export const crearVenta = async (data, user) => {
         user,
         session
       );
-    });
+    };
+
+    if (mongoSoportaTransacciones()) {
+      await session.withTransaction(guardarVenta);
+    } else {
+      await guardarVenta();
+    }
   } finally {
     await session.endSession();
   }
@@ -516,6 +536,27 @@ export const crearVenta = async (data, user) => {
     await sincronizarAlertaVenta(venta);
   } catch (error) {
     await registrarErrorPostVenta(venta, error);
+  }
+
+  if (venta.asesoriaId) {
+    try {
+      await Asesoria.findByIdAndUpdate(venta.asesoriaId, {
+        $set: {
+          "pago.estado": venta.estado === "PAGADA" ? "PAGADO" : "PENDIENTE",
+          "pago.valorRecibido": venta.estado === "PAGADA" ? venta.total : 0,
+          "pago.metodoPagoFinal": venta.metodoPago,
+          "flujo.etapa": venta.estado === "PAGADA" ? "FINALIZADA" : "PENDIENTE_PAGO",
+          "flujo.fechaFinalizacion": venta.estado === "PAGADA" ? new Date() : null,
+        },
+      });
+    } catch (error) {
+      await registrarErrorPostVenta(venta, error);
+    }
+    try {
+      await cerrarAlertaServicioListoPago(venta.asesoriaId);
+    } catch (error) {
+      await registrarErrorPostVenta(venta, error);
+    }
   }
 
   return venta;
@@ -537,7 +578,7 @@ export const obtenerVentaPorId = async (id) => {
 };
 
 export const actualizarEstadoVenta =
-  async (id, estado, user) => {
+  async (id, estado, user, metodoPago) => {
     const ventaActual =
       await Venta.findById(id);
 
@@ -550,13 +591,14 @@ export const actualizarEstadoVenta =
     let venta;
 
     try {
-      await session.withTransaction(async () => {
+      const guardarEstado = async () => {
         venta =
           await Venta.findByIdAndUpdate(
             id,
             {
               $set: {
                 estado,
+                ...(metodoPago ? { metodoPago } : {}),
               },
               $push: {
                 auditoria:
@@ -613,7 +655,13 @@ export const actualizarEstadoVenta =
           },
           { session }
         );
-      });
+      };
+
+      if (mongoSoportaTransacciones()) {
+        await session.withTransaction(guardarEstado);
+      } else {
+        await guardarEstado();
+      }
     } finally {
       await session.endSession();
     }
@@ -622,6 +670,22 @@ export const actualizarEstadoVenta =
       await sincronizarAlertaVenta(venta);
     } catch (error) {
       await registrarErrorPostVenta(venta, error);
+    }
+
+    if (venta.asesoriaId) {
+      try {
+        await Asesoria.findByIdAndUpdate(venta.asesoriaId, {
+          $set: {
+            "pago.estado": estado === "PAGADA" ? "PAGADO" : "PENDIENTE",
+            "pago.valorRecibido": estado === "PAGADA" ? venta.total : 0,
+            "pago.metodoPagoFinal": venta.metodoPago,
+            "flujo.etapa": estado === "PAGADA" ? "FINALIZADA" : "PENDIENTE_PAGO",
+            "flujo.fechaFinalizacion": estado === "PAGADA" ? new Date() : null,
+          },
+        });
+      } catch (error) {
+        await registrarErrorPostVenta(venta, error);
+      }
     }
 
     return venta;
@@ -644,7 +708,7 @@ export const actualizarVenta = async (id, data, user) => {
   let venta;
 
   try {
-    await session.withTransaction(async () => {
+    const guardarEdicion = async () => {
       await limpiarCortesVenta(
         ventaActual.items,
         user,
@@ -679,7 +743,13 @@ export const actualizarVenta = async (id, data, user) => {
         user,
         session
       );
-    });
+    };
+
+    if (mongoSoportaTransacciones()) {
+      await session.withTransaction(guardarEdicion);
+    } else {
+      await guardarEdicion();
+    }
   } finally {
     await session.endSession();
   }
@@ -692,6 +762,21 @@ export const actualizarVenta = async (id, data, user) => {
     await sincronizarAlertaVenta(venta);
   } catch (error) {
     await registrarErrorPostVenta(venta, error);
+  }
+
+  if (venta.asesoriaId) {
+    try {
+      await Asesoria.findByIdAndUpdate(venta.asesoriaId, {
+        $set: {
+          "comercial.valorVenta": venta.subtotal,
+          "comercial.descuento": venta.descuento,
+          "comercial.totalAcordado": venta.total,
+          "pago.metodoPagoFinal": venta.metodoPago,
+        },
+      });
+    } catch (error) {
+      await registrarErrorPostVenta(venta, error);
+    }
   }
 
   return venta;

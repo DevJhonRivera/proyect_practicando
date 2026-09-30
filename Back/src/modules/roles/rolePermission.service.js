@@ -23,12 +23,13 @@ export const permisosPorRolBase = {
     "dashboard:read",
     "ventas:*",
     "cortes:read",
+    "alertas:*",
   ],
   ASESOR: [
     "dashboard:read",
-    "asesores:read",
-    "ventas:*",
+    "asesores:*",
     "cortes:read",
+    "piezasPpf:read",
   ],
 };
 

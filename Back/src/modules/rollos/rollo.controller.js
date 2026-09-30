@@ -6,7 +6,16 @@ import {
     pasarAUso,
     obtenerRollosPorEstado,
     cerrarRolloAgotado,
+    obtenerReabastecimiento,
 } from "./rollo.service.js";
+
+export const getReabastecimiento = async (req, res) => {
+  try {
+    res.json({ success: true, data: await obtenerReabastecimiento() });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 export const createRollo =
   async (req, res) => {

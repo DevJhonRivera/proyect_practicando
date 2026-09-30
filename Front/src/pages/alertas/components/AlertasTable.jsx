@@ -1,4 +1,5 @@
-import { Check, CheckCircle2, ListChecks } from "lucide-react";
+import { Check, CheckCircle2, ExternalLink, ListChecks } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import ExcelButton from "../../../components/ui/ExcelButton";
 import TablePagination from "../../../components/ui/TablePagination";
@@ -17,6 +18,7 @@ function AlertasTable({
   pendientes,
 }) {
   const pagination = usePagination(alertas);
+  const navigate = useNavigate();
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -123,6 +125,15 @@ function AlertasTable({
                   </td>
 
                   <td className="p-4 text-right">
+                    {alerta.accionUrl && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(alerta.accionUrl)}
+                        className="mr-2 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100"
+                      >
+                        <ExternalLink size={15} /> Abrir corte
+                      </button>
+                    )}
                     {alerta.atendida ? (
                       <span className="text-xs text-slate-400">
                         Atendida
