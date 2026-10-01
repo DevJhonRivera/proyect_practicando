@@ -10,7 +10,16 @@ import {
   registrarNovedadAsesoria,
   revisarNovedadAsesoria,
   revisarGarantiaAsesoria,
+  resolverNovedadAsesoria,
 } from "./asesor.service.js";
+
+export const resolveNovedadAsesoria = async (req, res) => {
+  try {
+    res.json({ success: true, data: await resolverNovedadAsesoria(req.params.id, req.params.novedadId, req.body, req.user) });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
 
 export const reviewGarantiaAsesoria = async (req, res) => {
   try {

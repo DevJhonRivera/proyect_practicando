@@ -4,6 +4,7 @@ import Asesoria from "./asesoria.model.js";
 import Corte from "../cortes/corte.model.js";
 import Venta from "../ventas/venta.model.js";
 import mongoose from "mongoose";
+import { recalcularComercial, validarSinNovedadesBloqueantes } from "./asesoriaWorkflow.utils.js";
 import {
   cerrarAlertaSolicitudNovedad,
   crearAlertaServicioAsesor,
@@ -19,6 +20,31 @@ const redondearMetros = (value) =>
 const texto = (value) => String(value || "").trim();
 const mayusculas = (value) => texto(value).toUpperCase();
 const soloDigitos = (value) => texto(value).replace(/\D/g, "");
+
+const agruparPpfPorReferencia = (items = []) => {
+  const grupos = new Map();
+
+  items.forEach((item) => {
+    if (!item.referencia || !item.piezas?.length) return;
+    const existente = grupos.get(item.referencia) || {
+      ...item,
+      piezas: [],
+      valor: 0,
+      aplicaciones: new Set(),
+    };
+    existente.piezas = [...new Set([...existente.piezas, ...item.piezas])];
+    if (existente.valor <= 0 && item.valor > 0) existente.valor = item.valor;
+    existente.aplicaciones.add(item.aplicacion === "PIEZAS" ? "EXTERIOR" : item.aplicacion);
+    grupos.set(item.referencia, existente);
+  });
+
+  return [...grupos.values()].map(({ aplicaciones, ...item }) => ({
+    ...item,
+    aplicacion: aplicaciones.has("COMPLETO") || (aplicaciones.has("INTERIOR") && aplicaciones.has("EXTERIOR"))
+      ? "COMPLETO"
+      : [...aplicaciones][0] || "EXTERIOR",
+  }));
+};
 
 const escaparRegex = (value) =>
   texto(value).slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -158,14 +184,14 @@ const prepararDatosAsesoria = (data) => {
     partes: (item.partes || []).map(mayusculas).filter(Boolean),
     valor: Math.round(Number(item.valor || 0)),
   })).filter((item) => item.material && item.porcentaje && item.partes.length);
-  const ppf = (data.ppf || []).map((item) => ({
+  const ppf = agruparPpfPorReferencia((data.ppf || []).map((item) => ({
     referencia: mayusculas(item.referencia),
     aplicacion: ["INTERIOR", "EXTERIOR", "COMPLETO", "PIEZAS"].includes(item.aplicacion)
       ? item.aplicacion
-      : "PIEZAS",
+      : "EXTERIOR",
     piezas: (item.piezas || []).map(mayusculas).filter(Boolean),
     valor: Math.round(Number(item.valor || 0)),
-  })).filter((item) => item.referencia && (item.aplicacion !== "PIEZAS" || item.piezas.length));
+  })).filter((item) => item.referencia && item.piezas.length));
   const serviciosAdicionales = (data.serviciosAdicionales || []).map((item) => ({
     tipo: mayusculas(item.tipo),
     detalle: mayusculas(item.detalle),
@@ -263,8 +289,8 @@ export const crearBorradorAsesoria = async (data, user) => {
     asesorRol: user.rol || "ASESOR",
     estado: "APROBADA",
     flujo: {
-      etapa: datosAsesoria.garantia.esGarantia ? "PENDIENTE_GARANTIA" : "PENDIENTE_INVENTARIO",
-      fechaEnvioInventario: datosAsesoria.garantia.esGarantia ? null : new Date(),
+      etapa: datosAsesoria.garantia.esGarantia ? "PENDIENTE_GARANTIA" : "PENDIENTE_COORDINACION",
+      fechaEnvioInventario: null,
     },
   });
 
@@ -292,6 +318,24 @@ export const actualizarAsesoria = async (id, data, user) => {
   if (!actual) throw new Error("Servicio no encontrado");
 
   const datosAsesoria = prepararDatosAsesoria(data);
+  const cortesExistentes = await Corte.exists({ asesoriaId: actual._id });
+  const firmaMateriales = (origen) => JSON.stringify({
+    polarizados: (origen.polarizados || []).map((item) => ({ material: item.material, porcentaje: item.porcentaje, partes: item.partes })),
+    ppf: (origen.ppf || []).map((item) => ({ referencia: item.referencia, aplicacion: item.aplicacion, piezas: item.piezas })),
+  });
+  if (cortesExistentes && firmaMateriales(actual) !== firmaMateriales(datosAsesoria)) {
+    throw new Error("No se pueden cambiar materiales o piezas porque la orden ya tiene cortes. Registre una novedad administrativa");
+  }
+  const ventaExistente = await Venta.exists({ asesoriaId: actual._id });
+  const firmaComercial = (origen) => JSON.stringify({
+    polarizados: (origen.polarizados || []).map((item) => Number(item.valor || 0)),
+    ppf: (origen.ppf || []).map((item) => Number(item.valor || 0)),
+    adicionales: (origen.serviciosAdicionales || []).map((item) => ({ tipo: item.tipo, valor: Number(item.valor || 0) })),
+    descuento: Number(origen.comercial?.descuento || 0),
+  });
+  if (ventaExistente && firmaComercial(actual) !== firmaComercial(datosAsesoria)) {
+    throw new Error("No se pueden cambiar servicios, precios o descuentos porque la venta ya fue creada. Ajuste primero la venta y sus pagos");
+  }
   if (datosAsesoria.garantia.esGarantia && actual.garantia?.esGarantia) {
     datosAsesoria.garantia = {
       ...datosAsesoria.garantia,
@@ -382,8 +426,8 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
   if (descripcion.length < 5) throw new Error("Describa la novedad con al menos 5 caracteres");
   if (!Number.isFinite(valorImpacto) || valorImpacto < 0) throw new Error("El valor del impacto no es valido");
 
-  if (tipo === "CANCELACION_TOTAL" && asesoria.pago?.estado === "PAGADO") {
-    throw new Error("El servicio ya esta pagado. Registre primero la devolucion antes de cancelarlo");
+  if (tipo === "CANCELACION_TOTAL" && (["PARCIAL", "PAGADO"].includes(asesoria.pago?.estado) || Number(asesoria.pago?.valorRecibido || 0) > 0)) {
+    throw new Error("El servicio tiene dinero recibido. Registre primero la devolucion completa antes de cancelarlo");
   }
 
   const situacionPorTipo = {
@@ -400,6 +444,7 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
     afectaMaterial: Boolean(data.afectaMaterial),
     afectaPrecio: Boolean(data.afectaPrecio),
     valorImpacto,
+    serviciosAfectados: (data.serviciosAfectados || []).map(mayusculas).filter(Boolean),
     estado: esAdministrador ? "APROBADA" : "PENDIENTE",
     usuarioId: user._id,
     usuarioNombre: mayusculas(user.nombre || user.rol),
@@ -416,7 +461,7 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
     set["flujo.fechaFinalizacion"] = new Date();
 
     const venta = await Venta.findOne({ asesoriaId: asesoria._id });
-    if (venta?.estado === "PENDIENTE") {
+    if (["PENDIENTE", "RECHAZADA"].includes(venta?.estado)) {
       venta.estado = "ANULADA";
       venta.auditoria.push({
         accion: "ANULACION_POR_NOVEDAD",
@@ -427,6 +472,38 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
       });
       await venta.save();
     }
+  }
+
+  if (tipo === "CANCELACION_PARCIAL" && esAdministrador) {
+    if (!novedad.serviciosAfectados.length) throw new Error("Seleccione los servicios que desea cancelar");
+    const venta = await Venta.findOne({ asesoriaId: asesoria._id }).select("estado pagos").lean();
+    if (venta) throw new Error("La orden ya tiene una venta. Ajuste o devuelva el pago antes de cancelar servicios");
+    const cortes = await Corte.find({ asesoriaId: asesoria._id }).select("asesoriaLinea").lean();
+    if (cortes.length) throw new Error("No puede cancelar parcialmente una orden que ya consumio material. Registre el ajuste y el material afectado como novedad");
+
+    const seleccionados = new Set(novedad.serviciosAfectados);
+    asesoria.polarizados = asesoria.polarizados.filter((_, index) => !seleccionados.has(`POLARIZADO ${index + 1}`));
+    asesoria.ppf = asesoria.ppf.filter((_, index) => !seleccionados.has(`PPF ${index + 1}`));
+    asesoria.serviciosAdicionales = asesoria.serviciosAdicionales.filter((_, index) => !seleccionados.has(`ADICIONAL ${index + 1}`));
+    if (!asesoria.polarizados.length && !asesoria.ppf.length && !asesoria.serviciosAdicionales.length) {
+      throw new Error("Para retirar todos los servicios use cancelacion total");
+    }
+    asesoria.coordinacion.propuesta = [];
+    asesoria.coordinacion.asignaciones = [];
+    asesoria.coordinacion.estadoPropuesta = "PENDIENTE";
+    asesoria.flujo.etapa = "PENDIENTE_COORDINACION";
+    Object.assign(asesoria.comercial, recalcularComercial(asesoria));
+    asesoria.situacionActual = "NORMAL";
+    asesoria.novedades.push(novedad);
+    asesoria.auditoria.push({
+      accion: tipo,
+      descripcion: `${descripcion}. Servicios retirados: ${novedad.serviciosAfectados.join(", ")}`,
+      usuarioId: user._id,
+      usuarioNombre: mayusculas(user.nombre || user.rol),
+      fecha: new Date(),
+    });
+    await asesoria.save();
+    return asesoria;
   }
 
   const actualizada = await Asesoria.findByIdAndUpdate(
@@ -514,6 +591,31 @@ export const revisarNovedadAsesoria = async (id, novedadId, data, user) => {
   return asesoria;
 };
 
+export const resolverNovedadAsesoria = async (id, novedadId, data, user) => {
+  if (!["ADMIN", "SUPERUSUARIO"].includes(user.rol)) throw new Error("Solo administracion puede resolver novedades");
+  if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(novedadId)) throw new Error("Novedad no valida");
+  const asesoria = await Asesoria.findById(id);
+  if (!asesoria) throw new Error("Servicio no encontrado");
+  const novedad = asesoria.novedades.id(novedadId);
+  if (!novedad) throw new Error("Novedad no encontrada");
+  if (novedad.estado !== "APROBADA") throw new Error("Solo puede resolver una novedad aprobada");
+  const observacion = mayusculas(data.observacion);
+  if (observacion.length < 5) throw new Error("Indique como se resolvio la novedad");
+  novedad.estado = "RESUELTA";
+  novedad.observacionRevision = [novedad.observacionRevision, `SOLUCION: ${observacion}`].filter(Boolean).join(" | ");
+  novedad.fechaResolucion = new Date();
+  novedad.resueltoPorNombre = mayusculas(user.nombre || user.rol);
+  try {
+    validarSinNovedadesBloqueantes(asesoria);
+    asesoria.situacionActual = "NORMAL";
+  } catch {
+    asesoria.situacionActual = "NOVEDAD_ABIERTA";
+  }
+  asesoria.auditoria.push({ accion: "NOVEDAD_RESUELTA", descripcion: observacion, usuarioId: user._id, usuarioNombre: mayusculas(user.nombre || user.rol), fecha: new Date() });
+  await asesoria.save();
+  return asesoria;
+};
+
 export const revisarGarantiaAsesoria = async (id, data, user) => {
   if (!["ADMIN", "SUPERUSUARIO"].includes(user.rol)) {
     throw new Error("Solo administracion puede revisar garantias");
@@ -547,8 +649,8 @@ export const revisarGarantiaAsesoria = async (id, data, user) => {
   asesoria.garantia.revisadoPorId = user._id;
   asesoria.garantia.revisadoPorNombre = mayusculas(user.nombre || user.rol);
   asesoria.garantia.fechaRevision = new Date();
-  asesoria.flujo.etapa = decision === "APROBAR" ? "PENDIENTE_INVENTARIO" : "CANCELADA";
-  asesoria.flujo.fechaEnvioInventario = decision === "APROBAR" ? new Date() : null;
+  asesoria.flujo.etapa = decision === "APROBAR" ? "PENDIENTE_COORDINACION" : "CANCELADA";
+  asesoria.flujo.fechaEnvioInventario = null;
   if (decision === "RECHAZAR") asesoria.estado = "CANCELADA";
   asesoria.auditoria.push({
     accion: `GARANTIA_${asesoria.garantia.estado}`,
@@ -579,6 +681,10 @@ export const obtenerAsesoriaPorId = async (id) => {
 
 export const enviarAsesoriaAVentas = async (id) => {
   const asesoria = await obtenerAsesoriaPorId(id);
+  validarSinNovedadesBloqueantes(asesoria);
+  if (asesoria.coordinacion?.propuesta?.length || asesoria.coordinacion?.asignaciones?.length) {
+    throw new Error("La orden debe terminar primero el flujo de coordinacion e instalacion");
+  }
   if (!["PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(asesoria.flujo?.etapa)) {
     throw new Error("Esta orden ya fue enviada o no esta disponible para finalizar");
   }

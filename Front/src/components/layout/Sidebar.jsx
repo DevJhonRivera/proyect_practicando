@@ -8,6 +8,7 @@ import {
   Boxes,
   CircleDollarSign,
   ClipboardPlus,
+  ClipboardPenLine,
   LayoutDashboard,
   LogOut,
   PackageOpen,
@@ -48,6 +49,10 @@ function Sidebar({ open = false, onClose = () => {} }) {
       ? "Ventas"
       : usuario?.rol === "ASESOR"
       ? "Asesor"
+      : usuario?.rol === "COORDINADOR"
+      ? "Coordinador"
+      : usuario?.rol === "INSTALADOR"
+      ? "Instalador"
       : "Usuario";
 
   const menus = [
@@ -141,11 +146,25 @@ function Sidebar({ open = false, onClose = () => {} }) {
       section: "Produccion",
       items: [
         {
+          icon: ClipboardPenLine,
+          text: usuario?.rol === "INSTALADOR" ? "Mis trabajos" : "Coordinación",
+          url: "/coordinacion",
+          modulo: "coordinacion",
+          accion: "read",
+        },
+        {
           icon: Scissors,
           text: "Registrar cortes",
           url: "/cortes",
           modulo: "cortes",
           accion: "write",
+        },
+        {
+          icon: Car,
+          text: "Medidas de vehículos",
+          url: "/medidas-vehiculos",
+          modulo: "medidasVehiculos",
+          accion: "read",
         },
         {
           icon: Car,

@@ -1,6 +1,7 @@
 import axios from "axios";
 import {
   cerrarSesion,
+  getSessionItem,
   tokenExpirado,
 } from "../utils/session";
 import { finishActivity, startActivity } from "../utils/activityIndicator";
@@ -24,7 +25,7 @@ const finishRequestActivity = (config) => {
 api.interceptors.request.use((config) => {
 
     const token =
-      localStorage.getItem(
+      getSessionItem(
         "token"
       );
 
@@ -41,7 +42,10 @@ api.interceptors.request.use((config) => {
         `Bearer ${token}`;
     }
 
-    if (mutatingMethods.has(String(config.method || "").toLowerCase())) {
+    if (
+      !config.skipGlobalActivity &&
+      mutatingMethods.has(String(config.method || "").toLowerCase())
+    ) {
       config.activityStarted = true;
       startActivity();
     }

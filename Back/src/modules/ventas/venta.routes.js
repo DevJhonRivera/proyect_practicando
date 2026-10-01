@@ -44,7 +44,7 @@ router.put(
 router.patch(
   "/:id/estado",
   authMiddleware,
-  requireRole("ADMIN", "SUPERUSUARIO"),
+  requireRole("VENTAS", "ADMIN", "SUPERUSUARIO"),
   updateEstadoVenta
 );
 

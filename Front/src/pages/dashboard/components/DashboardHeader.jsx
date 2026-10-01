@@ -8,7 +8,7 @@ import {
 
 function DashboardHeader({ actualizar }) {
   const usuario = JSON.parse(
-    localStorage.getItem("usuario")
+    getSessionItem("usuario")
   );
 
   const fecha = new Date();
@@ -93,3 +93,5 @@ function InfoPill({ icon: Icon, color, text }) {
 }
 
 export default DashboardHeader;
+import { getSessionItem } from "../../../utils/session";
+

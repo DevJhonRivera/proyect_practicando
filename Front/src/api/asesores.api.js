@@ -27,6 +27,9 @@ export const createNovedadAsesoria = (id, data) =>
 export const reviewNovedadAsesoria = (id, novedadId, data) =>
   api.patch(`/asesores/servicios/${id}/novedades/${novedadId}`, data);
 
+export const resolveNovedadAsesoria = (id, novedadId, data) =>
+  api.patch(`/asesores/servicios/${id}/novedades/${novedadId}/resolver`, data);
+
 export const reviewGarantiaAsesoria = (id, data) =>
   api.patch(`/asesores/servicios/${id}/garantia`, data);
 

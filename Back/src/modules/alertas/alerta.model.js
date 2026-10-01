@@ -15,6 +15,13 @@ const alertaSchema =
       referenciaId:
         mongoose.Schema.Types.ObjectId,
 
+      destinatarioId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+        index: true,
+      },
+
       accionUrl: {
         type: String,
         default: ""

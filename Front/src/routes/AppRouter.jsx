@@ -22,6 +22,8 @@ import VentasPage from "../pages/ventas/VentasPage";
 import AuditoriaPage from "../pages/auditoria/AuditoriaPage";
 import UsuariosPage from "../pages/usuarios/UsuariosPage";
 import AsesoresPage from "../pages/asesores/AsesoresPage";
+import CoordinacionPage from "../pages/coordinacion/CoordinacionPage";
+import MedidasVehiculosPage from "../pages/medidasVehiculos/MedidasVehiculosPage";
 
 import PrivateRoute from "./PrivateRoute";
 import MainLayout from "../layouts/MainLayout";
@@ -155,6 +157,15 @@ function AppRouter() {
           />
 
           <Route
+            path="/medidas-vehiculos"
+            element={
+              <RutaPermitida modulo="medidasVehiculos" accion="read">
+                <MedidasVehiculosPage />
+              </RutaPermitida>
+            }
+          />
+
+          <Route
             path="/retazos"
             element={
               <RutaPermitida modulo="retazos">
@@ -195,6 +206,15 @@ function AppRouter() {
             element={
               <RutaPermitida modulo="asesores">
                 <AsesoresPage />
+              </RutaPermitida>
+            }
+          />
+
+          <Route
+            path="/coordinacion"
+            element={
+              <RutaPermitida modulo="coordinacion">
+                <CoordinacionPage />
               </RutaPermitida>
             }
           />

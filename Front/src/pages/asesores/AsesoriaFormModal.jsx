@@ -14,6 +14,19 @@ import { anchoLabel } from "../../utils/anchos";
 import { obtenerReferenciaPpf } from "../../utils/materiales";
 import { getPiezasPpf } from "../../api/piezasPpf.api";
 
+const PIEZAS_PPF_EXTERIOR = ["PUERTAS", "BOMPER DELANTERO", "BOMPER TRASERO", "TECHO", "SPOILER", "PARALES", "STOPS", "RETROVISORES", "TRIANGULOS", "FAROLAS", "CAPOT", "BAUL", "GUARDAFANGOS", "ESTRIBOS", "MANIJAS"];
+const PIEZAS_PPF_INTERIOR = ["PANTALLA", "CAJA CAMBIOS", "NEGRO PIANO", "CONSOLA CENTRAL", "TABLERO", "BOTONERA", "MOLDURAS", "PUERTAS INTERIORES"];
+
+const piezasParaAplicacion = (catalogo, aplicacion) => {
+  const ubicaciones = aplicacion === "COMPLETO" ? ["INTERIOR", "EXTERIOR"] : [aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR"];
+  return ubicaciones.flatMap((ubicacion) => {
+    const registradas = (catalogo || []).filter((pieza) => pieza.ubicacion === ubicacion);
+    if (registradas.length) return registradas;
+    const base = ubicacion === "INTERIOR" ? PIEZAS_PPF_INTERIOR : PIEZAS_PPF_EXTERIOR;
+    return base.map((pieza) => ({ pieza, ubicacion, anchoCm: 0, largoCm: 0, _id: `${ubicacion}-${pieza}` }));
+  });
+};
+
 const inicial = {
   cliente: { cedula: "", nombre: "", telefono: "", correo: "" },
   vehiculo: { placa: "", marca: "", modelo: "", anio: "", color: "" },
@@ -41,6 +54,34 @@ const soloDigitos = (value) => String(value || "").replace(/\D/g, "");
 const formatearMiles = (value) => {
   const digitos = soloDigitos(value);
   return digitos ? Number(digitos).toLocaleString("es-CO") : "";
+};
+
+const agruparPpfPorMaterial = (items = []) => {
+  const grupos = new Map();
+
+  items.forEach((item) => {
+    const referencia = mayusculas(item.referencia).trim();
+    if (!referencia) return;
+
+    const existente = grupos.get(referencia) || {
+      ...item,
+      referencia,
+      piezas: [],
+      valor: "",
+      aplicaciones: new Set(),
+    };
+    existente.piezas = [...new Set([...existente.piezas, ...(item.piezas || []).map(mayusculas)])];
+    if (!Number(existente.valor || 0) && Number(item.valor || 0) > 0) existente.valor = item.valor;
+    existente.aplicaciones.add(item.aplicacion === "PIEZAS" ? "EXTERIOR" : item.aplicacion);
+    grupos.set(referencia, existente);
+  });
+
+  return [...grupos.values()].map(({ aplicaciones, ...item }) => ({
+    ...item,
+    aplicacion: aplicaciones.has("COMPLETO") || (aplicaciones.has("INTERIOR") && aplicaciones.has("EXTERIOR"))
+      ? "COMPLETO"
+      : [...aplicaciones][0] || "EXTERIOR",
+  }));
 };
 
 const PARTES_POLARIZADO = [
@@ -115,10 +156,11 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   const [cargandoMateriales, setCargandoMateriales] = useState(true);
   const [piezasPpf, setPiezasPpf] = useState([]);
   const [cargandoPiezas, setCargandoPiezas] = useState(false);
+  const ppfAgrupado = useMemo(() => agruparPpfPorMaterial(form.ppf), [form.ppf]);
   const valorServicios = useMemo(
-    () => [...form.polarizados, ...form.ppf, ...form.serviciosAdicionales]
+    () => [...form.polarizados, ...ppfAgrupado, ...form.serviciosAdicionales]
       .reduce((total, item) => total + Number(item.valor || 0), 0),
-    [form.polarizados, form.ppf, form.serviciosAdicionales]
+    [form.polarizados, ppfAgrupado, form.serviciosAdicionales]
   );
 
   useEffect(() => {
@@ -274,12 +316,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       }),
     }));
   };
-  const agregarPiezaPersonalizada = (index) => {
-    const nombre = mayusculas(form.ppf[index]?.piezaPersonalizada).trim();
-    if (!nombre) return;
-    if (!form.ppf[index].piezas.includes(nombre)) alternarPiezaPpf(index, nombre);
-    editarItem("ppf", index, "piezaPersonalizada", "");
-  };
+  const seleccionarAplicacionPpf = (index, aplicacion) => setForm((actual) => ({ ...actual, ppf: actual.ppf.map((item, posicion) => posicion === index ? { ...item, aplicacion, piezas: [] } : item) }));
   const alternarPartePolarizado = (index, parte) => {
     setForm((actual) => ({
       ...actual,
@@ -377,9 +414,9 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       (item) => item.material.trim() && item.porcentaje.trim() && item.partes.length
     );
     const ppfValido = form.ppf.every(
-      (item) => item.referencia.trim() && (item.aplicacion !== "PIEZAS" || item.piezas.length)
+      (item) => item.referencia.trim() && item.piezas.length
     );
-    const preciosValidos = [...form.polarizados, ...form.ppf, ...form.serviciosAdicionales]
+    const preciosValidos = [...form.polarizados, ...ppfAgrupado, ...form.serviciosAdicionales]
       .every((item) => Number(item.valor || 0) > 0);
     if (!form.polarizados.length && !form.ppf.length && !form.serviciosAdicionales.length) {
       return Swal.fire({ icon: "warning", title: "Agregue al menos un servicio" });
@@ -413,7 +450,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
         ...form,
         comercial: { ...form.comercial, valorVenta: valorServicios },
         polarizados: form.polarizados.map((item) => ({ ...item, partes: item.partes })),
-        ppf: form.ppf.map((item) => ({ ...item, piezas: item.piezas })),
+        ppf: ppfAgrupado.map((item) => ({ ...item, piezas: item.piezas })),
       };
       const response = asesoria
         ? await updateAsesoria(asesoria._id, payload)
@@ -600,40 +637,39 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="PPF"
             button="Agregar PPF"
-            onAdd={() => agregarItem("ppf", { referencia: "", aplicacion: "PIEZAS", piezas: [], piezaPersonalizada: "", valor: "" })}
+            onAdd={() => agregarItem("ppf", { referencia: "", aplicacion: "EXTERIOR", piezas: [], valor: "" })}
           />
           {form.ppf.map((item, index) => (
             <ServiceRow key={`ppf-${index}`} onRemove={() => quitarItem("ppf", index)}>
               <Field label="Material PPF disponible">
                 <select value={item.referencia} disabled={cargandoMateriales} onChange={(e) => seleccionarPpf(index, e.target.value)} className="w-full rounded-xl border bg-white p-3 disabled:bg-slate-100">
                   <option value="">{cargandoMateriales ? "Cargando PPF..." : "Seleccione PPF..."}</option>
-                  {opcionesPpf.map((opcion) => <option key={opcion.referencia} value={opcion.referencia}>PPF - {opcion.referencia} · {opcion.anchos.join(", ")} · {Number(opcion.metrosDisponibles || 0).toFixed(2)} m</option>)}
+                  {opcionesPpf.map((opcion) => {
+                    const yaAgregado = form.ppf.some((ppf, posicion) => posicion !== index && ppf.referencia === opcion.referencia);
+                    return <option key={opcion.referencia} value={opcion.referencia} disabled={yaAgregado}>PPF - {opcion.referencia} · {opcion.anchos.join(", ")} · {Number(opcion.metrosDisponibles || 0).toFixed(2)} m{yaAgregado ? " · YA AGREGADO" : ""}</option>;
+                  })}
                 </select>
               </Field>
               <Field label="Aplicación">
-                <select value={item.aplicacion} onChange={(e) => editarItem("ppf", index, "aplicacion", e.target.value)} className="w-full rounded-xl border bg-white p-3">
-                  <option value="PIEZAS">Por piezas</option><option value="INTERIOR">Interior</option><option value="EXTERIOR">Exterior</option><option value="COMPLETO">Completo</option>
+                <select value={item.aplicacion === "PIEZAS" ? "EXTERIOR" : item.aplicacion} onChange={(e) => seleccionarAplicacionPpf(index, e.target.value)} className="w-full rounded-xl border bg-white p-3">
+                  <option value="INTERIOR">Interior</option><option value="EXTERIOR">Exterior</option><option value="COMPLETO">Interior y exterior</option>
                 </select>
               </Field>
               <div className="md:col-span-3">
                 <span className="mb-2 block text-xs font-semibold uppercase text-slate-500">Piezas PPF</span>
-                {item.aplicacion !== "PIEZAS" ? (
-                  <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600">La aplicación {item.aplicacion.toLowerCase()} no requiere seleccionar piezas individuales.</p>
-                ) : cargandoPiezas ? (
+                {cargandoPiezas ? (
                   <p className="text-sm text-blue-600">Cargando piezas registradas...</p>
-                ) : piezasPpf.length ? (
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {piezasPpf.map((pieza) => {
+                ) : (
+                  <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {piezasParaAplicacion(piezasPpf, item.aplicacion).map((pieza) => {
                       const activa = item.piezas.includes(pieza.pieza);
-                      return <button key={pieza._id} type="button" onClick={() => alternarPiezaPpf(index, pieza.pieza)} className={`rounded-lg border p-3 text-left transition ${activa ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-blue-50"}`}><span className="block text-sm font-bold">{pieza.pieza}</span><span className={`mt-1 block text-xs ${activa ? "text-blue-100" : "text-slate-500"}`}>{pieza.ubicacion} · {Number(pieza.anchoCm || 0)} × {Number(pieza.largoCm || 0)} cm</span></button>;
+                      return <button key={`${pieza.ubicacion}-${pieza.pieza}`} type="button" role="checkbox" aria-checked={activa} onClick={() => alternarPiezaPpf(index, pieza.pieza)} className={`min-h-11 rounded-md border px-2 py-1.5 text-left transition ${activa ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-blue-50"}`}><span className="block text-xs font-bold leading-tight">{activa ? "✓ " : ""}{pieza.pieza}</span><span className={`mt-0.5 block text-[10px] leading-tight ${activa ? "text-blue-100" : "text-slate-400"}`}>{pieza.ubicacion}{Number(pieza.anchoCm || 0) > 0 ? ` · ${Number(pieza.anchoCm)} × ${Number(pieza.largoCm)} cm` : ""}</span></button>;
                     })}
                   </div>
-                ) : (
-                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">No hay piezas registradas para {form.vehiculo.marca || "esta marca"} {form.vehiculo.anio || ""}.</p>
                 )}
-                {item.aplicacion === "PIEZAS" && <div className="mt-3 flex gap-2"><input value={item.piezaPersonalizada || ""} onChange={(e) => editarItem("ppf", index, "piezaPersonalizada", mayusculas(e.target.value))} placeholder="Otra pieza no registrada" className="min-w-0 flex-1 rounded-lg border p-2.5 text-sm" /><button type="button" onClick={() => agregarPiezaPersonalizada(index)} className="rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-bold text-blue-700">Agregar</button></div>}
               </div>
               <div className="md:col-span-3"><Field label="Precio del PPF"><input value={formatearMiles(item.valor)} inputMode="numeric" placeholder="Ej: 800.000" onChange={(e) => editarItem("ppf", index, "valor", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>
+              <p className="text-xs text-slate-500 md:col-span-3">Todas las piezas de esta referencia PPF se cobran y se envían como un solo servicio.</p>
             </ServiceRow>
           ))}
 

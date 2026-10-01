@@ -19,6 +19,11 @@ export const TIPO_SOLICITUD_NOVEDAD =
   "SOLICITUD_NOVEDAD";
 export const TIPO_SOLICITUD_GARANTIA =
   "SOLICITUD_GARANTIA";
+export const TIPO_COORDINACION_NUEVA = "COORDINACION_NUEVA";
+export const TIPO_PROPUESTA_CORTE = "PROPUESTA_CORTE";
+export const TIPO_MATERIAL_LISTO = "MATERIAL_LISTO";
+export const TIPO_ASIGNACION_TRABAJO = "ASIGNACION_TRABAJO";
+export const TIPO_INSTALACION_COMPLETA = "INSTALACION_COMPLETA";
 
 const TIPOS_STOCK_RESERVA = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
@@ -29,8 +34,11 @@ const TIPOS_INVENTARIO = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
   TIPO_STOCK_RESERVA_DOS_ROLLOS,
   TIPO_RECEPCION_NUEVA,
+  TIPO_PROPUESTA_CORTE,
   TIPO_SERVICIO_ASESOR_NUEVO
 ];
+
+const TIPOS_COORDINACION = [TIPO_COORDINACION_NUEVA, TIPO_MATERIAL_LISTO, TIPO_INSTALACION_COMPLETA];
 
 const TIPOS_VENTAS = [
   TIPO_VENTA_PENDIENTE,
@@ -56,6 +64,9 @@ const tiposPermitidosPorRol = (rol) => {
     return TIPOS_VENTAS;
   }
 
+  if (rol === "COORDINADOR") return TIPOS_COORDINACION;
+  if (rol === "INSTALADOR") return [TIPO_ASIGNACION_TRABAJO];
+
   return [];
 };
 
@@ -70,7 +81,8 @@ const filtroAlertasPorRol = (user) => {
   return {
     tipo: {
       $in: tiposPermitidos
-    }
+    },
+    ...(user?.rol === "INSTALADOR" ? { destinatarioId: user._id } : {}),
   };
 };
 
@@ -283,8 +295,23 @@ export const crearAlertaServicioAsesor = async (asesoria) => {
   return Alerta.findOneAndUpdate(
     { clave: `servicio-asesor:${asesoria._id}` },
     {
+      mensaje: `Nuevo servicio ${asesoria.codigo} para ${placa}. Prepare la propuesta de corte y asigne instaladores.`,
+      referenciaId: asesoria._id,
+      accionUrl: `/coordinacion?asesoria=${asesoria._id}`,
+      tipo: TIPO_COORDINACION_NUEVA,
+      atendida: false,
+      activa: true,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+};
+
+export const crearAlertaInventarioCorte = async (asesoria) =>
+  Alerta.findOneAndUpdate(
+    { clave: `corte-aprobado:${asesoria._id}` },
+    {
       tipo: TIPO_SERVICIO_ASESOR_NUEVO,
-      mensaje: `Nuevo servicio ${asesoria.codigo} para ${placa}. Revise los materiales y registre los cortes.`,
+      mensaje: `Propuesta aprobada para ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}). Realice los cortes indicados.`,
       referenciaId: asesoria._id,
       accionUrl: `/cortes?asesoria=${asesoria._id}`,
       atendida: false,
@@ -292,7 +319,70 @@ export const crearAlertaServicioAsesor = async (asesoria) => {
     },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
+
+export const crearAlertaPropuestaCorte = async (asesoria) =>
+  Alerta.findOneAndUpdate(
+    { clave: `propuesta-corte:${asesoria._id}` },
+    {
+      tipo: TIPO_PROPUESTA_CORTE,
+      mensaje: `Revisar propuesta de corte ${asesoria.codigo} para ${asesoria.vehiculo?.placa || ""}.`,
+      referenciaId: asesoria._id,
+      accionUrl: `/cortes?asesoria=${asesoria._id}`,
+      atendida: false,
+      activa: true,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+export const crearAlertaMaterialListo = async (asesoria) =>
+  Alerta.findOneAndUpdate(
+    { clave: `material-listo:${asesoria._id}` },
+    {
+      tipo: TIPO_MATERIAL_LISTO,
+      mensaje: `Los cortes de ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}) están listos para recoger.`,
+      referenciaId: asesoria._id,
+      accionUrl: `/coordinacion?asesoria=${asesoria._id}`,
+      atendida: false,
+      activa: true,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+export const crearAlertasInstaladores = async (asesoria) => {
+  const asignaciones = asesoria.coordinacion?.asignaciones || [];
+  await Promise.all(asignaciones.map((asignacion) =>
+    Alerta.findOneAndUpdate(
+      { clave: `asignacion:${asesoria._id}:${asignacion._id}` },
+      {
+        tipo: TIPO_ASIGNACION_TRABAJO,
+        mensaje: `Trabajo asignado: ${asignacion.servicio} para ${asesoria.vehiculo?.placa || ""}.`,
+        referenciaId: asesoria._id,
+        destinatarioId: asignacion.instaladorId,
+        accionUrl: "/coordinacion",
+        atendida: false,
+        activa: true,
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    )
+  ));
 };
+
+export const crearAlertaInstalacionCompleta = async (asesoria) =>
+  Alerta.findOneAndUpdate(
+    { clave: `instalacion-completa:${asesoria._id}` },
+    {
+      tipo: TIPO_INSTALACION_COMPLETA,
+      mensaje: `Todos los trabajos de ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}) fueron completados. Puede enviarlo a Ventas.`,
+      referenciaId: asesoria._id,
+      accionUrl: `/coordinacion?asesoria=${asesoria._id}`,
+      atendida: false,
+      activa: true,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+export const cerrarAlertaFlujo = async (clave) =>
+  Alerta.updateMany({ clave }, { atendida: true, activa: false });
 
 export const crearAlertaServicioListoPago = async (asesoria) =>
   Alerta.findOneAndUpdate(

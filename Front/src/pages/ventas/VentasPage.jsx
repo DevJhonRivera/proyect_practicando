@@ -6,10 +6,12 @@ import {
   Car,
   CheckCircle2,
   ClipboardList,
+  Eye,
   Pencil,
   Plus,
   Save,
   Search,
+  ReceiptText,
   Trash2,
   User,
 } from "lucide-react";
@@ -21,6 +23,7 @@ import {
   getVentas,
   updateVenta,
   createMovimientoPago,
+  updateEstadoVenta,
 } from "../../api/ventas.api";
 import ExcelButton from "../../components/ui/ExcelButton";
 import MonthFilter from "../../components/ui/MonthFilter";
@@ -29,6 +32,7 @@ import { useMonthFilter } from "../../hooks/useMonthFilter";
 import { usePagination } from "../../hooks/usePagination";
 import { etiquetaDetalle } from "../../utils/materiales";
 import { obtenerUsuarioActual } from "../../utils/permisos";
+import { generarFacturaVenta } from "../../utils/facturaVenta";
 
 const formatoCop = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -55,20 +59,42 @@ const serviciosAdicionales = [
   "OTRO",
 ];
 
+const entidadesPorMetodo = {
+  TRANSFERENCIA: ["BANCOLOMBIA SANTIAGO", "BANCOLOMBIA RAFAEL", "BANCOLOMBIA AUTOS", "BBVA"],
+  DATAFONO: ["BBVA"],
+  OTROS: ["SISTECREDITO", "ADDI"],
+};
+
+const opcionesMetodoPago = `
+  <option value="">Seleccione...</option>
+  <option value="EFECTIVO">Efectivo</option>
+  <option value="TRANSFERENCIA">Transferencia</option>
+  <option value="DATAFONO">Datáfono</option>
+  <option value="OTROS">Otros</option>
+`;
+
 const ventaInicial = {
   asesoriaId: "",
   cliente: {
     nombre: "",
     telefono: "",
+    cedula: "",
+    correo: "",
   },
   vehiculo: {
     placa: "",
     marca: "",
     modelo: "",
+    referencia: "",
+    anio: "",
+    color: "",
   },
   estado: "PENDIENTE",
   descuento: "",
   metodoPago: "POR_DEFINIR",
+  entidadPago: "",
+  comprobanteImagen: "",
+  comprobanteNombre: "",
   valorPago: "",
   observaciones: "",
   items: [],
@@ -104,6 +130,43 @@ const numeroDesdeMiles = (value) =>
 const placaValida = (value) =>
   normalizarPlaca(value).length >= 5 &&
   normalizarPlaca(value).length <= 10;
+
+const optimizarComprobante = (file) => new Promise((resolve, reject) => {
+  if (!file) return resolve({ comprobanteImagen: "", comprobanteNombre: "" });
+  if (!file.type.startsWith("image/")) return reject(new Error("Seleccione una imagen válida"));
+  if (file.size > 10 * 1024 * 1024) return reject(new Error("La imagen original no puede superar 10 MB"));
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error("No fue posible leer la imagen"));
+  reader.onload = () => {
+    const image = new Image();
+    image.onerror = () => reject(new Error("La imagen no es válida"));
+    image.onload = () => {
+      const limite = 1400;
+      const escala = Math.min(1, limite / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * escala));
+      canvas.height = Math.max(1, Math.round(image.height * escala));
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const comprobanteImagen = canvas.toDataURL("image/jpeg", 0.76);
+      if (comprobanteImagen.length > 2_200_000) return reject(new Error("La imagen sigue siendo demasiado pesada; use una foto más pequeña"));
+      resolve({ comprobanteImagen, comprobanteNombre: file.name });
+    };
+    image.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+const llenarEntidadesPago = (popup, metodo) => {
+  const contenedor = popup?.querySelector("#pago-entidad-contenedor");
+  const select = popup?.querySelector("#pago-entidad");
+  const opciones = entidadesPorMetodo[metodo] || [];
+  if (!contenedor || !select) return;
+  contenedor.style.display = opciones.length ? "block" : "none";
+  select.innerHTML = `<option value="">Seleccione...</option>${opciones.map((item) => `<option value="${item}">${item}</option>`).join("")}`;
+};
 
 function VentasPage() {
   const usuario = obtenerUsuarioActual();
@@ -208,10 +271,23 @@ function VentasPage() {
               valorUnitario: Number(item.valor || 0), total: Number(item.valor || 0),
             };
           }),
-          ...(orden.ppf || []).map((item, index) => {
-            const ids = cortesLinea(`PPF ${index + 1}`);
-            return { tipoServicio: "PPF", descripcion: `PPF ${item.referencia} - ${(item.piezas || []).join(", ") || item.aplicacion}`, corteId: ids[0], corteIds: ids, cantidad: 1, valorUnitario: Number(item.valor || 0), total: Number(item.valor || 0) };
-          }),
+          ...[...(orden.ppf || []).reduce((grupos, item, index) => {
+            const referencia = String(item.referencia || "PPF").trim().toUpperCase();
+            const actual = grupos.get(referencia) || { referencia, piezas: [], ids: [], valor: 0 };
+            actual.piezas.push(...(item.piezas?.length ? item.piezas : [item.aplicacion]).filter(Boolean));
+            actual.ids.push(...cortesLinea(`PPF ${index + 1}`));
+            actual.valor += Number(item.valor || 0);
+            grupos.set(referencia, actual);
+            return grupos;
+          }, new Map()).values()].map((item) => ({
+            tipoServicio: "PPF",
+            descripcion: `PPF ${item.referencia} - ${[...new Set(item.piezas)].join(", ")}`,
+            corteId: item.ids[0],
+            corteIds: [...new Set(item.ids)],
+            cantidad: 1,
+            valorUnitario: item.valor,
+            total: item.valor,
+          })),
           ...(orden.serviciosAdicionales || []).map((item) => ({
             tipoServicio: ["LAVADO", "POLICHADA", "PDR", "ASEGURADA"].includes(item.tipo) ? item.tipo : "OTRO",
             descripcion: `${item.tipo}${item.detalle ? ` - ${item.detalle}` : ""}`,
@@ -221,10 +297,16 @@ function VentasPage() {
         setForm({
           ...ventaInicial,
           asesoriaId,
-          cliente: { nombre: orden.cliente?.nombre || "", telefono: orden.cliente?.telefono || "" },
-          vehiculo: { placa: orden.vehiculo?.placa || "", marca: orden.vehiculo?.marca || "", modelo: orden.vehiculo?.anio || "" },
+          cliente: { nombre: orden.cliente?.nombre || "", telefono: orden.cliente?.telefono || "", cedula: orden.cliente?.cedula || "", correo: orden.cliente?.correo || "" },
+          vehiculo: { placa: orden.vehiculo?.placa || "", marca: orden.vehiculo?.marca || "", modelo: orden.vehiculo?.anio || "", referencia: orden.vehiculo?.modelo || "", anio: orden.vehiculo?.anio || "", color: orden.vehiculo?.color || "" },
           descuento: orden.comercial?.descuento || "",
-          metodoPago: orden.comercial?.metodoPagoPrevisto || "POR_DEFINIR",
+          metodoPago: orden.comercial?.metodoPagoPrevisto === "TARJETA"
+            ? "DATAFONO"
+            : orden.comercial?.metodoPagoPrevisto === "CREDITO"
+            ? "OTROS"
+            : orden.comercial?.metodoPagoPrevisto === "MIXTO"
+            ? "POR_DEFINIR"
+            : orden.comercial?.metodoPagoPrevisto || "POR_DEFINIR",
           observaciones: `ORDEN ${orden.codigo}`,
           items,
           valorPago: String(Math.max(items.reduce((suma, item) => suma + Number(item.total || 0), 0) - Number(orden.comercial?.descuento || 0), 0)),
@@ -336,6 +418,12 @@ function VentasPage() {
   };
 
   const cargarCorteEnVenta = (grupo) => {
+    if (grupo.asesoriaId) {
+      asesoriaCargadaRef.current = "";
+      navigate(`/ventas?asesoria=${encodeURIComponent(grupo.asesoriaId)}`);
+      return;
+    }
+
     seleccionarCorte(grupo.key);
     setValorCorte(
       grupo.valorVenta > 0
@@ -534,6 +622,9 @@ function VentasPage() {
     if (valorPago <= 0 || valorPago > total) {
       return Swal.fire({ icon: "warning", title: "El pago debe ser mayor a cero y no superar el total" });
     }
+    if (entidadesPorMetodo[form.metodoPago] && !form.entidadPago) {
+      return Swal.fire({ icon: "warning", title: "Seleccione la cuenta o entidad del pago" });
+    }
     const confirmacion = await Swal.fire({
       icon: "question",
       title: "¿Confirmar pago?",
@@ -550,6 +641,9 @@ function VentasPage() {
           tipo: "PAGO",
           valor: valorPago,
           metodoPago: form.metodoPago,
+          entidadPago: form.entidadPago,
+          comprobanteImagen: form.comprobanteImagen,
+          comprobanteNombre: form.comprobanteNombre,
           observacion: "ABONO INICIAL",
         });
       }
@@ -567,21 +661,32 @@ function VentasPage() {
     const saldo = Number(venta.saldoPendiente ?? (venta.estado === "PAGADA" ? 0 : Number(venta.total || 0)));
     const resultado = await Swal.fire({
       title: "Registrar abono",
-      html: `<div class="grid gap-3 text-left"><p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">Saldo pendiente: <strong>${formatoCop.format(saldo)}</strong></p><label class="text-sm font-semibold text-slate-600">Valor recibido<input id="pago-valor" class="swal2-input venta-precio" inputmode="numeric" value="${formatearMiles(saldo)}" placeholder="Ej: 300.000" /></label><label class="text-sm font-semibold text-slate-600">Forma de pago<select id="pago-metodo" class="swal2-input"><option value="">Seleccione...</option><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option><option value="CREDITO">Crédito</option></select></label><input id="pago-referencia" class="swal2-input" placeholder="Referencia o comprobante (opcional)" /><input id="pago-observacion" class="swal2-input" placeholder="Observación (opcional)" /></div>`,
+      html: `<div class="grid gap-3 text-left"><p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">Saldo pendiente: <strong>${formatoCop.format(saldo)}</strong></p><label class="text-sm font-semibold text-slate-600">Valor recibido<input id="pago-valor" class="swal2-input venta-precio" inputmode="numeric" value="${formatearMiles(saldo)}" placeholder="Ej: 300.000" /></label><label class="text-sm font-semibold text-slate-600">Forma de pago<select id="pago-metodo" class="swal2-input">${opcionesMetodoPago}</select></label><label id="pago-entidad-contenedor" class="text-sm font-semibold text-slate-600" style="display:none">Cuenta o entidad<select id="pago-entidad" class="swal2-input"></select></label><label class="text-sm font-semibold text-slate-600">Foto del comprobante (opcional)<input id="pago-comprobante" type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full rounded-lg border p-2 text-sm" /></label><input id="pago-referencia" class="swal2-input" placeholder="Número de referencia (opcional)" /><input id="pago-observacion" class="swal2-input" placeholder="Observación (opcional)" /></div>`,
       showCancelButton: true,
       confirmButtonText: "Registrar abono",
       cancelButtonText: "Cancelar",
       didOpen: () => {
         const input = Swal.getPopup()?.querySelector("#pago-valor");
         input?.addEventListener("input", () => { input.value = formatearMiles(input.value); });
+        const popup = Swal.getPopup();
+        const metodo = popup?.querySelector("#pago-metodo");
+        metodo?.addEventListener("change", () => llenarEntidadesPago(popup, metodo.value));
       },
-      preConfirm: () => {
+      preConfirm: async () => {
         const popup = Swal.getPopup();
         const valor = numeroDesdeMiles(popup.querySelector("#pago-valor")?.value || 0);
         const metodoPago = popup.querySelector("#pago-metodo")?.value || "";
+        const entidadPago = popup.querySelector("#pago-entidad")?.value || "";
         if (valor <= 0 || valor > saldo) return Swal.showValidationMessage("El valor debe ser mayor a cero y no superar el saldo");
         if (!metodoPago) return Swal.showValidationMessage("Seleccione la forma de pago");
-        return { tipo: "PAGO", valor, metodoPago, referencia: popup.querySelector("#pago-referencia")?.value || "", observacion: popup.querySelector("#pago-observacion")?.value || "" };
+        if (entidadesPorMetodo[metodoPago] && !entidadPago) return Swal.showValidationMessage("Seleccione la cuenta o entidad");
+        try {
+          const comprobante = await optimizarComprobante(popup.querySelector("#pago-comprobante")?.files?.[0]);
+          return { tipo: "PAGO", valor, metodoPago, entidadPago, ...comprobante, referencia: popup.querySelector("#pago-referencia")?.value || "", observacion: popup.querySelector("#pago-observacion")?.value || "" };
+        } catch (error) {
+          Swal.showValidationMessage(error.message);
+          return false;
+        }
       },
     });
     if (!resultado.isConfirmed) return;
@@ -591,6 +696,27 @@ function VentasPage() {
       await cargar();
     } catch (error) {
       Swal.fire({ icon: "error", title: "No fue posible registrar el pago", text: error.response?.data?.message || "Intente nuevamente." });
+    }
+  };
+
+  const registrarPagoRechazado = async (venta) => {
+    const resultado = await Swal.fire({
+      icon: "warning",
+      title: "Registrar pago rechazado",
+      input: "textarea",
+      inputLabel: "Motivo del rechazo",
+      inputPlaceholder: "Ej: TRANSACCION RECHAZADA POR EL BANCO",
+      showCancelButton: true,
+      confirmButtonText: "Registrar rechazo",
+      inputValidator: (value) => value.trim().length < 5 ? "Describa el motivo" : undefined,
+    });
+    if (!resultado.isConfirmed) return;
+    try {
+      await updateEstadoVenta(venta._id, "RECHAZADA", venta.metodoPago, resultado.value);
+      await cargar();
+      Swal.fire({ icon: "success", title: "Pago rechazado registrado", timer: 1400, showConfirmButton: false });
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No fue posible registrar el rechazo", text: error.response?.data?.message });
     }
   };
 
@@ -894,7 +1020,9 @@ function VentasPage() {
           subtotal={subtotal}
           descuento={descuento}
           total={total}
-          onMetodoPagoChange={(metodoPago) => setForm({ ...form, metodoPago })}
+          onMetodoPagoChange={(metodoPago) => setForm({ ...form, metodoPago, entidadPago: "" })}
+          onEntidadPagoChange={(entidadPago) => setForm({ ...form, entidadPago })}
+          onComprobanteChange={(comprobante) => setForm({ ...form, ...comprobante })}
           onValorPagoChange={(valorPago) => setForm({ ...form, valorPago })}
           onConfirm={registrarPagoOrden}
         />
@@ -1272,6 +1400,7 @@ function VentasPage() {
                   venta={venta}
                   onMarkPaid={registrarPago}
                   onRefund={registrarDevolucion}
+                  onReject={registrarPagoRechazado}
                   onEdit={editarVenta}
                   canEdit={puedeEditar}
                 />
@@ -1285,7 +1414,15 @@ function VentasPage() {
   );
 }
 
-function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onValorPagoChange, onConfirm }) {
+function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onEntidadPagoChange, onComprobanteChange, onValorPagoChange, onConfirm }) {
+  const entidades = entidadesPorMetodo[form.metodoPago] || [];
+  const cargarComprobante = async (file) => {
+    try {
+      onComprobanteChange(await optimizarComprobante(file));
+    } catch (error) {
+      Swal.fire({ icon: "warning", title: "No se pudo cargar la imagen", text: error.message });
+    }
+  };
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 bg-slate-50 p-5">
@@ -1300,10 +1437,14 @@ function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onVa
           <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase text-slate-500">Servicios vendidos</div>
           <div className="divide-y divide-slate-100">{form.items.map((item, index) => <div key={`${item.descripcion}-${index}`} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-800">{servicioLabels[item.tipoServicio] || item.tipoServicio}</p><p className="text-xs text-slate-500">{item.descripcion}</p></div><p className="font-black text-slate-900">{formatoCop.format(item.total || 0)}</p></div>)}</div>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_220px] lg:items-end">
+        <div className="grid gap-4 lg:grid-cols-3 lg:items-end">
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4"><div className="flex justify-between text-sm text-blue-800"><span>Subtotal</span><strong>{formatoCop.format(subtotal)}</strong></div><div className="mt-1 flex justify-between text-sm text-blue-800"><span>Descuento</span><strong>- {formatoCop.format(descuento)}</strong></div><div className="mt-3 flex justify-between border-t border-blue-200 pt-3 text-xl font-black text-blue-900"><span>Total a cobrar</span><span>{formatoCop.format(total)}</span></div></div>
-          <Field label="Forma de pago confirmada"><select value={form.metodoPago} onChange={(event) => onMetodoPagoChange(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3"><option value="POR_DEFINIR">Seleccione...</option><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option><option value="CREDITO">Crédito</option><option value="MIXTO">Mixto</option></select></Field>
+          <Field label="Forma de pago confirmada"><select value={form.metodoPago} onChange={(event) => onMetodoPagoChange(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3"><option value="POR_DEFINIR">Seleccione...</option><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="DATAFONO">Datáfono</option><option value="OTROS">Otros</option></select></Field>
           <Field label="Valor recibido"><input value={formatearMiles(form.valorPago)} onChange={(event) => onValorPagoChange(soloDigitos(event.target.value))} inputMode="numeric" placeholder="Ej: 500.000" className="w-full rounded-xl border border-slate-200 bg-white p-3" /></Field>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {entidades.length > 0 && <Field label={form.metodoPago === "TRANSFERENCIA" ? "Cuenta que recibió" : "Entidad de pago"}><select value={form.entidadPago} onChange={(event) => onEntidadPagoChange(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3"><option value="">Seleccione...</option>{entidades.map((entidad) => <option key={entidad} value={entidad}>{entidad}</option>)}</select></Field>}
+          <Field label="Foto del comprobante (opcional)"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => cargarComprobante(event.target.files?.[0])} className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm" />{form.comprobanteImagen && <div className="mt-2 flex items-center gap-3 rounded-lg bg-emerald-50 p-2"><img src={form.comprobanteImagen} alt="Vista previa del comprobante" className="h-14 w-14 rounded-md object-cover" /><span className="min-w-0 truncate text-xs font-semibold text-emerald-700">{form.comprobanteNombre || "Comprobante listo"}</span></div>}</Field>
         </div>
         <div className="flex justify-end border-t border-slate-200 pt-5"><button type="button" onClick={onConfirm} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-bold text-white hover:bg-emerald-700 sm:w-auto"><CheckCircle2 size={18} />Registrar pago</button></div>
       </div>
@@ -1695,7 +1836,7 @@ function ItemsVenta({ items, onDelete }) {
   );
 }
 
-function VentaCard({ venta, onMarkPaid, onRefund, onEdit, canEdit }) {
+function VentaCard({ venta, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
   const valorPagado = Number(venta.valorPagado || (venta.estado === "PAGADA" && !venta.pagos?.length ? venta.total : 0));
   const valorDevuelto = Number(venta.valorDevuelto || 0);
   const netoRecibido = Math.max(valorPagado - valorDevuelto, 0);
@@ -1713,11 +1854,30 @@ function VentaCard({ venta, onMarkPaid, onRefund, onEdit, canEdit }) {
           </p>
           <p className="text-sm text-slate-500 flex items-center gap-1">
             <Car size={14} />
-            {venta.vehiculo?.placa} - {venta.vehiculo?.marca} {venta.vehiculo?.modelo}
+            {venta.vehiculo?.placa} - {venta.vehiculo?.marca} {venta.vehiculo?.referencia || venta.vehiculo?.modelo} {venta.vehiculo?.anio || ""}
           </p>
         </div>
         <div className="flex items-start gap-2">
           <EstadoBadge estado={venta.estado} />
+          {venta.estado !== "ANULADA" && <button
+            type="button"
+            onClick={() => {
+              try {
+                generarFacturaVenta(venta);
+              } catch (error) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "No se pudo abrir el comprobante",
+                  text: error.message,
+                });
+              }
+            }}
+            title="Ver factura o comprobante"
+            aria-label="Ver factura o comprobante"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50"
+          >
+            <ReceiptText size={15} />
+          </button>}
           {canEdit && <button
             type="button"
             onClick={() => onEdit(venta)}
@@ -1764,12 +1924,31 @@ function VentaCard({ venta, onMarkPaid, onRefund, onEdit, canEdit }) {
             Registrar abono
           </button>
         )}
+        {venta.estado !== "PAGADA" && venta.estado !== "ANULADA" && venta.estado !== "RECHAZADA" && saldoPendiente > 0 && <button type="button" onClick={() => onReject(venta)} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">Pago rechazado</button>}
         {canEdit && venta.estado !== "ANULADA" && netoRecibido > 0 && <button type="button" onClick={() => onRefund(venta)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">Registrar devolución</button>}
         </div>
       </div>
-      {venta.pagos?.length > 0 && <details className="rounded-xl border border-slate-200 bg-white"><summary className="cursor-pointer px-3 py-2 text-xs font-bold text-slate-600">Ver movimientos ({venta.pagos.length})</summary><div className="divide-y divide-slate-100">{[...venta.pagos].reverse().map((movimiento) => <div key={movimiento._id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs"><div><p className={`font-bold ${movimiento.tipo === "DEVOLUCION" ? "text-red-700" : "text-emerald-700"}`}>{movimiento.tipo} · {movimiento.metodoPago.replaceAll("_", " ")}</p><p className="text-slate-500">{new Date(movimiento.fecha).toLocaleString("es-CO")} · {movimiento.usuarioNombre || "Usuario"}{movimiento.observacion ? ` · ${movimiento.observacion}` : ""}</p></div><strong>{movimiento.tipo === "DEVOLUCION" ? "- " : "+ "}{formatoCop.format(movimiento.valor)}</strong></div>)}</div></details>}
+      {venta.pagos?.length > 0 && <details className="rounded-xl border border-slate-200 bg-white"><summary className="cursor-pointer px-3 py-2 text-xs font-bold text-slate-600">Ver pagos y comprobantes ({venta.pagos.length})</summary><div className="divide-y divide-slate-100">{[...venta.pagos].reverse().map((movimiento) => <div key={movimiento._id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-xs"><div className="flex min-w-0 items-center gap-3">{movimiento.comprobanteImagen && <button type="button" onClick={() => abrirComprobantePago(movimiento)} title="Ver comprobante de pago" className="group relative shrink-0 overflow-hidden rounded-lg border border-blue-200 bg-blue-50"><img src={movimiento.comprobanteImagen} alt="Comprobante de pago" className="h-14 w-14 object-cover transition group-hover:opacity-70" /><span className="absolute inset-0 flex items-center justify-center text-blue-700 opacity-0 transition group-hover:opacity-100"><Eye size={20} /></span></button>}<div><p className={`font-bold ${movimiento.tipo === "DEVOLUCION" ? "text-red-700" : "text-emerald-700"}`}>{movimiento.tipo} · {movimiento.metodoPago.replaceAll("_", " ")}{movimiento.entidadPago ? ` · ${movimiento.entidadPago}` : ""}</p><p className="text-slate-500">{new Date(movimiento.fecha).toLocaleString("es-CO")} · {movimiento.usuarioNombre || "Usuario"}{movimiento.observacion ? ` · ${movimiento.observacion}` : ""}</p>{movimiento.comprobanteImagen && <button type="button" onClick={() => abrirComprobantePago(movimiento)} className="mt-1 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900"><Eye size={13} /> Ver comprobante</button>}</div></div><strong>{movimiento.tipo === "DEVOLUCION" ? "- " : "+ "}{formatoCop.format(movimiento.valor)}</strong></div>)}</div></details>}
     </article>
   );
+}
+
+function abrirComprobantePago(movimiento) {
+  if (!movimiento?.comprobanteImagen) return;
+
+  Swal.fire({
+    title: "Comprobante de pago",
+    text: movimiento.comprobanteNombre || "Imagen adjunta al movimiento",
+    imageUrl: movimiento.comprobanteImagen,
+    imageAlt: "Comprobante de pago",
+    imageWidth: "100%",
+    width: 720,
+    confirmButtonText: "Cerrar",
+    confirmButtonColor: "#2563eb",
+    customClass: {
+      image: "max-h-[65vh] object-contain rounded-lg border border-slate-200",
+    },
+  });
 }
 
 function ItemCortesRelacionados({ item }) {
@@ -1801,6 +1980,7 @@ function EstadoBadge({ estado }) {
     PAGADA: "bg-green-100 text-green-700",
     PARCIAL: "bg-blue-100 text-blue-700",
     ANULADA: "bg-red-100 text-red-700",
+    RECHAZADA: "bg-orange-100 text-orange-700",
     PENDIENTE: "bg-yellow-100 text-yellow-700",
   };
 
@@ -1943,6 +2123,7 @@ function agruparCortesPorCarroMaterial(cortes) {
   const grupos = new Map();
 
   cortes.forEach((corte) => {
+    const asesoriaId = getEntityId(corte.asesoriaId) || "";
     const tipoServicio =
       tipoServicioDesdeCorte(corte);
     const material =
@@ -1951,6 +2132,7 @@ function agruparCortesPorCarroMaterial(cortes) {
       corte.placa || "",
       corte.marca || "",
       corte.modelo || "",
+      asesoriaId,
       tipoServicio,
       material,
     ]
@@ -1963,6 +2145,7 @@ function agruparCortesPorCarroMaterial(cortes) {
         placa: corte.placa || "",
         marca: corte.marca || "",
         modelo: corte.modelo || "",
+        asesoriaId,
         tipoServicio,
         material,
         cortes: [],

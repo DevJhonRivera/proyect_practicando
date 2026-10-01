@@ -5,12 +5,13 @@ import {
 
 import {
   cerrarSesion,
+  getSessionItem,
   tokenExpirado,
 } from "../utils/session";
 
 function PrivateRoute() {
 
-  const token = localStorage.getItem("token");
+  const token = getSessionItem("token");
 
   if (token && tokenExpirado(token)) {
     cerrarSesion({

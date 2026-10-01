@@ -4,6 +4,22 @@ const SESSION_KEYS = [
   "permisosRolActual",
 ];
 
+export const getSessionItem = (key) => {
+  const actual = sessionStorage.getItem(key);
+  if (actual !== null) return actual;
+  const legacy = localStorage.getItem(key);
+  if (legacy !== null) {
+    sessionStorage.setItem(key, legacy);
+    localStorage.removeItem(key);
+  }
+  return legacy;
+};
+
+export const setSessionItem = (key, value) => {
+  sessionStorage.setItem(key, value);
+  localStorage.removeItem(key);
+};
+
 const MAX_SESSION_MS =
   8 * 60 * 60 * 1000;
 
@@ -62,6 +78,7 @@ export const tokenExpirado = (token) => {
 
 export const limpiarSesion = () => {
   SESSION_KEYS.forEach((key) => {
+    sessionStorage.removeItem(key);
     localStorage.removeItem(key);
   });
 };

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import {
   cerrarSesion,
+  getSessionItem,
   getTokenExpirationMs,
 } from "../../utils/session";
 
@@ -21,7 +22,7 @@ function SessionWatcher() {
       limpiarTimers();
 
       const token =
-        localStorage.getItem("token");
+        getSessionItem("token");
 
       if (!token) {
         return;
@@ -48,7 +49,7 @@ function SessionWatcher() {
 
       intervalId = window.setInterval(() => {
         const tokenActual =
-          localStorage.getItem("token");
+          getSessionItem("token");
         const expActual =
           getTokenExpirationMs(tokenActual);
 

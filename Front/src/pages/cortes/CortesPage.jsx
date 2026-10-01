@@ -4,7 +4,8 @@ import { ClipboardList } from "lucide-react";
 import Swal from "sweetalert2";
 
 import { updateCorte } from "../../api/cortes.api";
-import { enviarAsesoriaAVentas, getAsesoriaPorId } from "../../api/asesores.api";
+import { getAsesoriaPorId } from "../../api/asesores.api";
+import { markMaterialReady, reviewPropuestaCoordinacion } from "../../api/coordinacion.api";
 import CorteForm from "./components/CorteForm";
 import CortesHeader from "./components/CortesHeader";
 import CortesSearch from "./components/CortesSearch";
@@ -135,6 +136,9 @@ function CortesPage() {
           rotada: false,
         }))
       : [];
+    const medidaPropuesta = ordenAsesoria.coordinacion?.propuesta?.find(
+      (item) => item.linea === linea.etiqueta
+    );
     setForm((actual) => ({
       ...actual,
       asesoriaId: ordenAsesoria._id,
@@ -152,6 +156,9 @@ function CortesPage() {
       rolloId: rollo?._id || "",
       origenMaterial: "ROLLO",
       piezasPpf,
+      metrosUtilizados: medidaPropuesta?.metrosPropuestos
+        ? String(medidaPropuesta.metrosPropuestos)
+        : actual.metrosUtilizados,
     }));
     window.scrollTo({ top: 0, behavior: "smooth" });
     if (!rollo) {
@@ -159,23 +166,37 @@ function CortesPage() {
     }
   };
 
+  const revisarPropuestaCorte = async (decision) => {
+    let observacion = "";
+    if (decision === "RECHAZAR") {
+      const resultado = await Swal.fire({ title: "Rechazar propuesta", input: "textarea", inputLabel: "Indique qué debe corregir el coordinador", showCancelButton: true, confirmButtonText: "Rechazar", inputValidator: (value) => value.trim().length < 5 ? "Escriba el motivo" : undefined });
+      if (!resultado.isConfirmed) return;
+      observacion = resultado.value;
+    }
+    try {
+      await reviewPropuestaCoordinacion(ordenAsesoria._id, { decision, observacion });
+      const response = await getAsesoriaPorId(ordenAsesoria._id);
+      setOrdenAsesoria(response.data?.data || ordenAsesoria);
+      Swal.fire({ icon: "success", title: decision === "APROBAR" ? "Propuesta aprobada, puede registrar los cortes" : "Propuesta devuelta al coordinador", timer: 1800, showConfirmButton: false });
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No fue posible revisar", text: error.response?.data?.message });
+    }
+  };
+
   const finalizarTrabajo = async () => {
-    const garantiaSinCobro = Boolean(ordenAsesoria?.garantia?.esGarantia) && Number(ordenAsesoria?.comercial?.totalAcordado || 0) <= 0;
     const confirmacion = await Swal.fire({
       icon: "question",
-      title: garantiaSinCobro ? "¿Finalizar la garantía?" : "¿Enviar la orden a Ventas?",
+      title: "¿Confirmar que los cortes están listos?",
       text: "Confirme que ya registró todos los cortes necesarios.",
       showCancelButton: true,
-      confirmButtonText: garantiaSinCobro ? "Sí, finalizar garantía" : "Sí, enviar a Ventas",
+      confirmButtonText: "Sí, avisar al coordinador",
       cancelButtonText: "Seguir trabajando",
     });
     if (!confirmacion.isConfirmed) return;
     try {
-      const response = await enviarAsesoriaAVentas(ordenAsesoria._id);
+      const response = await markMaterialReady(ordenAsesoria._id);
       setOrdenAsesoria(response.data?.data || ordenAsesoria);
-      await Swal.fire(garantiaSinCobro
-        ? { icon: "success", title: "Garantía finalizada", text: "El trabajo quedó cerrado sin cobro pendiente." }
-        : { icon: "success", title: "Orden enviada a Ventas", text: "Ventas recibió una notificación para continuar con el pago." });
+      await Swal.fire({ icon: "success", title: "Material listo", text: "El coordinador recibió la notificación para recogerlo y continuar la instalación." });
     } catch (error) {
       Swal.fire({ icon: "error", title: "No se pudo enviar", text: error.response?.data?.message || "Revise los cortes registrados." });
     }
@@ -331,7 +352,7 @@ function CortesPage() {
 
       {vistaCortes === "registrar" && (
         <>
-        {ordenAsesoria && <OrdenAsesoriaPanel orden={ordenAsesoria} cortes={cortes} onLoad={cargarLineaAsesoria} onFinish={finalizarTrabajo} onReport={() => setReportandoNovedad(true)} />}
+        {ordenAsesoria && <OrdenAsesoriaPanel orden={ordenAsesoria} cortes={cortes} onLoad={cargarLineaAsesoria} onFinish={finalizarTrabajo} onReport={() => setReportandoNovedad(true)} onReview={revisarPropuestaCorte} />}
         <CorteForm
           form={form}
           loadingSugerencias={loadingSugerencias}
@@ -390,10 +411,11 @@ function CortesPage() {
   );
 }
 
-function OrdenAsesoriaPanel({ orden, cortes, onLoad, onFinish, onReport }) {
-  const solicitudPendiente = orden.novedades?.some((item) => item.estado === "PENDIENTE");
+function OrdenAsesoriaPanel({ orden, cortes, onLoad, onFinish, onReport, onReview }) {
+  const tiposBloqueantes = ["FALTA_MATERIAL", "MATERIAL_DEFECTUOSO", "ROLLO_EQUIVOCADO", "ERROR_REGISTRO", "TRABAJO_PENDIENTE"];
+  const solicitudPendiente = orden.novedades?.some((item) => item.estado === "PENDIENTE" || (item.estado === "APROBADA" && tiposBloqueantes.includes(item.tipo)));
   const garantiaBloqueada = orden.garantia?.esGarantia && orden.garantia.estado !== "APROBADA";
-  const garantiaSinCobro = orden.garantia?.esGarantia && Number(orden.comercial?.totalAcordado || 0) <= 0;
+  const propuestaPendiente = orden.flujo?.etapa === "PENDIENTE_APROBACION_CORTE";
   const lineas = [
     ...(orden.polarizados || []).map((item, index) => ({ ...item, clase: "POLARIZADO", etiqueta: `POLARIZADO ${index + 1}` })),
     ...(orden.ppf || []).map((item, index) => ({ ...item, clase: "PPF", material: item.referencia, partes: item.aplicacion === "PIEZAS" ? item.piezas : [item.aplicacion], etiqueta: `PPF ${index + 1}` })),
@@ -403,11 +425,11 @@ function OrdenAsesoriaPanel({ orden, cortes, onLoad, onFinish, onReport }) {
     <div className="divide-y divide-slate-100">
       {lineas.map((linea) => {
         const registrado = cortes.some((corte) => String(corte.asesoriaId || "") === String(orden._id) && corte.asesoriaLinea === linea.etiqueta);
-        return <div key={linea.etiqueta} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-500">{(linea.partes || []).join(" + ") || linea.aplicacion} · Venta: ${Number(linea.valor || 0).toLocaleString("es-CO")}</p></div><button type="button" disabled={registrado || garantiaBloqueada} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : garantiaBloqueada ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}>{registrado ? "Corte registrado" : garantiaBloqueada ? "Esperando aprobación" : "Cargar corte agrupado"}</button></div>;
+        return <div key={linea.etiqueta} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-500">{(linea.partes || []).join(" + ") || linea.aplicacion} · Propuesta: {orden.coordinacion?.propuesta?.find((item) => item.linea === linea.etiqueta)?.metrosPropuestos || 0} m · Venta: ${Number(linea.valor || 0).toLocaleString("es-CO")}</p></div><button type="button" disabled={registrado || garantiaBloqueada || propuestaPendiente} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : garantiaBloqueada || propuestaPendiente ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}>{registrado ? "Corte registrado" : propuestaPendiente ? "Revise la propuesta" : garantiaBloqueada ? "Esperando aprobación" : "Cargar corte agrupado"}</button></div>;
       })}
       {!lineas.length && <p className="p-4 text-sm text-slate-500">Esta orden solo contiene servicios que no requieren corte.</p>}
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 p-4"><div><p className="text-sm font-semibold text-slate-600">Estado: {(orden.flujo?.etapa || "PENDIENTE_INVENTARIO").replaceAll("_", " ")}</p>{(solicitudPendiente || garantiaBloqueada) && <p className="mt-1 text-xs font-bold text-amber-700">Tiene una aprobación pendiente de administración</p>}</div><div className="flex flex-wrap gap-2"><button type="button" onClick={onReport} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100">Reportar problema</button>{orden.flujo?.etapa !== "PENDIENTE_PAGO" && orden.flujo?.etapa !== "FINALIZADA" && orden.flujo?.etapa !== "CANCELADA" && <button type="button" onClick={onFinish} disabled={solicitudPendiente || garantiaBloqueada} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{solicitudPendiente || garantiaBloqueada ? "Esperando aprobación" : garantiaSinCobro ? "Finalizar garantía" : "Finalizar trabajo y enviar a Ventas"}</button>}</div></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 p-4"><div><p className="text-sm font-semibold text-slate-600">Estado: {(orden.flujo?.etapa || "PENDIENTE_INVENTARIO").replaceAll("_", " ")}</p>{(solicitudPendiente || garantiaBloqueada) && <p className="mt-1 text-xs font-bold text-amber-700">Tiene una novedad o garantía pendiente de solución administrativa</p>}</div><div className="flex flex-wrap gap-2">{propuestaPendiente && <><button type="button" onClick={() => onReview("APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar propuesta</button><button type="button" onClick={() => onReview("RECHAZAR")} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}<button type="button" onClick={onReport} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100">Reportar problema</button>{!propuestaPendiente && orden.flujo?.etapa !== "MATERIAL_LISTO" && orden.flujo?.etapa !== "FINALIZADA" && orden.flujo?.etapa !== "CANCELADA" && <button type="button" onClick={onFinish} disabled={solicitudPendiente || garantiaBloqueada} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">{solicitudPendiente || garantiaBloqueada ? "Esperando solución" : "Confirmar cortes listos"}</button>}</div></div>
   </section>;
 }
 

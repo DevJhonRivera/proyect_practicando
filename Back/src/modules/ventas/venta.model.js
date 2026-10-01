@@ -12,6 +12,8 @@ const clienteSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    cedula: { type: String, trim: true, default: "" },
+    correo: { type: String, trim: true, lowercase: true, default: "" },
   },
   {
     _id: false,
@@ -38,6 +40,9 @@ const vehiculoSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    referencia: { type: String, trim: true, uppercase: true, default: "" },
+    anio: { type: String, trim: true, default: "" },
+    color: { type: String, trim: true, uppercase: true, default: "" },
   },
   {
     _id: false,
@@ -138,11 +143,14 @@ const movimientoPagoSchema = new mongoose.Schema(
     valor: { type: Number, required: true, min: 0.01 },
     metodoPago: {
       type: String,
-      enum: ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "MIXTO"],
+      enum: ["EFECTIVO", "TRANSFERENCIA", "DATAFONO", "OTROS", "TARJETA", "CREDITO", "MIXTO"],
       required: true,
     },
+    entidadPago: { type: String, default: "", trim: true, uppercase: true },
     referencia: { type: String, default: "", trim: true, uppercase: true },
     observacion: { type: String, default: "", trim: true, uppercase: true },
+    comprobanteImagen: { type: String, default: "" },
+    comprobanteNombre: { type: String, default: "", trim: true },
     usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     usuarioNombre: { type: String, default: "" },
     usuarioRol: { type: String, default: "" },
@@ -181,6 +189,7 @@ const ventaSchema = new mongoose.Schema(
         "PENDIENTE",
         "PARCIAL",
         "PAGADA",
+        "RECHAZADA",
         "ANULADA",
       ],
       default: "PENDIENTE",
@@ -204,7 +213,7 @@ const ventaSchema = new mongoose.Schema(
     },
     metodoPago: {
       type: String,
-      enum: ["POR_DEFINIR", "EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "MIXTO"],
+      enum: ["POR_DEFINIR", "EFECTIVO", "TRANSFERENCIA", "DATAFONO", "OTROS", "TARJETA", "CREDITO", "MIXTO"],
       default: "POR_DEFINIR",
     },
     total: {

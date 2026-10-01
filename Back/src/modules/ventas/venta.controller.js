@@ -89,7 +89,8 @@ export const updateEstadoVenta =
           req.params.id,
           req.body.estado,
           req.user,
-          req.body.metodoPago
+          req.body.metodoPago,
+          req.body.observacion
         );
 
       res.json(venta);

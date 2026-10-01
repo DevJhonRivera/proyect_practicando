@@ -12,6 +12,11 @@ export const TIPO_VENTA_PENDIENTE =
   "VENTA_PENDIENTE";
 export const TIPO_VENTA_REVISION_CORTES =
   "VENTA_REVISION_CORTES";
+export const TIPO_COORDINACION_NUEVA = "COORDINACION_NUEVA";
+export const TIPO_PROPUESTA_CORTE = "PROPUESTA_CORTE";
+export const TIPO_MATERIAL_LISTO = "MATERIAL_LISTO";
+export const TIPO_ASIGNACION_TRABAJO = "ASIGNACION_TRABAJO";
+export const TIPO_INSTALACION_COMPLETA = "INSTALACION_COMPLETA";
 
 export function nivelAlerta(tipo) {
   const upper = tipo?.toUpperCase() || "";
@@ -31,7 +36,7 @@ export function nivelAlerta(tipo) {
     return "PREVENTIVO";
   }
 
-  if (tipo === TIPO_RECEPCION_NUEVA || tipo === TIPO_SERVICIO_ASESOR_NUEVO || tipo === TIPO_SERVICIO_LISTO_PAGO) {
+  if (tipo === TIPO_RECEPCION_NUEVA || tipo === TIPO_SERVICIO_ASESOR_NUEVO || tipo === TIPO_SERVICIO_LISTO_PAGO || tipo === TIPO_COORDINACION_NUEVA || tipo === TIPO_PROPUESTA_CORTE || tipo === TIPO_MATERIAL_LISTO || tipo === TIPO_ASIGNACION_TRABAJO || tipo === TIPO_INSTALACION_COMPLETA) {
     return "INFORMATIVO";
   }
 

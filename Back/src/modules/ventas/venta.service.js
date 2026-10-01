@@ -13,6 +13,30 @@ import Asesoria from "../asesores/asesoria.model.js";
 const roundMoney = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
+const ENTIDADES_PAGO = {
+  TRANSFERENCIA: ["BANCOLOMBIA SANTIAGO", "BANCOLOMBIA RAFAEL", "BANCOLOMBIA AUTOS", "BBVA"],
+  DATAFONO: ["BBVA"],
+  OTROS: ["SISTECREDITO", "ADDI"],
+};
+
+const prepararDetallePago = (data = {}, requiereEntidad = true) => {
+  const metodoPago = normalizarMayusculas(data.metodoPago);
+  const entidadPago = normalizarMayusculas(data.entidadPago);
+  if (requiereEntidad && ENTIDADES_PAGO[metodoPago] && !ENTIDADES_PAGO[metodoPago].includes(entidadPago)) {
+    throw new Error("Seleccione una cuenta o entidad valida para el pago");
+  }
+  const comprobanteImagen = normalizarTexto(data.comprobanteImagen);
+  if (comprobanteImagen && !/^data:image\/(jpeg|png|webp);base64,/i.test(comprobanteImagen)) {
+    throw new Error("El comprobante debe ser una imagen JPG, PNG o WEBP");
+  }
+  if (comprobanteImagen.length > 2_200_000) throw new Error("La imagen del comprobante es demasiado grande");
+  return {
+    entidadPago: ENTIDADES_PAGO[metodoPago] ? entidadPago : "",
+    comprobanteImagen,
+    comprobanteNombre: normalizarTexto(data.comprobanteNombre).slice(0, 120),
+  };
+};
+
 const normalizarTexto = (value) =>
   String(value || "").trim();
 
@@ -341,7 +365,7 @@ const limpiarCortesVenta = async (
 };
 
 const sincronizarAlertaVenta = async (venta) => {
-  if (["PENDIENTE", "PARCIAL"].includes(venta.estado)) {
+  if (["PENDIENTE", "PARCIAL", "RECHAZADA"].includes(venta.estado)) {
     await crearAlertaVentaPendiente(venta);
     return;
   }
@@ -371,6 +395,8 @@ const prepararVenta = async (data, ventaActual = null) => {
       normalizarMayusculas(data.cliente?.nombre),
     telefono:
       normalizarTexto(data.cliente?.telefono),
+    cedula: soloNumeros(data.cliente?.cedula ?? ventaActual?.cliente?.cedula),
+    correo: normalizarTexto(data.cliente?.correo ?? ventaActual?.cliente?.correo).toLowerCase(),
   };
 
   const vehiculo = {
@@ -380,6 +406,9 @@ const prepararVenta = async (data, ventaActual = null) => {
       normalizarMayusculas(data.vehiculo?.marca),
     modelo:
       soloNumeros(data.vehiculo?.modelo),
+    referencia: normalizarMayusculas(data.vehiculo?.referencia ?? ventaActual?.vehiculo?.referencia),
+    anio: soloNumeros(data.vehiculo?.anio ?? ventaActual?.vehiculo?.anio).slice(0, 4),
+    color: normalizarMayusculas(data.vehiculo?.color ?? ventaActual?.vehiculo?.color),
   };
 
   if (!cliente.nombre) {
@@ -479,7 +508,7 @@ const prepararVenta = async (data, ventaActual = null) => {
     subtotal,
     descuento,
     total,
-    metodoPago: ["POR_DEFINIR", "EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "MIXTO"].includes(data.metodoPago)
+    metodoPago: ["POR_DEFINIR", "EFECTIVO", "TRANSFERENCIA", "DATAFONO", "OTROS", "TARJETA", "CREDITO", "MIXTO"].includes(data.metodoPago)
       ? data.metodoPago
       : ventaActual?.metodoPago || "POR_DEFINIR",
     observaciones:
@@ -505,6 +534,9 @@ export const crearVenta = async (data, user) => {
   }
   const ventaData =
     await prepararVenta(data);
+  const detallePagoInicial = ventaData.estado === "PAGADA"
+    ? prepararDetallePago(data)
+    : { entidadPago: "", comprobanteImagen: "", comprobanteNombre: "" };
   if (!["PENDIENTE", "PAGADA"].includes(ventaData.estado)) {
     throw new Error("El estado inicial de la venta no es valido");
   }
@@ -536,6 +568,7 @@ export const crearVenta = async (data, user) => {
               tipo: "PAGO",
               valor: ventaData.total,
               metodoPago: ventaData.metodoPago,
+              ...detallePagoInicial,
               observacion: "PAGO TOTAL AL REGISTRAR LA VENTA",
               ...usuarioAuditoria(user),
               fecha: new Date(),
@@ -607,6 +640,7 @@ export const crearVenta = async (data, user) => {
 
 export const obtenerVentas = async () => {
   return await Venta.find()
+    .populate("asesoriaId", "cliente vehiculo codigo")
     .populate("items.corteId")
     .populate("items.corteIds")
     .sort({
@@ -616,17 +650,24 @@ export const obtenerVentas = async () => {
 
 export const obtenerVentaPorId = async (id) => {
   return await Venta.findById(id)
+    .populate("asesoriaId", "cliente vehiculo codigo")
     .populate("items.corteId")
     .populate("items.corteIds");
 };
 
 export const actualizarEstadoVenta =
-  async (id, estado, user, metodoPago) => {
+  async (id, estado, user, metodoPago, observacion = "") => {
     if (["PAGADA", "PARCIAL"].includes(estado)) {
       throw new Error("Registre un movimiento de pago para actualizar el estado de la venta");
     }
-    if (!["PENDIENTE", "ANULADA"].includes(estado)) {
+    if (!["PENDIENTE", "RECHAZADA", "ANULADA"].includes(estado)) {
       throw new Error("El estado solicitado no es valido");
+    }
+    if (user.rol === "VENTAS" && estado !== "RECHAZADA") {
+      throw new Error("Ventas solo puede registrar un intento de pago rechazado");
+    }
+    if (estado === "RECHAZADA" && normalizarTexto(observacion).length < 5) {
+      throw new Error("Indique el motivo del rechazo del pago");
     }
     const ventaActual =
       await Venta.findById(id);
@@ -654,7 +695,7 @@ export const actualizarEstadoVenta =
                   entradaAuditoria({
                     accion: "CAMBIO_ESTADO",
                     descripcion:
-                      `Estado cambiado a ${estado}`,
+                      estado === "RECHAZADA" ? `Pago rechazado: ${normalizarMayusculas(observacion)}` : `Estado cambiado a ${estado}`,
                     user,
                     cambios: {
                       estado: {
@@ -725,7 +766,7 @@ export const actualizarEstadoVenta =
       try {
         await Asesoria.findByIdAndUpdate(venta.asesoriaId, {
           $set: {
-            "pago.estado": estado === "PAGADA" ? "PAGADO" : "PENDIENTE",
+            "pago.estado": estado === "PAGADA" ? "PAGADO" : estado === "RECHAZADA" ? "RECHAZADO" : "PENDIENTE",
             "pago.valorRecibido": estado === "PAGADA" ? venta.total : 0,
             "pago.metodoPagoFinal": venta.metodoPago,
             "flujo.etapa": estado === "PAGADA" ? "FINALIZADA" : "PENDIENTE_PAGO",
@@ -749,10 +790,11 @@ export const registrarMovimientoPago = async (id, data, user) => {
   const tipo = normalizarMayusculas(data.tipo || "PAGO");
   const metodoPago = normalizarMayusculas(data.metodoPago);
   const valor = roundMoney(data.valor);
-  const metodos = ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", "MIXTO"];
+  const metodos = ["EFECTIVO", "TRANSFERENCIA", "DATAFONO", "OTROS", "TARJETA", "CREDITO", "MIXTO"];
   if (!["PAGO", "DEVOLUCION"].includes(tipo)) throw new Error("Tipo de movimiento no valido");
   if (!metodos.includes(metodoPago)) throw new Error("Seleccione la forma de pago");
   if (!Number.isFinite(valor) || valor <= 0) throw new Error("Ingrese un valor mayor a cero");
+  const detallePago = prepararDetallePago({ ...data, metodoPago }, tipo === "PAGO");
   if (tipo === "DEVOLUCION" && !["ADMIN", "SUPERUSUARIO"].includes(user.rol)) {
     throw new Error("Solo administracion puede registrar devoluciones");
   }
@@ -776,6 +818,7 @@ export const registrarMovimientoPago = async (id, data, user) => {
     tipo,
     valor,
     metodoPago,
+    ...detallePago,
     referencia: normalizarMayusculas(data.referencia),
     observacion: normalizarMayusculas(data.observacion),
     ...usuarioAuditoria(user),
@@ -820,7 +863,10 @@ export const registrarMovimientoPago = async (id, data, user) => {
   } catch (error) {
     await registrarErrorPostVenta(venta, error);
   }
-  return Venta.findById(venta._id).populate("items.corteId").populate("items.corteIds");
+  return Venta.findById(venta._id)
+    .populate("asesoriaId", "cliente vehiculo codigo")
+    .populate("items.corteId")
+    .populate("items.corteIds");
 };
 
 export const actualizarVenta = async (id, data, user) => {
@@ -887,6 +933,7 @@ export const actualizarVenta = async (id, data, user) => {
   }
 
   venta = await Venta.findById(venta._id)
+    .populate("asesoriaId", "cliente vehiculo codigo")
     .populate("items.corteId")
     .populate("items.corteIds");
 

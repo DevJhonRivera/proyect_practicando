@@ -14,6 +14,7 @@ import {
   createNovedadAsesoria,
   reviewNovedadAsesoria,
   reviewGarantiaAsesoria,
+  resolveNovedadAsesoria,
 } from "./asesor.controller.js";
 
 const router = Router();
@@ -44,6 +45,13 @@ router.patch(
   authMiddleware,
   requireRole("ADMIN", "SUPERUSUARIO"),
   reviewNovedadAsesoria
+);
+
+router.patch(
+  "/servicios/:id/novedades/:novedadId/resolver",
+  authMiddleware,
+  requireRole("ADMIN", "SUPERUSUARIO"),
+  resolveNovedadAsesoria
 );
 
 router.patch(

@@ -1,3 +1,5 @@
+import { getSessionItem, setSessionItem } from "./session";
+
 export const permisosPorRolBase = {
   SUPERUSUARIO: ["*"],
   ADMIN: ["*"],
@@ -10,11 +12,13 @@ export const permisosPorRolBase = {
     "alertas:*",
     "cortes:*",
     "piezasPpf:*",
+    "coordinacion:*",
   ],
   VENTAS: [
     "dashboard:read",
     "ventas:*",
     "cortes:read",
+    "coordinacion:read",
     "alertas:*",
   ],
   ASESOR: [
@@ -23,10 +27,12 @@ export const permisosPorRolBase = {
     "cortes:read",
     "piezasPpf:read",
   ],
+  COORDINADOR: ["dashboard:read", "coordinacion:*", "medidasVehiculos:*", "piezasPpf:*", "alertas:*", "cortes:read"],
+  INSTALADOR: ["dashboard:read", "coordinacion:read", "coordinacion:write", "alertas:read"],
 };
 
 export const guardarPermisosUsuarioActual = (rol, permisos) => {
-  localStorage.setItem(
+  setSessionItem(
     "permisosRolActual",
     JSON.stringify({
       rol,
@@ -38,7 +44,7 @@ export const guardarPermisosUsuarioActual = (rol, permisos) => {
 const obtenerPermisosUsuarioActual = (rol) => {
   try {
     const config = JSON.parse(
-      localStorage.getItem("permisosRolActual") ||
+      getSessionItem("permisosRolActual") ||
         "null"
     );
 
@@ -54,7 +60,7 @@ const obtenerPermisosUsuarioActual = (rol) => {
 
 export const obtenerUsuarioActual = () => {
   try {
-    return JSON.parse(localStorage.getItem("usuario") || "null");
+    return JSON.parse(getSessionItem("usuario") || "null");
   } catch {
     return null;
   }

@@ -6,6 +6,7 @@ import { AuthContext } from "./auth-context";
 import {
   cerrarSesion as cerrarSesionUsuario,
   notificarSesionActualizada,
+  setSessionItem,
 } from "../utils/session";
 
 export const AuthProvider = ({
@@ -20,12 +21,12 @@ export const AuthProvider = ({
     userData
   ) => {
 
-    localStorage.setItem(
+    setSessionItem(
       "token",
       token
     );
 
-    localStorage.setItem(
+    setSessionItem(
       "usuario",
       JSON.stringify(userData)
     );

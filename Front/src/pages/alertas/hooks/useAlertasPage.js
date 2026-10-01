@@ -50,9 +50,18 @@ export function useAlertasPage() {
     };
 
     cargarInicial();
+    const intervalId = window.setInterval(async () => {
+      try {
+        const res = await getAlertas();
+        if (active) setAlertas(res.data.data || res.data || []);
+      } catch {
+        // Conserva la información visible si una actualización temporal falla.
+      }
+    }, 5000);
 
     return () => {
       active = false;
+      window.clearInterval(intervalId);
     };
   }, []);
 

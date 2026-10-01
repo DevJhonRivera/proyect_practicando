@@ -3,6 +3,7 @@ import { mongoSoportaTransacciones } from "../../config/db.js";
 import Corte from "./corte.model.js";
 import Rollo from "../rollos/rollo.model.js";
 import PiezaPpf from "../piezasPpf/piezaPpf.model.js";
+import { validarSinNovedadesBloqueantes } from "../asesores/asesoriaWorkflow.utils.js";
 import Asesoria from "../asesores/asesoria.model.js";
 import { crearAlerta }
 from "../alertas/alerta.service.js";
@@ -295,6 +296,7 @@ export const registrarCorte =
       }
       asesoria = await Asesoria.findById(data.asesoriaId).lean();
       if (!asesoria) throw new Error("La orden de servicio no existe");
+      validarSinNovedadesBloqueantes(asesoria);
       if (!["PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(asesoria.flujo?.etapa)) {
         throw new Error("La orden no esta disponible para registrar cortes");
       }

@@ -12,6 +12,7 @@ const inicial = {
   afectaMaterial: false,
   afectaPrecio: false,
   valorImpacto: "",
+  serviciosAfectados: [],
 };
 
 const soloDigitos = (value) => String(value || "").replace(/\D/g, "");
@@ -25,6 +26,11 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
   const [guardando, setGuardando] = useState(false);
   const esAdministrador = ["ADMIN", "SUPERUSUARIO"].includes(usuario?.rol);
   const esSolicitudInventario = usuario?.rol === "INVENTARIO";
+  const servicios = [
+    ...(asesoria.polarizados || []).map((item, index) => ({ id: `POLARIZADO ${index + 1}`, nombre: `Polarizado: ${item.material} ${item.porcentaje}` })),
+    ...(asesoria.ppf || []).map((item, index) => ({ id: `PPF ${index + 1}`, nombre: `PPF: ${item.referencia}` })),
+    ...(asesoria.serviciosAdicionales || []).map((item, index) => ({ id: `ADICIONAL ${index + 1}`, nombre: `${item.tipo}: ${item.detalle || "Servicio adicional"}` })),
+  ];
 
   const cambiar = (campo, valor) => setForm((actual) => ({ ...actual, [campo]: valor }));
 
@@ -32,6 +38,9 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
     if (!form.tipo) return Swal.fire({ icon: "warning", title: "Seleccione el tipo de novedad" });
     if (form.descripcion.trim().length < 5) {
       return Swal.fire({ icon: "warning", title: "Describa lo ocurrido con más detalle" });
+    }
+    if (form.tipo === "CANCELACION_PARCIAL" && !form.serviciosAfectados.length) {
+      return Swal.fire({ icon: "warning", title: "Seleccione qué servicios desea cancelar" });
     }
 
     if (form.tipo === "CANCELACION_TOTAL") {
@@ -131,6 +140,8 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
             className="w-full resize-none rounded-xl border p-3"
           />
         </Field>
+
+        {form.tipo === "CANCELACION_PARCIAL" && <div><p className="mb-2 text-sm font-semibold text-slate-700">Servicios que se cancelan</p><div className="grid gap-2 sm:grid-cols-2">{servicios.map((servicio) => { const activo = form.serviciosAfectados.includes(servicio.id); return <label key={servicio.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${activo ? "border-red-300 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-700"}`}><input type="checkbox" checked={activo} onChange={() => cambiar("serviciosAfectados", activo ? form.serviciosAfectados.filter((id) => id !== servicio.id) : [...form.serviciosAfectados, servicio.id])} className="mt-0.5 h-4 w-4" /><span><strong className="block">{servicio.id}</strong>{servicio.nombre}</span></label>; })}</div><p className="mt-2 text-xs text-slate-500">La orden regresará a Coordinación para actualizar propuesta e instaladores. No se permite si ya existen cortes o una venta.</p></div>}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 font-semibold text-slate-700">

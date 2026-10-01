@@ -28,6 +28,8 @@ const normalizarRol = (rol) => {
       "INVENTARIO",
       "VENTAS",
       "ASESOR",
+      "COORDINADOR",
+      "INSTALADOR",
     ].includes(rol)
   ) {
     return rol;

@@ -9,10 +9,11 @@ export const getVentas = () =>
 export const updateVenta = (id, data) =>
   api.put(`/ventas/${id}`, data);
 
-export const updateEstadoVenta = (id, estado, metodoPago) =>
+export const updateEstadoVenta = (id, estado, metodoPago, observacion = "") =>
   api.patch(`/ventas/${id}/estado`, {
     estado,
     metodoPago,
+    observacion,
   });
 
 export const createMovimientoPago = (id, data) =>

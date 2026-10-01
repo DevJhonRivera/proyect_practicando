@@ -18,6 +18,8 @@ import userRoutes from "./modules/users/user.routes.js";
 import rolePermissionRoutes from "./modules/roles/rolePermission.routes.js";
 import piezaPpfRoutes from "./modules/piezasPpf/piezaPpf.routes.js";
 import asesorRoutes from "./modules/asesores/asesor.routes.js";
+import coordinacionRoutes from "./modules/coordinacion/coordinacion.routes.js";
+import medidaVehiculoRoutes from "./modules/medidasVehiculos/medidaVehiculo.routes.js";
 import {
   corsOptions,
   securityHeaders,
@@ -40,7 +42,7 @@ app.use(
       : "dev"
   )
 );
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "3mb" }));
 
 app.get("/api/health", (req, res) => {
   const databaseConnected =
@@ -98,6 +100,8 @@ app.use("/api/ventas",ventaRoutes);
 app.use("/api/piezas-ppf", piezaPpfRoutes);
 
 app.use("/api/asesores", asesorRoutes);
+app.use("/api/coordinacion", coordinacionRoutes);
+app.use("/api/medidas-vehiculos", medidaVehiculoRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -19,7 +19,7 @@ import { getMisPermisos } from "../../api/roles.api";
 import {
   guardarPermisosUsuarioActual
 } from "../../utils/permisos";
-import { notificarSesionActualizada } from "../../utils/session";
+import { notificarSesionActualizada, setSessionItem } from "../../utils/session";
 
 import {
   useNavigate
@@ -82,12 +82,12 @@ function LoginPage() {
         const res =
           await login(data);
 
-        localStorage.setItem(
+        setSessionItem(
           "token",
           res.data.token
         );
 
-        localStorage.setItem(
+        setSessionItem(
           "usuario",
           JSON.stringify(
             res.data.user

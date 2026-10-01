@@ -3,7 +3,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, Download, Eye, Filter, Pencil, R
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
-import { getAsesorias, reviewGarantiaAsesoria, reviewNovedadAsesoria } from "../../api/asesores.api";
+import { getAsesorias, resolveNovedadAsesoria, reviewGarantiaAsesoria, reviewNovedadAsesoria } from "../../api/asesores.api";
 import AppModal from "../../components/ui/AppModal";
 import { obtenerUsuarioActual } from "../../utils/permisos";
 import { descargarExcel } from "../../utils/excelExport";
@@ -209,6 +209,28 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
     }
   };
 
+  const resolverNovedad = async (asesoria, novedad) => {
+    const resultadoResolucion = await Swal.fire({
+      icon: "question",
+      title: "Resolver novedad",
+      input: "textarea",
+      inputLabel: "¿Cómo se solucionó?",
+      inputPlaceholder: "Ej: LLEGÓ EL MATERIAL Y YA ESTÁ DISPONIBLE",
+      showCancelButton: true,
+      confirmButtonText: "Marcar como resuelta",
+      inputValidator: (value) => value.trim().length < 5 ? "Describa la solución" : undefined,
+    });
+    if (!resultadoResolucion.isConfirmed) return;
+    try {
+      const response = await resolveNovedadAsesoria(asesoria._id, novedad._id, { observacion: resultadoResolucion.value });
+      setSeleccionada(response.data?.data || null);
+      await cargar(resultado.pagination.page);
+      Swal.fire({ icon: "success", title: "Novedad resuelta", timer: 1400, showConfirmButton: false });
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No fue posible resolverla", text: error.response?.data?.message });
+    }
+  };
+
   const revisarGarantia = async (asesoria, decision) => {
     const aprobar = decision === "APROBAR";
     const resultadoRevision = await Swal.fire({
@@ -287,7 +309,7 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
             {['BORRADOR','COTIZACION','APROBADA','CANCELADA'].map((v) => <option key={v}>{v}</option>)}
           </Select>
           <Select value={filtros.estadoPago} onChange={(v) => cambiar("estadoPago", v)} placeholder="Cualquier estado de pago">
-            {['PENDIENTE','PARCIAL','PAGADO'].map((v) => <option key={v}>{v}</option>)}
+            {['PENDIENTE','PARCIAL','PAGADO','RECHAZADO'].map((v) => <option key={v}>{v}</option>)}
           </Select>
           <Select value={filtros.metodoPago} onChange={(v) => cambiar("metodoPago", v)} placeholder="Cualquier forma de pago">
             {['POR_DEFINIR','EFECTIVO','TRANSFERENCIA','TARJETA','CREDITO','MIXTO'].map((v) => <option key={v}>{v.replaceAll('_', ' ')}</option>)}
@@ -355,7 +377,7 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
         </div>
       </div>
 
-      {seleccionada && <Detalle asesoria={seleccionada} puedeRevisar={puedeEditar} onReview={revisarNovedad} onReviewGarantia={revisarGarantia} onClose={() => setSeleccionada(null)} />}
+      {seleccionada && <Detalle asesoria={seleccionada} puedeRevisar={puedeEditar} onReview={revisarNovedad} onResolve={resolverNovedad} onReviewGarantia={revisarGarantia} onClose={() => setSeleccionada(null)} />}
       {editando && (
         <AsesoriaFormModal
           asesoria={editando}
@@ -383,7 +405,7 @@ function Metric({ label, value }) {
   return <div className="min-w-0 rounded-xl bg-slate-50 p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 break-words text-lg font-bold text-slate-800">{value}</p></div>;
 }
 
-function Detalle({ asesoria, puedeRevisar, onReview, onReviewGarantia, onClose }) {
+function Detalle({ asesoria, puedeRevisar, onReview, onResolve, onReviewGarantia, onClose }) {
   return (
     <AppModal title={asesoria.codigo} subtitle={`${asesoria.vehiculo?.placa} · ${asesoria.cliente?.nombre}`} icon={ReceiptText} maxWidth="max-w-2xl" onClose={onClose}>
       <FlujoVisual etapa={asesoria.flujo?.etapa} />
@@ -403,7 +425,7 @@ function Detalle({ asesoria, puedeRevisar, onReview, onReviewGarantia, onClose }
       </div>
       {asesoria.garantia?.esGarantia && <div className="mt-5 rounded-xl border border-violet-200 bg-violet-50 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-violet-900">Solicitud de garantía</p><EstadoGarantia estado={asesoria.garantia.estado} /></div><p className="mt-2 text-sm text-slate-700">{asesoria.garantia.motivo}</p><p className="mt-2 text-xs text-slate-600">Tipo: {(asesoria.garantia.tipo || 'GARANTIA_EMPRESA').replaceAll('_', ' ')} · Responsable: {(asesoria.garantia.responsable || 'POR_DEFINIR').replaceAll('_', ' ')}</p>{asesoria.garantia.instalador && <p className="mt-1 text-xs text-slate-600">Instalador: {asesoria.garantia.instalador}</p>}{asesoria.garantia.fechaRevision && <p className="mt-1 text-xs text-slate-500">Revisó: {asesoria.garantia.revisadoPorNombre} · {asesoria.garantia.observacionRevision || 'Sin observación'}</p>}{puedeRevisar && asesoria.garantia.estado === 'PENDIENTE' && <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onReviewGarantia(asesoria, 'APROBAR')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Aprobar garantía</button><button type="button" onClick={() => onReviewGarantia(asesoria, 'RECHAZAR')} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Rechazar</button></div>}</div>}
       <div className="mt-5 space-y-2"><p className="text-xs font-bold uppercase text-slate-500">Servicios cotizados</p>{[...(asesoria.polarizados || []).map((item) => `${item.material} ${item.porcentaje} · ${(item.partes || []).join(', ')} · ${cop.format(item.valor || 0)}`), ...(asesoria.ppf || []).map((item) => `PPF ${item.referencia} · ${item.aplicacion} · ${cop.format(item.valor || 0)}`), ...(asesoria.serviciosAdicionales || []).map((item) => `${item.tipo} ${item.detalle || ''} · ${cop.format(item.valor || 0)}`)].map((texto, index) => <div key={`${texto}-${index}`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">{texto}</div>)}</div>
-      {asesoria.novedades?.length > 0 && <div className="mt-5 space-y-2"><p className="text-xs font-bold uppercase text-amber-700">Historial de novedades</p>{[...asesoria.novedades].reverse().map((novedad, index) => <div key={`${novedad.fecha}-${index}`} className="rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-bold text-amber-900">{novedad.tipo.replaceAll('_', ' ')}</p><EstadoNovedad estado={novedad.estado} /></div><p className="text-xs text-amber-700">{new Date(novedad.fecha).toLocaleString('es-CO')}</p></div><p className="mt-1 text-sm text-slate-700">{novedad.descripcion}</p><p className="mt-2 text-xs text-slate-500">Reportó: {novedad.usuarioNombre || 'Usuario'} · Costo: {(novedad.responsableCosto || 'NO_APLICA').replaceAll('_', ' ')}{novedad.valorImpacto ? ` · ${cop.format(novedad.valorImpacto)}` : ''}</p>{novedad.fechaRevision && <p className="mt-1 text-xs text-slate-500">Revisó: {novedad.revisadoPorNombre} · {novedad.observacionRevision || 'Sin observación'}</p>}{puedeRevisar && novedad.estado === 'PENDIENTE' && <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onReview(asesoria, novedad, 'APROBAR')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Aprobar solicitud</button><button type="button" onClick={() => onReview(asesoria, novedad, 'RECHAZAR')} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Rechazar</button></div>}</div>)}</div>}
+      {asesoria.novedades?.length > 0 && <div className="mt-5 space-y-2"><p className="text-xs font-bold uppercase text-amber-700">Historial de novedades</p>{[...asesoria.novedades].reverse().map((novedad, index) => <div key={`${novedad.fecha}-${index}`} className="rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-bold text-amber-900">{novedad.tipo.replaceAll('_', ' ')}</p><EstadoNovedad estado={novedad.estado} /></div><p className="text-xs text-amber-700">{new Date(novedad.fecha).toLocaleString('es-CO')}</p></div><p className="mt-1 text-sm text-slate-700">{novedad.descripcion}</p>{novedad.serviciosAfectados?.length > 0 && <p className="mt-1 text-xs font-semibold text-red-700">Servicios retirados: {novedad.serviciosAfectados.join(', ')}</p>}<p className="mt-2 text-xs text-slate-500">Reportó: {novedad.usuarioNombre || 'Usuario'} · Costo: {(novedad.responsableCosto || 'NO_APLICA').replaceAll('_', ' ')}{novedad.valorImpacto ? ` · ${cop.format(novedad.valorImpacto)}` : ''}</p>{novedad.fechaRevision && <p className="mt-1 text-xs text-slate-500">Revisó: {novedad.revisadoPorNombre} · {novedad.observacionRevision || 'Sin observación'}</p>}{puedeRevisar && novedad.estado === 'PENDIENTE' && <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onReview(asesoria, novedad, 'APROBAR')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Aprobar solicitud</button><button type="button" onClick={() => onReview(asesoria, novedad, 'RECHAZAR')} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Rechazar</button></div>}{puedeRevisar && novedad.estado === 'APROBADA' && ['FALTA_MATERIAL','MATERIAL_DEFECTUOSO','ROLLO_EQUIVOCADO','ERROR_REGISTRO','TRABAJO_PENDIENTE'].includes(novedad.tipo) && <button type="button" onClick={() => onResolve(asesoria, novedad)} className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Marcar solucionada</button>}</div>)}</div>}
     </AppModal>
   );
 }
@@ -421,7 +443,7 @@ function SituacionBadge({ situacion = "NORMAL" }) {
 }
 
 function EstadoNovedad({ estado = "APROBADA" }) {
-  const estilos = estado === "PENDIENTE" ? "bg-amber-200 text-amber-900" : estado === "RECHAZADA" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700";
+  const estilos = estado === "PENDIENTE" ? "bg-amber-200 text-amber-900" : estado === "RECHAZADA" ? "bg-red-100 text-red-700" : estado === "RESUELTA" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700";
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${estilos}`}>{estado}</span>;
 }
 

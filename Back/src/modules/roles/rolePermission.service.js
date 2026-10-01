@@ -5,6 +5,8 @@ export const rolesConfigurables = [
   "INVENTARIO",
   "VENTAS",
   "ASESOR",
+  "COORDINADOR",
+  "INSTALADOR",
 ];
 
 export const permisosPorRolBase = {
@@ -18,11 +20,13 @@ export const permisosPorRolBase = {
     "alertas:*",
     "cortes:*",
     "piezasPpf:*",
+    "coordinacion:*",
   ],
   VENTAS: [
     "dashboard:read",
     "ventas:*",
     "cortes:read",
+    "coordinacion:read",
     "alertas:*",
   ],
   ASESOR: [
@@ -30,6 +34,20 @@ export const permisosPorRolBase = {
     "asesores:*",
     "cortes:read",
     "piezasPpf:read",
+  ],
+  COORDINADOR: [
+    "dashboard:read",
+    "coordinacion:*",
+    "medidasVehiculos:*",
+    "piezasPpf:*",
+    "alertas:*",
+    "cortes:read",
+  ],
+  INSTALADOR: [
+    "dashboard:read",
+    "coordinacion:read",
+    "coordinacion:write",
+    "alertas:read",
   ],
 };
 

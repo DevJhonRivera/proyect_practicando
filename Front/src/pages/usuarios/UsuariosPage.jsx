@@ -34,6 +34,8 @@ const rolesUsuario = [
   ["INVENTARIO", "Inventario"],
   ["VENTAS", "Ventas"],
   ["ASESOR", "Asesor"],
+  ["COORDINADOR", "Coordinador"],
+  ["INSTALADOR", "Instalador"],
 ];
 
 const formInicial = {
@@ -44,6 +46,16 @@ const formInicial = {
 };
 
 const modulosConfigurables = [
+  {
+    key: "medidasVehiculos",
+    label: "Medidas de vehículos",
+    permisos: ["medidasVehiculos:*"],
+  },
+  {
+    key: "coordinacion",
+    label: "Coordinación e instalaciones",
+    permisos: ["coordinacion:*"],
+  },
   {
     key: "asesores",
     label: "Catálogo para asesores",
@@ -112,17 +124,21 @@ const roleLabels = {
   INVENTARIO: "Inventario",
   VENTAS: "Ventas",
   ASESOR: "Asesor",
+  COORDINADOR: "Coordinador",
+  INSTALADOR: "Instalador",
 };
 
 const configuracionesRolBase = {
   ADMIN: ["*"],
-  INVENTARIO: ["dashboard:read", "pedidos:*", "recepciones:*", "rollos:*", "retazos:*", "alertas:*", "cortes:*", "piezasPpf:*"],
-  VENTAS: ["dashboard:read", "ventas:*", "cortes:read", "alertas:*"],
+  INVENTARIO: ["dashboard:read", "pedidos:*", "recepciones:*", "rollos:*", "retazos:*", "alertas:*", "cortes:*", "piezasPpf:*", "coordinacion:*"],
+  VENTAS: ["dashboard:read", "ventas:*", "cortes:read", "coordinacion:read", "alertas:*"],
   ASESOR: ["dashboard:read", "asesores:*", "cortes:read", "piezasPpf:read"],
+  COORDINADOR: ["dashboard:read", "coordinacion:*", "medidasVehiculos:*", "piezasPpf:*", "alertas:*", "cortes:read"],
+  INSTALADOR: ["dashboard:read", "coordinacion:read", "coordinacion:write", "alertas:read"],
 };
 
 const normalizarConfiguracionesRoles = (configuraciones = []) =>
-  ["ADMIN", "INVENTARIO", "VENTAS", "ASESOR"].map((rol) => {
+  ["ADMIN", "INVENTARIO", "VENTAS", "ASESOR", "COORDINADOR", "INSTALADOR"].map((rol) => {
     const encontrada = configuraciones.find((config) => config.rol === rol);
     return encontrada || { rol, permisos: configuracionesRolBase[rol] };
   });
@@ -131,15 +147,21 @@ const modulosPermitidosPorRol = () => modulosConfigurables;
 
 const tienePermisoModulo = (permisos, modulo) =>
   permisos.includes("*") ||
-  permisos.includes(modulo.permisos[0]);
+  permisos.some((permiso) => permiso.startsWith(`${modulo.key}:`));
 
-const permisosDesdeModulos = (rol, modulosActivos) => {
+const permisosDesdeModulos = (rol, modulosActivos, permisosActuales = []) => {
   const activos = new Set(["dashboard", ...modulosActivos]);
   const permisos = [];
 
   modulosPermitidosPorRol(rol).forEach((modulo) => {
     if (activos.has(modulo.key)) {
-      permisos.push(...modulo.permisos);
+      const permisosExistentes = permisosActuales.filter((permiso) =>
+        permiso.startsWith(`${modulo.key}:`)
+      );
+      const permisosBase = (configuracionesRolBase[rol] || []).filter((permiso) =>
+        permiso.startsWith(`${modulo.key}:`)
+      );
+      permisos.push(...(permisosExistentes.length ? permisosExistentes : permisosBase.length ? permisosBase : modulo.permisos));
     }
   });
 
@@ -515,7 +537,7 @@ function UsuariosPage() {
 
         return {
           ...config,
-          permisos: permisosDesdeModulos(rol, Array.from(activos)),
+          permisos: permisosDesdeModulos(rol, Array.from(activos), config.permisos || []),
         };
       })
     );
@@ -792,7 +814,7 @@ function UsuariosPage() {
               <SlidersHorizontal className="text-blue-600" />
               <div>
                 <h2 className="font-bold text-slate-800">
-                  Permisos por rol · 4 perfiles
+                  Permisos por rol · 6 perfiles
                 </h2>
                 <p className="text-sm text-slate-500">
                   Elige que modulos puede ver y usar cada perfil.

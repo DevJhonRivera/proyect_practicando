@@ -4,7 +4,7 @@ const rolePermissionSchema = new mongoose.Schema(
   {
     rol: {
       type: String,
-      enum: ["ADMIN", "INVENTARIO", "VENTAS", "ASESOR"],
+      enum: ["ADMIN", "INVENTARIO", "VENTAS", "ASESOR", "COORDINADOR", "INSTALADOR"],
       required: true,
       unique: true,
     },
