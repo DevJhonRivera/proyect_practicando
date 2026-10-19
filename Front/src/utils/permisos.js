@@ -13,6 +13,7 @@ export const permisosPorRolBase = {
     "cortes:*",
     "piezasPpf:*",
     "coordinacion:*",
+    "accesorios:*",
   ],
   VENTAS: [
     "dashboard:read",
@@ -26,6 +27,7 @@ export const permisosPorRolBase = {
     "asesores:*",
     "cortes:read",
     "piezasPpf:read",
+    "accesorios:read",
   ],
   COORDINADOR: ["dashboard:read", "coordinacion:*", "medidasVehiculos:*", "piezasPpf:*", "alertas:*", "cortes:read"],
   INSTALADOR: ["dashboard:read", "coordinacion:read", "coordinacion:write", "alertas:read"],

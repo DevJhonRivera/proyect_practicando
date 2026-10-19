@@ -163,7 +163,7 @@ function CorteForm({
   }, [form.origenMaterial, form.retazoId, form.rolloId, retazoSeleccionado, rolloSeleccionado]);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div id="formulario-registro-corte" className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center gap-3 mb-5">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
           <Plus size={20} />

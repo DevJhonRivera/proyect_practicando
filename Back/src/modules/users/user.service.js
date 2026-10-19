@@ -47,16 +47,6 @@ const validarGestionSuperusuario = (currentUser, rol) => {
 
 const validarUsuarioGestionable = (currentUser, user) => {
   validarGestionSuperusuario(currentUser, user.rol);
-
-  if (
-    !esSuperusuario(currentUser) &&
-    user.creadoPor &&
-    String(user.creadoPor) !== String(currentUser?._id)
-  ) {
-    throw new Error(
-      "Solo puede gestionar usuarios creados por su cuenta"
-    );
-  }
 };
 
 const validarUsuarioDiferente = (currentUser, user) => {

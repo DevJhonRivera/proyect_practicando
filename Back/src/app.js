@@ -20,6 +20,8 @@ import piezaPpfRoutes from "./modules/piezasPpf/piezaPpf.routes.js";
 import asesorRoutes from "./modules/asesores/asesor.routes.js";
 import coordinacionRoutes from "./modules/coordinacion/coordinacion.routes.js";
 import medidaVehiculoRoutes from "./modules/medidasVehiculos/medidaVehiculo.routes.js";
+import accesorioRoutes from "./modules/accesorios/accesorio.routes.js";
+import ordenTrabajoRoutes from "./modules/ordenesTrabajo/ordenTrabajo.routes.js";
 import {
   corsOptions,
   securityHeaders,
@@ -102,6 +104,8 @@ app.use("/api/piezas-ppf", piezaPpfRoutes);
 app.use("/api/asesores", asesorRoutes);
 app.use("/api/coordinacion", coordinacionRoutes);
 app.use("/api/medidas-vehiculos", medidaVehiculoRoutes);
+app.use("/api/accesorios", accesorioRoutes);
+app.use("/api/ordenes-trabajo", ordenTrabajoRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

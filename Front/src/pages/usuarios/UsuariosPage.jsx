@@ -47,6 +47,11 @@ const formInicial = {
 
 const modulosConfigurables = [
   {
+    key: "accesorios",
+    label: "Inventario de accesorios",
+    permisos: ["accesorios:*"],
+  },
+  {
     key: "medidasVehiculos",
     label: "Medidas de vehículos",
     permisos: ["medidasVehiculos:*"],
@@ -686,12 +691,9 @@ function UsuariosPage() {
                     const suspendido = suspensionActiva(usuario);
                     const esCuentaActual =
                       String(usuario._id) === String(usuarioActual?._id);
-                    const creadoPor = usuario.creadoPor?._id || usuario.creadoPor;
                     const puedeGestionar =
                       !esCuentaActual &&
-                      (esSuperusuario ||
-                        !creadoPor ||
-                        String(creadoPor) === String(usuarioActual?._id));
+                      (esSuperusuario || usuario.rol !== "SUPERUSUARIO");
 
                     return (
                     <tr
@@ -756,7 +758,7 @@ function UsuariosPage() {
                           disabled={!puedeGestionar}
                           onClick={() => cambiarPassword(usuario)}
                           className="p-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:cursor-not-allowed disabled:opacity-35"
-                          title={puedeGestionar ? "Cambiar clave" : "No disponible para esta cuenta"}
+                          title={puedeGestionar ? "Cambiar clave" : esCuentaActual ? "No puede modificar su propia cuenta aquí" : "Solo el superusuario puede gestionar esta cuenta"}
                           aria-label="Cambiar clave"
                         >
                           <KeyRound size={16} />
@@ -775,7 +777,9 @@ function UsuariosPage() {
                               ? suspendido
                                 ? "Reactivar usuario"
                                 : "Suspender usuario"
-                              : "No disponible para esta cuenta"
+                              : esCuentaActual
+                                ? "No puede modificar su propia cuenta aquí"
+                                : "Solo el superusuario puede gestionar esta cuenta"
                           }
                           aria-label={suspendido ? "Reactivar usuario" : "Suspender usuario"}
                         >
@@ -788,7 +792,7 @@ function UsuariosPage() {
                             eliminarUsuarioSeleccionado(usuario)
                           }
                           className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-35"
-                          title={puedeGestionar ? "Eliminar usuario" : "No disponible para esta cuenta"}
+                          title={puedeGestionar ? "Eliminar usuario" : esCuentaActual ? "No puede eliminar su propia cuenta" : "Solo el superusuario puede gestionar esta cuenta"}
                           aria-label="Eliminar usuario"
                         >
                           <Trash2 size={16} />

@@ -17,6 +17,7 @@ export const TIPO_PROPUESTA_CORTE = "PROPUESTA_CORTE";
 export const TIPO_MATERIAL_LISTO = "MATERIAL_LISTO";
 export const TIPO_ASIGNACION_TRABAJO = "ASIGNACION_TRABAJO";
 export const TIPO_INSTALACION_COMPLETA = "INSTALACION_COMPLETA";
+export const TIPO_ACCESORIO_PENDIENTE = "ACCESORIO_PENDIENTE";
 
 export function nivelAlerta(tipo) {
   const upper = tipo?.toUpperCase() || "";
@@ -25,6 +26,7 @@ export function nivelAlerta(tipo) {
     upper.includes("AGOTADO") ||
     upper.includes("CRITICO") ||
     tipo === TIPO_STOCK_RESERVA_UN_ROLLO
+    || tipo === TIPO_ACCESORIO_PENDIENTE
   ) {
     return "CRITICO";
   }

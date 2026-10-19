@@ -24,6 +24,8 @@ import UsuariosPage from "../pages/usuarios/UsuariosPage";
 import AsesoresPage from "../pages/asesores/AsesoresPage";
 import CoordinacionPage from "../pages/coordinacion/CoordinacionPage";
 import MedidasVehiculosPage from "../pages/medidasVehiculos/MedidasVehiculosPage";
+import AccesoriosPage from "../pages/accesorios/AccesoriosPage";
+import OrdenesTrabajoPage from "../pages/ordenesTrabajo/OrdenesTrabajoPage";
 
 import PrivateRoute from "./PrivateRoute";
 import MainLayout from "../layouts/MainLayout";
@@ -82,6 +84,11 @@ function AppRouter() {
           <Route
             path="/dashboard"
             element={<DashboardPage />}
+          />
+
+          <Route
+            path="/ordenes-trabajo"
+            element={<RutaPermitida modulo="dashboard"><OrdenesTrabajoPage /></RutaPermitida>}
           />
 
           <Route
@@ -172,6 +179,11 @@ function AppRouter() {
                 <RetazosPage />
               </RutaPermitida>
             }
+          />
+
+          <Route
+            path="/accesorios"
+            element={<RutaPermitida modulo="accesorios"><AccesoriosPage /></RutaPermitida>}
           />
 
           <Route

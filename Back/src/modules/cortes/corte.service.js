@@ -561,12 +561,95 @@ export const registrarCorte =
     return corteCreado;
   };
 
+const tipoCorteDesdePartes = (clase, partes = []) => {
+  if (clase === "PPF") return { tipoCorte: "PIEZAS_PPF", tipoCorteDetalle: "" };
+  const tipos = ["PANORAMICO", "LUNETA", "DELANTERAS", "TRASERAS", "FIJOS", "SUNROOF", "COMPLETO"];
+  const parte = partes[0] || "";
+  if (partes.length === 1 && tipos.includes(parte)) return { tipoCorte: parte, tipoCorteDetalle: "" };
+  return { tipoCorte: partes.length ? "OTROS" : "COMPLETO", tipoCorteDetalle: partes.join(" + ") };
+};
+
+const coincideRolloOrden = (rollo, linea) => {
+  const tipo = normalizarMayusculas(rollo.tipoPolarizado);
+  const material = normalizarMayusculas(linea.material);
+  const coincideMaterial = tipo === material || tipo.includes(material) || material.includes(tipo);
+  if (!coincideMaterial) return false;
+  if (linea.clase === "PPF") return (rollo.unidadMedida || "PORCENTAJE") === "NINGUNA" || tipo.includes("PPF");
+  const unidad = normalizarMayusculas(linea.porcentaje).includes("MICRAS") ? "MICRAS" : "PORCENTAJE";
+  const clasificacion = Number(String(linea.porcentaje || "").match(/[\d.]+/)?.[0] || 0);
+  return (rollo.unidadMedida || "PORCENTAJE") === unidad && Number(rollo.porcentaje || 0) === clasificacion;
+};
+
+export const registrarPropuestaCompleta = async (asesoriaId, user) => {
+  if (!mongoose.Types.ObjectId.isValid(asesoriaId)) throw new Error("La orden de servicio no es valida");
+  const asesoria = await Asesoria.findById(asesoriaId).lean();
+  if (!asesoria) throw new Error("La orden de servicio no existe");
+  validarSinNovedadesBloqueantes(asesoria);
+  if (!['PENDIENTE_INVENTARIO', 'EN_PROCESO'].includes(asesoria.flujo?.etapa)) throw new Error("La propuesta debe estar aprobada por Inventario");
+  if (asesoria.garantia?.esGarantia && asesoria.garantia.estado !== "APROBADA") throw new Error("La garantia debe estar aprobada antes de consumir material");
+
+  const lineas = [
+    ...(asesoria.polarizados || []).map((item, index) => ({ ...item, clase: "POLARIZADO", etiqueta: `POLARIZADO ${index + 1}`, material: item.material, partes: item.partes || [] })),
+    ...(asesoria.ppf || []).map((item, index) => ({ ...item, clase: "PPF", etiqueta: `PPF ${index + 1}`, material: item.referencia, partes: item.piezas?.length ? item.piezas : [item.aplicacion] })),
+  ];
+  if (!lineas.length) throw new Error("La orden no contiene materiales que requieran corte");
+  const existentes = await Corte.find({ asesoriaId }).select("asesoriaLinea").lean();
+  const registradas = new Set(existentes.map((item) => item.asesoriaLinea));
+  const pendientes = lineas.filter((item) => !registradas.has(item.etiqueta));
+  if (!pendientes.length) throw new Error("Todos los cortes de esta propuesta ya fueron registrados");
+
+  const rollos = await Rollo.find({ estado: "USO" }).sort({ largoDisponible: 1 }).lean();
+  const disponibleVirtual = new Map(rollos.map((item) => [String(item._id), Number(item.largoDisponible || 0)]));
+  const preparados = pendientes.map((linea) => {
+    const propuesta = (asesoria.coordinacion?.propuesta || []).find((item) => item.linea === linea.etiqueta);
+    const metros = roundMeters(Number(propuesta?.metrosPropuestos || 0));
+    if (metros < 0.05) throw new Error(`Faltan metros propuestos para ${linea.etiqueta}`);
+    const rollo = rollos.find((item) => coincideRolloOrden(item, linea) && Number(disponibleVirtual.get(String(item._id)) || 0) >= metros);
+    if (!rollo) throw new Error(`No hay un rollo en uso compatible con stock suficiente para ${linea.etiqueta}: ${linea.material}`);
+    disponibleVirtual.set(String(rollo._id), roundMeters(disponibleVirtual.get(String(rollo._id)) - metros));
+    const detalle = tipoCorteDesdePartes(linea.clase, linea.partes);
+    const piezasPpf = linea.clase === "PPF" ? linea.partes.map((pieza) => ({
+      pieza,
+      ubicacion: linea.aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR",
+      cantidad: linea.partes.length === 1 ? Math.max(Number(propuesta?.cantidad || 1), 1) : 1,
+      anchoCm: Number(propuesta?.anchoCm || 0),
+      largoCm: Number(propuesta?.largoCm || 0),
+      rotada: false,
+    })) : [];
+    return {
+      asesoriaId: asesoria._id,
+      asesoriaLinea: linea.etiqueta,
+      partesServicio: linea.partes,
+      placa: asesoria.vehiculo?.placa,
+      marca: asesoria.vehiculo?.marca,
+      modelo: asesoria.vehiculo?.anio || String(asesoria.vehiculo?.modelo || "").replace(/\D/g, ""),
+      tipoServicio: asesoria.garantia?.esGarantia ? asesoria.garantia.tipo || "GARANTIA" : "VENTA",
+      instalador: asesoria.garantia?.instalador || "",
+      ...detalle,
+      rolloId: rollo._id,
+      origenMaterial: "ROLLO",
+      piezasPpf,
+      metrosUtilizados: metros,
+    };
+  });
+
+  const creados = [];
+  try {
+    for (const data of preparados) creados.push(await registrarCorte(data, user));
+  } catch (error) {
+    error.message = `${error.message}. Se guardaron ${creados.length} de ${preparados.length} cortes; revise la orden antes de reintentar`;
+    throw error;
+  }
+  return { creados, cantidad: creados.length };
+};
+
 
 export const obtenerCortes =async () => {
     return await Corte.find()
       .populate("rolloId")
       .populate("retazoId")
       .populate("ventaId")
+      .populate("asesoriaId", "coordinacion.asignaciones polarizados ppf cliente vehiculo codigo")
       .sort({
         createdAt: -1,
       });

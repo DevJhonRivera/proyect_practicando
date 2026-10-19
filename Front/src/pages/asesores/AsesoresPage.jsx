@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BadgeDollarSign, Boxes, ClipboardPlus, Search } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import { getCatalogoDisponible } from "../../api/asesores.api";
@@ -20,6 +21,7 @@ const etiquetaClasificacion = (material) => {
 };
 
 function AsesoresPage() {
+  const [searchParams] = useSearchParams();
   const [materiales, setMateriales] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [loading, setLoading] = useState(true);
@@ -153,7 +155,7 @@ function AsesoresPage() {
         )}
       </section>
 
-      <AsesoriasHistorial refreshKey={historialVersion} />
+      <AsesoriasHistorial refreshKey={historialVersion} asesoriaObjetivo={searchParams.get("asesoria") || ""} />
 
       <div className="flex items-center gap-2 text-xs text-slate-500">
         <BadgeDollarSign size={16} className="text-blue-600" />

@@ -24,6 +24,7 @@ export const TIPO_PROPUESTA_CORTE = "PROPUESTA_CORTE";
 export const TIPO_MATERIAL_LISTO = "MATERIAL_LISTO";
 export const TIPO_ASIGNACION_TRABAJO = "ASIGNACION_TRABAJO";
 export const TIPO_INSTALACION_COMPLETA = "INSTALACION_COMPLETA";
+export const TIPO_ACCESORIO_PENDIENTE = "ACCESORIO_PENDIENTE";
 
 const TIPOS_STOCK_RESERVA = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
@@ -36,7 +37,28 @@ const TIPOS_INVENTARIO = [
   TIPO_RECEPCION_NUEVA,
   TIPO_PROPUESTA_CORTE,
   TIPO_SERVICIO_ASESOR_NUEVO
+  ,TIPO_ACCESORIO_PENDIENTE
 ];
+
+export const sincronizarAlertasAccesorios = async (asesoria) => {
+  const prefijo = `accesorio-pendiente:${asesoria._id}:`;
+  const clavesActivas = [];
+  for (const item of asesoria.estado === "CANCELADA" ? [] : (asesoria.accesorios || [])) {
+    const faltante = Number(item.cantidadPendiente || 0);
+    if (faltante <= 0) continue;
+    const clave = `${prefijo}${item.accesorioId}`;
+    clavesActivas.push(clave);
+    await Alerta.findOneAndUpdate({ clave }, {
+      tipo: TIPO_ACCESORIO_PENDIENTE,
+      mensaje: `Se deben pedir ${faltante} unidad(es) de ${item.nombre} ${item.marca || ""}${item.referencia ? ` ${item.referencia}` : ""} para la orden ${asesoria.codigo}.`,
+      referenciaId: asesoria._id,
+      accionUrl: "/accesorios",
+      activa: true,
+      atendida: false,
+    }, { new: true, upsert: true, setDefaultsOnInsert: true });
+  }
+  await Alerta.updateMany({ clave: { $regex: `^${prefijo}` }, ...(clavesActivas.length ? { clave: { $regex: `^${prefijo}`, $nin: clavesActivas } } : {}) }, { $set: { activa: false, atendida: true } });
+};
 
 const TIPOS_COORDINACION = [TIPO_COORDINACION_NUEVA, TIPO_MATERIAL_LISTO, TIPO_INSTALACION_COMPLETA];
 
@@ -355,10 +377,10 @@ export const crearAlertasInstaladores = async (asesoria) => {
       { clave: `asignacion:${asesoria._id}:${asignacion._id}` },
       {
         tipo: TIPO_ASIGNACION_TRABAJO,
-        mensaje: `Trabajo asignado: ${asignacion.servicio} para ${asesoria.vehiculo?.placa || ""}.`,
+        mensaje: `Trabajo asignado: ${asignacion.descripcion || asignacion.servicio} para ${asesoria.vehiculo?.placa || ""}.`,
         referenciaId: asesoria._id,
         destinatarioId: asignacion.instaladorId,
-        accionUrl: "/coordinacion",
+        accionUrl: `/coordinacion?asesoria=${asesoria._id}`,
         atendida: false,
         activa: true,
       },
@@ -405,7 +427,7 @@ export const crearAlertaSolicitudNovedad = async (asesoria, novedad) =>
       tipo: TIPO_SOLICITUD_NOVEDAD,
       mensaje: `Inventario reportó ${String(novedad.tipo || "una novedad").replaceAll("_", " ")} en el servicio ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}.`,
       referenciaId: asesoria._id,
-      accionUrl: "/asesores",
+      accionUrl: `/asesores?asesoria=${asesoria._id}`,
       atendida: false,
       activa: true,
     },
@@ -419,7 +441,7 @@ export const crearAlertaSolicitudGarantia = async (asesoria) =>
       tipo: TIPO_SOLICITUD_GARANTIA,
       mensaje: `Revisar garantía ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}: ${asesoria.garantia?.motivo || "SIN MOTIVO"}.`,
       referenciaId: asesoria._id,
-      accionUrl: "/asesores",
+      accionUrl: `/asesores?asesoria=${asesoria._id}`,
       atendida: false,
       activa: true,
     },

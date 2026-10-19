@@ -3,6 +3,9 @@ import api from "./axios";
 export const createCorte = (data) =>
   api.post("/cortes",data);
 
+export const createCortesPropuesta = (asesoriaId) =>
+  api.post(`/cortes/propuesta/${asesoriaId}`);
+
 export const getCortes = () =>
   api.get("/cortes");
 

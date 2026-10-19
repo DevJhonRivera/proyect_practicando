@@ -230,6 +230,7 @@ const corteSchema = new mongoose.Schema(
                 "PENDIENTE",
                 "PARCIAL",
                 "PAGADA",
+                "RECHAZADA",
                 "ANULADA",
                 ""
             ],

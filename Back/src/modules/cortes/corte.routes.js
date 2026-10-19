@@ -5,6 +5,7 @@ import {
   getCortes,
   getSugerenciasCortes,
   updateCorte,
+  createCortesPropuesta,
 } from "./corte.controller.js";
 
 import { authMiddleware }
@@ -12,6 +13,13 @@ from "../../middlewares/auth.middleware.js";
 import { requirePermission, requireRole } from "../../middlewares/permission.middleware.js";
 
 const router = Router();
+
+router.post(
+  "/propuesta/:asesoriaId",
+  authMiddleware,
+  requireRole("INVENTARIO", "ADMIN", "SUPERUSUARIO"),
+  createCortesPropuesta
+);
 
 router.post(
   "/",

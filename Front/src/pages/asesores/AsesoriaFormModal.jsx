@@ -13,6 +13,8 @@ import AppModal from "../../components/ui/AppModal";
 import { anchoLabel } from "../../utils/anchos";
 import { obtenerReferenciaPpf } from "../../utils/materiales";
 import { getPiezasPpf } from "../../api/piezasPpf.api";
+import { getInstaladoresCoordinacion } from "../../api/coordinacion.api";
+import { getAccesorios } from "../../api/accesorios.api";
 
 const PIEZAS_PPF_EXTERIOR = ["PUERTAS", "BOMPER DELANTERO", "BOMPER TRASERO", "TECHO", "SPOILER", "PARALES", "STOPS", "RETROVISORES", "TRIANGULOS", "FAROLAS", "CAPOT", "BAUL", "GUARDAFANGOS", "ESTRIBOS", "MANIJAS"];
 const PIEZAS_PPF_INTERIOR = ["PANTALLA", "CAJA CAMBIOS", "NEGRO PIANO", "CONSOLA CENTRAL", "TABLERO", "BOTONERA", "MOLDURAS", "PUERTAS INTERIORES"];
@@ -40,7 +42,8 @@ const inicial = {
   polarizados: [],
   ppf: [],
   serviciosAdicionales: [],
-  garantia: { esGarantia: false, tipo: "GARANTIA_EMPRESA", motivo: "", instalador: "" },
+  accesorios: [],
+  garantia: { esGarantia: false, tipo: "GARANTIA_EMPRESA", motivo: "", instalador: "", instaladorId: "" },
   comercial: {
     valorVenta: "",
     aplicaDescuento: false,
@@ -106,6 +109,7 @@ const prepararFormulario = (asesoria) => {
       polarizados: [],
       ppf: [],
       serviciosAdicionales: [],
+      accesorios: [],
     };
   }
 
@@ -137,6 +141,12 @@ const prepararFormulario = (asesoria) => {
       detalle: item.detalle || "",
       valor: String(item.valor || ""),
     })),
+    accesorios: (asesoria.accesorios || []).map((item) => ({
+      accesorioId: String(item.accesorioId || ""),
+      cantidad: String(item.cantidad || 1),
+      precioUnitario: String(item.precioUnitario || ""),
+      valor: Number(item.valor || 0),
+    })),
     garantia: { ...inicial.garantia, ...asesoria.garantia },
     comercial: {
       ...inicial.comercial,
@@ -156,12 +166,27 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   const [cargandoMateriales, setCargandoMateriales] = useState(true);
   const [piezasPpf, setPiezasPpf] = useState([]);
   const [cargandoPiezas, setCargandoPiezas] = useState(false);
+  const [instaladores, setInstaladores] = useState([]);
+  const [catalogoAccesorios, setCatalogoAccesorios] = useState([]);
   const ppfAgrupado = useMemo(() => agruparPpfPorMaterial(form.ppf), [form.ppf]);
   const valorServicios = useMemo(
     () => [...form.polarizados, ...ppfAgrupado, ...form.serviciosAdicionales]
-      .reduce((total, item) => total + Number(item.valor || 0), 0),
-    [form.polarizados, ppfAgrupado, form.serviciosAdicionales]
+      .reduce((total, item) => total + Number(item.valor || 0), 0) +
+      form.accesorios.reduce((total, item) => total + Number(item.cantidad || 0) * Number(item.precioUnitario || 0), 0),
+    [form.polarizados, ppfAgrupado, form.serviciosAdicionales, form.accesorios]
   );
+
+  useEffect(() => {
+    getInstaladoresCoordinacion()
+      .then((response) => setInstaladores(response.data?.data || []))
+      .catch(() => setInstaladores([]));
+  }, []);
+
+  useEffect(() => {
+    getAccesorios({ page: 1, limit: 100 })
+      .then((response) => setCatalogoAccesorios(response.data?.data?.items || []))
+      .catch(() => setCatalogoAccesorios([]));
+  }, []);
 
   useEffect(() => {
     const cedula = soloDigitos(form.cliente.cedula);
@@ -340,6 +365,18 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       ...actual,
       [grupo]: actual[grupo].filter((_, posicion) => posicion !== index),
     }));
+  const seleccionarAccesorio = (index, accesorioId) => {
+    const producto = catalogoAccesorios.find((item) => item._id === accesorioId);
+    setForm((actual) => ({
+      ...actual,
+      accesorios: actual.accesorios.map((item, posicion) => posicion === index ? {
+        ...item,
+        accesorioId,
+        cantidad: item.cantidad || "1",
+        precioUnitario: String(producto?.precioSugerido || ""),
+      } : item),
+    }));
+  };
 
   const buscarCliente = async () => {
     const cedula = soloDigitos(form.cliente.cedula);
@@ -356,13 +393,6 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
         cliente: { ...actual.cliente, ...anterior.cliente, cedula },
         vehiculo: { ...actual.vehiculo, ...anterior.vehiculo },
       }));
-      Swal.fire({
-        icon: "success",
-        title: "Cliente encontrado",
-        text: "Se cargaron sus últimos datos registrados.",
-        timer: 1500,
-        showConfirmButton: false,
-      });
     } catch {
       // La búsqueda es una ayuda; el formulario sigue disponible.
     } finally {
@@ -378,13 +408,6 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
     }));
     setMostrarClientes(false);
     setClientesSugeridos([]);
-    Swal.fire({
-      icon: "success",
-      title: "Cliente autocompletado",
-      text: "Se cargaron sus datos y el último vehículo registrado.",
-      timer: 1400,
-      showConfirmButton: false,
-    });
   };
 
   const guardar = async () => {
@@ -418,20 +441,22 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
     );
     const preciosValidos = [...form.polarizados, ...ppfAgrupado, ...form.serviciosAdicionales]
       .every((item) => Number(item.valor || 0) > 0);
-    if (!form.polarizados.length && !form.ppf.length && !form.serviciosAdicionales.length) {
+    const accesoriosValidos = form.accesorios.every((item) => item.accesorioId && Number(item.cantidad) > 0 && Number(item.precioUnitario) > 0);
+    if (!form.polarizados.length && !form.ppf.length && !form.serviciosAdicionales.length && !form.accesorios.length) {
       return Swal.fire({ icon: "warning", title: "Agregue al menos un servicio" });
     }
     if (!polarizadosValidos || !ppfValido) {
       return Swal.fire({ icon: "warning", title: "Complete los materiales y partes solicitadas" });
     }
+    if (!accesoriosValidos) return Swal.fire({ icon: "warning", title: "Complete los accesorios, cantidades y precios" });
     if (!form.garantia.esGarantia && !preciosValidos) {
       return Swal.fire({ icon: "warning", title: "Ingrese el precio de cada servicio" });
     }
     if (form.garantia.esGarantia && !form.garantia.motivo.trim()) {
       return Swal.fire({ icon: "warning", title: "Indique el motivo de la garantía" });
     }
-    if (form.garantia.esGarantia && form.garantia.tipo === "GARANTIA_INSTALADOR" && !form.garantia.instalador.trim()) {
-      return Swal.fire({ icon: "warning", title: "Ingrese el instalador relacionado con la garantía" });
+    if (form.garantia.esGarantia && form.garantia.tipo === "GARANTIA_INSTALADOR" && !form.garantia.instaladorId) {
+      return Swal.fire({ icon: "warning", title: "Seleccione el instalador responsable de la garantía" });
     }
     const valorVenta = valorServicios;
     const descuento = form.comercial.aplicaDescuento
@@ -690,11 +715,26 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
             </ServiceRow>
           ))}
 
+          <ServiceHeader
+            title="Accesorios del vehículo"
+            button="Agregar accesorio"
+            onAdd={() => agregarItem("accesorios", { accesorioId: "", cantidad: "1", precioUnitario: "" })}
+          />
+          {form.accesorios.map((item, index) => {
+            const producto = catalogoAccesorios.find((opcion) => opcion._id === item.accesorioId);
+            return <ServiceRow key={`accesorio-${index}`} onRemove={() => quitarItem("accesorios", index)}>
+              <div className="md:col-span-3"><Field label="Accesorio"><select value={item.accesorioId} onChange={(e) => seleccionarAccesorio(index, e.target.value)} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione producto...</option>{catalogoAccesorios.map((opcion) => { const usado = form.accesorios.some((actual, posicion) => posicion !== index && actual.accesorioId === opcion._id); return <option key={opcion._id} value={opcion._id} disabled={usado}>{opcion.nombre} · {opcion.marca}{opcion.referencia ? ` · ${opcion.referencia}` : ""} · {opcion.stock > 0 ? `${opcion.stock} disponibles` : "AGOTADO · SE SOLICITARÁ"}</option>; })}</select>{producto?.stock <= 0 && item.accesorioId && <span className="mt-1 block text-xs font-semibold text-amber-700">Puede incluirlo. Inventario y Administración recibirán una alerta para pedirlo.</span>}</Field></div>
+              <Field label="Cantidad"><input value={item.cantidad} inputMode="numeric" onChange={(e) => editarItem("accesorios", index, "cantidad", soloDigitos(e.target.value).slice(0, 3))} className="w-full rounded-xl border p-3"/><span className="mt-1 block text-xs text-slate-500">Máximo disponible: {producto?.stock || 0}</span></Field>
+              <div className="md:col-span-2"><Field label="Precio unitario"><input value={formatearMiles(item.precioUnitario)} inputMode="numeric" placeholder="Ej: 120.000" onChange={(e) => editarItem("accesorios", index, "precioUnitario", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3"/><span className="mt-1 block text-xs font-semibold text-blue-700">Subtotal: ${Number(Number(item.cantidad || 0) * Number(item.precioUnitario || 0)).toLocaleString("es-CO")}</span></Field></div>
+            </ServiceRow>;
+          })}
+          {form.serviciosAdicionales.some((item) => item.tipo === "ASEGURADA") && <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">Para una asegurada general, agregue aquí los marcos, tapetes u otros productos que se entregarán. El stock se descontará al guardar.</p>}
+
           <Inspection label="El cliente viene por garantía" checked={form.garantia.esGarantia} onChange={(checked) => cambiar("garantia", "esGarantia", checked)}>
             {form.garantia.esGarantia && <div className="mt-3 grid gap-3 md:grid-cols-3">
-              <select value={form.garantia.tipo} onChange={(e) => cambiar("garantia", "tipo", e.target.value)} className="rounded-xl border bg-white p-3"><option value="GARANTIA_EMPRESA">Garantía empresa</option><option value="GARANTIA_INSTALADOR">Garantía instalador</option><option value="GARANTIA_PROVEEDOR">Garantía proveedor</option></select>
+              <select value={form.garantia.tipo} onChange={(e) => setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, tipo: e.target.value, instalador: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instalador : "", instaladorId: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instaladorId : "" } }))} className="rounded-xl border bg-white p-3"><option value="GARANTIA_EMPRESA">Garantía empresa</option><option value="GARANTIA_INSTALADOR">Garantía instalador</option><option value="GARANTIA_PROVEEDOR">Garantía proveedor</option></select>
               <input value={form.garantia.motivo} placeholder="Motivo de la garantía" onChange={(e) => cambiar("garantia", "motivo", mayusculas(e.target.value))} className="rounded-xl border p-3" />
-              {form.garantia.tipo === "GARANTIA_INSTALADOR" && <input value={form.garantia.instalador} placeholder="Nombre del instalador" onChange={(e) => cambiar("garantia", "instalador", mayusculas(e.target.value))} className="rounded-xl border p-3" />}
+              {form.garantia.tipo === "GARANTIA_INSTALADOR" && <select value={form.garantia.instaladorId || ""} onChange={(e) => { const instalador = instaladores.find((item) => item._id === e.target.value); setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, instaladorId: e.target.value, instalador: instalador?.nombre || "" } })); }} className="rounded-xl border bg-white p-3"><option value="">Seleccione instalador responsable</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select>}
               <p className="text-xs text-slate-500 md:col-span-3">La solicitud quedará pendiente de aprobación administrativa. Si no habrá cobro, puede dejar los precios en cero.</p>
             </div>}
           </Inspection>

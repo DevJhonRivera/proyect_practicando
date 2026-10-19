@@ -12,11 +12,13 @@ import {
   LayoutDashboard,
   LogOut,
   PackageOpen,
+  PackageSearch,
   Scissors,
   ShoppingCart,
   Truck,
   UserPlus,
   X,
+  ListTodo,
 } from "lucide-react";
 
 import { useEffect } from "react";
@@ -63,6 +65,13 @@ function Sidebar({ open = false, onClose = () => {} }) {
           icon: LayoutDashboard,
           text: "Inicio",
           url: "/dashboard",
+          modulo: "dashboard",
+          accion: "read",
+        },
+        {
+          icon: ListTodo,
+          text: "Órdenes de trabajo",
+          url: "/ordenes-trabajo",
           modulo: "dashboard",
           accion: "read",
         },
@@ -131,6 +140,13 @@ function Sidebar({ open = false, onClose = () => {} }) {
           text: "Retazos disponibles",
           url: "/retazos",
           modulo: "retazos",
+          accion: "read",
+        },
+        {
+          icon: PackageSearch,
+          text: "Accesorios",
+          url: "/accesorios",
+          modulo: "accesorios",
           accion: "read",
         },
         {

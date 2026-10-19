@@ -57,12 +57,47 @@ const obtenerOrden = async (id) => {
 
 export const listarOrdenesCoordinacion = async (user) => {
   const query = {};
-  if (user.rol === "INSTALADOR") query["coordinacion.asignaciones.instaladorId"] = user._id;
-  return Asesoria.find(query)
+  const nombresCompatibles = [...new Set([
+    mayusculas(user.nombre),
+    ...mayusculas(user.nombre).split(/\s+/).filter((item) => item.length >= 3),
+  ].filter(Boolean))];
+  if (user.rol === "INSTALADOR") query.$or = [
+    { "coordinacion.asignaciones.instaladorId": user._id },
+    { "garantia.instaladorId": user._id },
+    { "garantia.tipo": "GARANTIA_INSTALADOR", "garantia.instalador": { $in: nombresCompatibles } },
+    { "novedades.instaladorId": user._id },
+  ];
+  const ordenes = await Asesoria.find(query)
     .select("codigo cliente vehiculo polarizados ppf serviciosAdicionales garantia comercial coordinacion flujo novedades asesorNombre createdAt")
     .sort({ createdAt: -1 })
     .limit(200)
     .lean();
+  const garantiasIds = ordenes.filter((orden) => orden.garantia?.esGarantia).map((orden) => orden._id);
+  const costos = garantiasIds.length ? await Corte.aggregate([
+    { $match: { asesoriaId: { $in: garantiasIds } } },
+    { $group: { _id: "$asesoriaId", total: { $sum: { $ifNull: ["$costoMaterialCop", 0] } } } },
+  ]) : [];
+  const costoPorOrden = new Map(costos.map((item) => [String(item._id), Number(item.total || 0)]));
+  const resultado = ordenes.map((orden) => ({
+    ...orden,
+    garantia: { ...orden.garantia, costoMaterial: costoPorOrden.get(String(orden._id)) || 0 },
+  }));
+
+  if (user.rol !== "INSTALADOR") return resultado;
+
+  const ocultarValor = (item) => {
+    const seguro = { ...item };
+    delete seguro.valor;
+    return seguro;
+  };
+
+  return resultado.map((orden) => ({
+    ...orden,
+    comercial: undefined,
+    polarizados: (orden.polarizados || []).map(ocultarValor),
+    ppf: (orden.ppf || []).map(ocultarValor),
+    serviciosAdicionales: (orden.serviciosAdicionales || []).map(ocultarValor),
+  }));
 };
 
 export const listarInstaladores = async () =>
@@ -96,8 +131,13 @@ export const guardarPropuesta = async (id, data, user) => {
 
   const servicios = serviciosOrden(asesoria);
   const entradasAsignacion = data.asignaciones || [];
+  if (!entradasAsignacion.length) throw new Error("Agregue al menos una asignacion de instalacion");
+  const serviciosValidos = new Set(servicios.map((item) => item.servicio));
+  const asignacionesDesconocidas = entradasAsignacion.filter((item) => !serviciosValidos.has(mayusculas(item.servicio)));
+  if (asignacionesDesconocidas.length) throw new Error("Hay asignaciones que no pertenecen a los servicios de esta orden");
   const faltanAsignaciones = servicios.filter((item) => !entradasAsignacion.some((asignacion) => mayusculas(asignacion.servicio) === item.servicio));
   if (faltanAsignaciones.length) throw new Error(`Falta asignar instalador para: ${faltanAsignaciones.map((item) => item.descripcion).join(", ")}`);
+  if (entradasAsignacion.some((item) => !texto(item.descripcion))) throw new Error("Indique que parte del trabajo realizara cada instalador");
 
   const ids = [...new Set(entradasAsignacion.map((item) => String(item.instaladorId || "")))];
   if (ids.some((item) => !mongoose.Types.ObjectId.isValid(item))) throw new Error("Seleccione instaladores validos");
@@ -190,6 +230,11 @@ export const actualizarAsignacion = async (id, asignacionId, data, user) => {
 export const enviarTrabajoAVentas = async (id) => {
   const asesoria = await obtenerOrden(id);
   validarSinNovedadesBloqueantes(asesoria);
+  const accesoriosPendientes = (asesoria.accesorios || []).filter((item) => Number(item.cantidadPendiente || 0) > 0);
+  if (accesoriosPendientes.length) {
+    const detalle = accesoriosPendientes.map((item) => `${item.nombre}: faltan ${item.cantidadPendiente}`).join(", ");
+    throw new Error(`No se puede enviar a Ventas. Faltan accesorios por recibir: ${detalle}`);
+  }
   if (!["MATERIAL_LISTO", "EN_INSTALACION"].includes(asesoria.flujo.etapa)) throw new Error("El trabajo no esta listo para finalizar");
   if (!asesoria.coordinacion.asignaciones.length) throw new Error("La orden no tiene instalaciones asignadas");
   const pendientes = asesoria.coordinacion.asignaciones.filter((item) => item.estado !== "COMPLETADA");

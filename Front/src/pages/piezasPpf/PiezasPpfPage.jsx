@@ -695,17 +695,17 @@ function PiezasPpfPage() {
             />
           </div>
 
-          <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[1fr_160px_150px_150px]">
+          <div className="grid gap-3 border-b border-slate-200 bg-slate-50/70 p-3 md:grid-cols-[1fr_160px_150px_150px] md:items-end">
             <div className="relative">
               <Search
                 size={18}
-                className="absolute left-3 top-3.5 text-slate-400"
+                className="absolute left-2.5 top-2.5 text-slate-400"
               />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar por marca, modelo, pieza u observacion..."
-                className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                className="h-9 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -715,7 +715,7 @@ function PiezasPpfPage() {
                 setFiltroMarca(event.target.value);
                 setFiltroModelo("TODOS");
               }}
-              className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+              className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="TODAS">
                 Todas las marcas
@@ -732,7 +732,7 @@ function PiezasPpfPage() {
               onChange={(event) =>
                 setFiltroModelo(event.target.value)
               }
-              className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+              className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="TODOS">
                 Todos modelos
@@ -749,7 +749,7 @@ function PiezasPpfPage() {
               onChange={(event) =>
                 setFiltroUbicacion(event.target.value)
               }
-              className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+              className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="TODAS">
                 Todas

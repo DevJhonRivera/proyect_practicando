@@ -480,19 +480,19 @@ function ReservaPage() {
 
       <div
         className="
-        rounded-2xl
+        rounded-lg
         border
         border-slate-200
         bg-white
         shadow-sm
-        p-5"
+        p-3"
       >
 
         <div
           className="
           grid
           md:grid-cols-3
-          gap-4"
+          gap-3"
         >
 
           <div
@@ -505,7 +505,7 @@ function ReservaPage() {
               className="
               absolute
               left-3
-              top-3.5
+              top-2.5
               text-slate-400"
             />
 
@@ -521,10 +521,12 @@ function ReservaPage() {
               className="
               w-full
               border
-              rounded-xl
+              rounded-md
               border-slate-200
-              p-3
-              pl-10"
+              h-9
+              text-sm
+              pl-9
+              pr-3"
             />
 
           </div>
@@ -538,9 +540,11 @@ function ReservaPage() {
             }
             className="
             border
-            rounded-xl
+            rounded-md
             border-slate-200
-            p-3"
+            h-9
+            px-2.5
+            text-sm"
           >
 
             {materiales.map(
@@ -566,9 +570,11 @@ function ReservaPage() {
             }
             className="
             border
-            rounded-xl
+            rounded-md
             border-slate-200
-            p-3"
+            h-9
+            px-2.5
+            text-sm"
           >
 
             {porcentajes.map(

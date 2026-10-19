@@ -3,12 +3,15 @@ import { ArrowRight, ChevronLeft, ChevronRight, Download, Eye, Filter, Pencil, R
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
-import { getAsesorias, resolveNovedadAsesoria, reviewGarantiaAsesoria, reviewNovedadAsesoria } from "../../api/asesores.api";
+import { getAsesoriaPorId, getAsesorias, resolveNovedadAsesoria, reviewGarantiaAsesoria, reviewNovedadAsesoria } from "../../api/asesores.api";
 import AppModal from "../../components/ui/AppModal";
 import { obtenerUsuarioActual } from "../../utils/permisos";
 import { descargarExcel } from "../../utils/excelExport";
 import AsesoriaFormModal from "./AsesoriaFormModal";
 import NovedadAsesoriaModal from "./NovedadAsesoriaModal";
+import { getInstaladoresCoordinacion } from "../../api/coordinacion.api";
+
+const escaparHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 
 const inicial = {
   buscar: "",
@@ -69,7 +72,7 @@ const columnasExcel = [
   { header: "Última novedad", value: (item) => item.novedades?.at(-1)?.descripcion || "", width: 42 },
 ];
 
-function AsesoriasHistorial({ refreshKey = 0 }) {
+function AsesoriasHistorial({ refreshKey = 0, asesoriaObjetivo = "" }) {
   const navigate = useNavigate();
   const usuario = obtenerUsuarioActual();
   const [filtros, setFiltros] = useState(inicial);
@@ -87,6 +90,7 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
   const [seleccionada, setSeleccionada] = useState(null);
   const [editando, setEditando] = useState(null);
   const [reportandoNovedad, setReportandoNovedad] = useState(null);
+  const [instaladores, setInstaladores] = useState([]);
   const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(usuario?.rol);
   const puedeReportarNovedad = puedeEditar;
 
@@ -113,6 +117,18 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
   useEffect(() => {
     cargar(1, aplicados);
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (!puedeEditar) return;
+    getInstaladoresCoordinacion().then((response) => setInstaladores(response.data?.data || [])).catch(() => setInstaladores([]));
+  }, [puedeEditar]);
+
+  useEffect(() => {
+    if (!asesoriaObjetivo) return;
+    getAsesoriaPorId(asesoriaObjetivo)
+      .then((response) => setSeleccionada(response.data?.data || null))
+      .catch((error) => Swal.fire({ icon: "info", title: "Trabajo no disponible", text: error.response?.data?.message || "No fue posible abrir esta orden." }));
+  }, [asesoriaObjetivo]);
 
   const cambiar = (campo, value) =>
     setFiltros((actual) => ({ ...actual, [campo]: value }));
@@ -243,7 +259,10 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
           <option value="PROVEEDOR">Responde el proveedor</option>
           <option value="CLIENTE">Asume el cliente</option>
         </select>
-        <input id="garantia-instalador" class="swal2-input" placeholder="Nombre del instalador (si aplica)" />
+        <select id="garantia-instalador" class="swal2-select" style="display:flex;width:80%;margin:1rem auto">
+          <option value="">Seleccione instalador responsable</option>
+          ${instaladores.map((instalador) => `<option value="${escaparHtml(instalador._id)}">${escaparHtml(instalador.nombre)}</option>`).join("")}
+        </select>
         <textarea id="garantia-observacion" class="swal2-textarea" placeholder="Observación administrativa"></textarea>
       ` : `<textarea id="garantia-observacion" class="swal2-textarea" placeholder="Motivo del rechazo"></textarea>`,
       showCancelButton: true,
@@ -252,17 +271,18 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
       confirmButtonColor: aprobar ? "#16a34a" : "#dc2626",
       preConfirm: () => {
         const responsable = document.getElementById("garantia-responsable")?.value || "CLIENTE";
-        const instalador = document.getElementById("garantia-instalador")?.value?.trim() || "";
+        const instaladorId = document.getElementById("garantia-instalador")?.value || "";
+        const instalador = instaladores.find((item) => item._id === instaladorId)?.nombre || "";
         const observacion = document.getElementById("garantia-observacion")?.value?.trim() || "";
-        if (aprobar && responsable === "INSTALADOR" && !instalador) {
-          Swal.showValidationMessage("Ingrese el nombre del instalador responsable");
+        if (aprobar && responsable === "INSTALADOR" && !instaladorId) {
+          Swal.showValidationMessage("Seleccione el instalador responsable");
           return false;
         }
         if (!aprobar && observacion.length < 5) {
           Swal.showValidationMessage("Indique el motivo del rechazo");
           return false;
         }
-        return { decision, responsable, instalador, observacion };
+        return { decision, responsable, instaladorId, instalador, observacion };
       },
     });
     if (!resultadoRevision.isConfirmed) return;
@@ -291,14 +311,14 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
         </div>
       </div>
 
-      <div className="border-b border-slate-200 p-5">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="border-b border-slate-200 bg-slate-50/70 p-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 xl:items-end">
           <div className="relative md:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-            <input value={filtros.buscar} onChange={(e) => cambiar("buscar", e.target.value)} placeholder="Código, cliente, cédula, placa, marca o modelo..." className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3" />
+            <input value={filtros.buscar} onChange={(e) => cambiar("buscar", e.target.value)} placeholder="Código, cliente, cédula, placa, marca o modelo..." className="h-9 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
           </div>
-          <input type="date" value={filtros.desde} onChange={(e) => cambiar("desde", e.target.value)} className="rounded-xl border border-slate-200 p-3" title="Desde" />
-          <input type="date" value={filtros.hasta} onChange={(e) => cambiar("hasta", e.target.value)} className="rounded-xl border border-slate-200 p-3" title="Hasta" />
+          <input type="date" value={filtros.desde} onChange={(e) => cambiar("desde", e.target.value)} className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm" title="Desde" />
+          <input type="date" value={filtros.hasta} onChange={(e) => cambiar("hasta", e.target.value)} className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm" title="Hasta" />
 
           {resultado.alcance === "TODOS" && (
             <Select value={filtros.asesorId} onChange={(v) => cambiar("asesorId", v)} placeholder="Todos los asesores">
@@ -322,8 +342,8 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
             {['PENDIENTE','APROBADA','RECHAZADA','FINALIZADA'].map((v) => <option key={v} value={v}>Garantía {v.toLowerCase()}</option>)}
           </Select>
         </div>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <select value={alcanceExcel} onChange={(e) => setAlcanceExcel(e.target.value)} className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-800">
+        <div className="mt-3 flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-end">
+          <select value={alcanceExcel} onChange={(e) => setAlcanceExcel(e.target.value)} className="h-9 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-800">
             <option value="FILTRADO">Excel con filtros aplicados</option>
             <option value="TODO">Excel con todos los servicios</option>
           </select>
@@ -398,7 +418,7 @@ function AsesoriasHistorial({ refreshKey = 0 }) {
 }
 
 function Select({ value, onChange, placeholder, children }) {
-  return <select value={value} onChange={(e) => onChange(e.target.value)} className="rounded-xl border border-slate-200 bg-white p-3"><option value="">{placeholder}</option>{children}</select>;
+  return <select value={value} onChange={(e) => onChange(e.target.value)} className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"><option value="">{placeholder}</option>{children}</select>;
 }
 
 function Metric({ label, value }) {
@@ -424,7 +444,7 @@ function Detalle({ asesoria, puedeRevisar, onReview, onResolve, onReviewGarantia
         <Info label="Pago previsto" value={`${(asesoria.comercial?.metodoPagoPrevisto || 'POR DEFINIR').replaceAll('_', ' ')} · ${asesoria.pago?.estado || 'PENDIENTE'}`} />
       </div>
       {asesoria.garantia?.esGarantia && <div className="mt-5 rounded-xl border border-violet-200 bg-violet-50 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-violet-900">Solicitud de garantía</p><EstadoGarantia estado={asesoria.garantia.estado} /></div><p className="mt-2 text-sm text-slate-700">{asesoria.garantia.motivo}</p><p className="mt-2 text-xs text-slate-600">Tipo: {(asesoria.garantia.tipo || 'GARANTIA_EMPRESA').replaceAll('_', ' ')} · Responsable: {(asesoria.garantia.responsable || 'POR_DEFINIR').replaceAll('_', ' ')}</p>{asesoria.garantia.instalador && <p className="mt-1 text-xs text-slate-600">Instalador: {asesoria.garantia.instalador}</p>}{asesoria.garantia.fechaRevision && <p className="mt-1 text-xs text-slate-500">Revisó: {asesoria.garantia.revisadoPorNombre} · {asesoria.garantia.observacionRevision || 'Sin observación'}</p>}{puedeRevisar && asesoria.garantia.estado === 'PENDIENTE' && <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onReviewGarantia(asesoria, 'APROBAR')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Aprobar garantía</button><button type="button" onClick={() => onReviewGarantia(asesoria, 'RECHAZAR')} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Rechazar</button></div>}</div>}
-      <div className="mt-5 space-y-2"><p className="text-xs font-bold uppercase text-slate-500">Servicios cotizados</p>{[...(asesoria.polarizados || []).map((item) => `${item.material} ${item.porcentaje} · ${(item.partes || []).join(', ')} · ${cop.format(item.valor || 0)}`), ...(asesoria.ppf || []).map((item) => `PPF ${item.referencia} · ${item.aplicacion} · ${cop.format(item.valor || 0)}`), ...(asesoria.serviciosAdicionales || []).map((item) => `${item.tipo} ${item.detalle || ''} · ${cop.format(item.valor || 0)}`)].map((texto, index) => <div key={`${texto}-${index}`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">{texto}</div>)}</div>
+      <div className="mt-5 space-y-2"><p className="text-xs font-bold uppercase text-slate-500">Servicios cotizados</p>{[...(asesoria.polarizados || []).map((item) => `${item.material} ${item.porcentaje} · ${(item.partes || []).join(', ')} · ${cop.format(item.valor || 0)}`), ...(asesoria.ppf || []).map((item) => `PPF ${item.referencia} · ${item.aplicacion} · ${cop.format(item.valor || 0)}`), ...(asesoria.serviciosAdicionales || []).map((item) => `${item.tipo} ${item.detalle || ''} · ${cop.format(item.valor || 0)}`), ...(asesoria.accesorios || []).map((item) => `${item.cantidad} × ${item.nombre} ${item.marca || ''} · ${cop.format(item.valor || 0)}`)].map((texto, index) => <div key={`${texto}-${index}`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">{texto}</div>)}</div>
       {asesoria.novedades?.length > 0 && <div className="mt-5 space-y-2"><p className="text-xs font-bold uppercase text-amber-700">Historial de novedades</p>{[...asesoria.novedades].reverse().map((novedad, index) => <div key={`${novedad.fecha}-${index}`} className="rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-bold text-amber-900">{novedad.tipo.replaceAll('_', ' ')}</p><EstadoNovedad estado={novedad.estado} /></div><p className="text-xs text-amber-700">{new Date(novedad.fecha).toLocaleString('es-CO')}</p></div><p className="mt-1 text-sm text-slate-700">{novedad.descripcion}</p>{novedad.serviciosAfectados?.length > 0 && <p className="mt-1 text-xs font-semibold text-red-700">Servicios retirados: {novedad.serviciosAfectados.join(', ')}</p>}<p className="mt-2 text-xs text-slate-500">Reportó: {novedad.usuarioNombre || 'Usuario'} · Costo: {(novedad.responsableCosto || 'NO_APLICA').replaceAll('_', ' ')}{novedad.valorImpacto ? ` · ${cop.format(novedad.valorImpacto)}` : ''}</p>{novedad.fechaRevision && <p className="mt-1 text-xs text-slate-500">Revisó: {novedad.revisadoPorNombre} · {novedad.observacionRevision || 'Sin observación'}</p>}{puedeRevisar && novedad.estado === 'PENDIENTE' && <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onReview(asesoria, novedad, 'APROBAR')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Aprobar solicitud</button><button type="button" onClick={() => onReview(asesoria, novedad, 'RECHAZAR')} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Rechazar</button></div>}{puedeRevisar && novedad.estado === 'APROBADA' && ['FALTA_MATERIAL','MATERIAL_DEFECTUOSO','ROLLO_EQUIVOCADO','ERROR_REGISTRO','TRABAJO_PENDIENTE'].includes(novedad.tipo) && <button type="button" onClick={() => onResolve(asesoria, novedad)} className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Marcar solucionada</button>}</div>)}</div>}
     </AppModal>
   );

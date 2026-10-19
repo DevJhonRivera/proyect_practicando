@@ -36,7 +36,7 @@ router.put(
 router.post(
   "/servicios/:id/novedades",
   authMiddleware,
-  requireRole("ADMIN", "SUPERUSUARIO", "INVENTARIO"),
+  requireRole("ADMIN", "SUPERUSUARIO", "INVENTARIO", "COORDINADOR"),
   createNovedadAsesoria
 );
 

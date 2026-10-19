@@ -31,7 +31,9 @@ export function generarFacturaVenta(venta) {
 
   const pagos = (venta.pagos || []).filter((item) => item.tipo === "PAGO");
   const metodos = pagos.length
-    ? pagos.map((item) => `${item.metodoPago.replaceAll("_", " ")}${item.entidadPago ? ` - ${item.entidadPago}` : ""}`).join(" / ")
+    ? [...new Set(pagos.map((item) => item.metodoPago || "POR DEFINIR"))]
+      .map((metodo) => metodo.replaceAll("_", " "))
+      .join(" / ")
     : (venta.metodoPago || "POR DEFINIR").replaceAll("_", " ");
   const asesoria = venta.asesoriaId && typeof venta.asesoriaId === "object" ? venta.asesoriaId : {};
   const valorDato = (principal, respaldo, textoVacio) => principal || respaldo || textoVacio;

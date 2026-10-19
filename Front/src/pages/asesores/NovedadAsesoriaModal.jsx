@@ -13,6 +13,7 @@ const inicial = {
   afectaPrecio: false,
   valorImpacto: "",
   serviciosAfectados: [],
+  instaladorId: "",
 };
 
 const soloDigitos = (value) => String(value || "").replace(/\D/g, "");
@@ -21,15 +22,17 @@ const formatoMiles = (value) => {
   return digitos ? Number(digitos).toLocaleString("es-CO") : "";
 };
 
-function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
+function NovedadAsesoriaModal({ asesoria, usuario, instaladores = [], onClose, onSaved }) {
   const [form, setForm] = useState(inicial);
   const [guardando, setGuardando] = useState(false);
   const esAdministrador = ["ADMIN", "SUPERUSUARIO"].includes(usuario?.rol);
   const esSolicitudInventario = usuario?.rol === "INVENTARIO";
+  const esCoordinador = usuario?.rol === "COORDINADOR";
   const servicios = [
     ...(asesoria.polarizados || []).map((item, index) => ({ id: `POLARIZADO ${index + 1}`, nombre: `Polarizado: ${item.material} ${item.porcentaje}` })),
     ...(asesoria.ppf || []).map((item, index) => ({ id: `PPF ${index + 1}`, nombre: `PPF: ${item.referencia}` })),
     ...(asesoria.serviciosAdicionales || []).map((item, index) => ({ id: `ADICIONAL ${index + 1}`, nombre: `${item.tipo}: ${item.detalle || "Servicio adicional"}` })),
+    ...(asesoria.accesorios || []).map((item, index) => ({ id: `ACCESORIO ${index + 1}`, nombre: `${item.cantidad} × ${item.nombre} ${item.marca || ""}` })),
   ];
 
   const cambiar = (campo, valor) => setForm((actual) => ({ ...actual, [campo]: valor }));
@@ -41,6 +44,9 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
     }
     if (form.tipo === "CANCELACION_PARCIAL" && !form.serviciosAfectados.length) {
       return Swal.fire({ icon: "warning", title: "Seleccione qué servicios desea cancelar" });
+    }
+    if (esCoordinador && (!form.instaladorId || !form.serviciosAfectados.length)) {
+      return Swal.fire({ icon: "warning", title: "Seleccione el instalador y el servicio que necesita recorte" });
     }
 
     if (form.tipo === "CANCELACION_TOTAL") {
@@ -85,7 +91,7 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
 
   return (
     <AppModal
-      title={esSolicitudInventario ? "Solicitar cambio a administración" : "Reportar novedad"}
+      title={esCoordinador ? "Solicitar recorte de material" : esSolicitudInventario ? "Solicitar cambio a administración" : "Reportar novedad"}
       subtitle={`${asesoria.codigo} · ${asesoria.vehiculo?.placa}`}
       icon={TriangleAlert}
       maxWidth="max-w-2xl"
@@ -93,7 +99,9 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
     >
       <div className="space-y-5">
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          {esSolicitudInventario
+          {esCoordinador
+            ? "La solicitud llegará a administración. Cuando sea aprobada, Inventario podrá realizar el nuevo corte y su costo real quedará asociado al instalador responsable."
+            : esSolicitudInventario
             ? "La solicitud quedará pendiente. No modificará el servicio ni el inventario hasta que administración la revise."
             : "La novedad quedará en el historial del servicio. No se eliminarán cortes, pagos ni movimientos de inventario."}
         </div>
@@ -102,13 +110,14 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
           <Field label="Tipo de novedad">
             <select value={form.tipo} onChange={(e) => cambiar("tipo", e.target.value)} className="w-full rounded-xl border bg-white p-3">
               <option value="">Seleccione una opción</option>
+              {esCoordinador && <option value="REPETICION_CORTE">Repetición de corte por material dañado</option>}
               {esAdministrador && <option value="CANCELACION_TOTAL">Cancelación total</option>}
               {esAdministrador && <option value="CANCELACION_PARCIAL">Cancelación parcial</option>}
               {esAdministrador && <option value="CAMBIO_CLIENTE">Cambio solicitado por el cliente</option>}
               <option value="FALTA_MATERIAL">Falta de material</option>
               <option value="MATERIAL_DEFECTUOSO">Material defectuoso</option>
               <option value="ROLLO_EQUIVOCADO">Rollo seleccionado por error</option>
-              <option value="REPETICION_CORTE">Repetición de corte</option>
+              {!esCoordinador && <option value="REPETICION_CORTE">Repetición de corte</option>}
               <option value="DANO_ENCONTRADO">Daño encontrado</option>
               <option value="TRABAJO_PENDIENTE">Trabajo pendiente</option>
               <option value="ERROR_REGISTRO">Error de registro</option>
@@ -118,7 +127,7 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
           </Field>
 
           <Field label="Quién asume el costo">
-            <select value={form.responsableCosto} onChange={(e) => cambiar("responsableCosto", e.target.value)} className="w-full rounded-xl border bg-white p-3">
+            <select value={esCoordinador ? "INSTALADOR" : form.responsableCosto} disabled={esCoordinador} onChange={(e) => cambiar("responsableCosto", e.target.value)} className="w-full rounded-xl border bg-white p-3 disabled:bg-slate-100">
               <option value="NO_APLICA">No aplica</option>
               <option value="POR_DEFINIR">Por definir</option>
               <option value="CLIENTE">Cliente</option>
@@ -129,6 +138,8 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
             </select>
           </Field>
         </div>
+
+        {esCoordinador && <Field label="Instalador responsable"><select value={form.instaladorId} onChange={(e) => cambiar("instaladorId", e.target.value)} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione el instalador</option>{instaladores.map((item) => <option key={item._id} value={item._id}>{item.nombre}</option>)}</select></Field>}
 
         <Field label="Descripción de lo ocurrido">
           <textarea
@@ -141,11 +152,11 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
           />
         </Field>
 
-        {form.tipo === "CANCELACION_PARCIAL" && <div><p className="mb-2 text-sm font-semibold text-slate-700">Servicios que se cancelan</p><div className="grid gap-2 sm:grid-cols-2">{servicios.map((servicio) => { const activo = form.serviciosAfectados.includes(servicio.id); return <label key={servicio.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${activo ? "border-red-300 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-700"}`}><input type="checkbox" checked={activo} onChange={() => cambiar("serviciosAfectados", activo ? form.serviciosAfectados.filter((id) => id !== servicio.id) : [...form.serviciosAfectados, servicio.id])} className="mt-0.5 h-4 w-4" /><span><strong className="block">{servicio.id}</strong>{servicio.nombre}</span></label>; })}</div><p className="mt-2 text-xs text-slate-500">La orden regresará a Coordinación para actualizar propuesta e instaladores. No se permite si ya existen cortes o una venta.</p></div>}
+        {(form.tipo === "CANCELACION_PARCIAL" || (esCoordinador && form.tipo === "REPETICION_CORTE")) && <div><p className="mb-2 text-sm font-semibold text-slate-700">{esCoordinador ? "Servicio que necesita el nuevo corte" : "Servicios que se cancelan"}</p><div className="grid gap-2 sm:grid-cols-2">{servicios.map((servicio) => { const activo = form.serviciosAfectados.includes(servicio.id); return <label key={servicio.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${activo ? "border-red-300 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-700"}`}><input type="checkbox" checked={activo} onChange={() => cambiar("serviciosAfectados", activo ? form.serviciosAfectados.filter((id) => id !== servicio.id) : esCoordinador ? [servicio.id] : [...form.serviciosAfectados, servicio.id])} className="mt-0.5 h-4 w-4" /><span><strong className="block">{servicio.id}</strong>{servicio.nombre}</span></label>; })}</div>{!esCoordinador && <p className="mt-2 text-xs text-slate-500">La orden regresará a Coordinación para actualizar propuesta e instaladores. No se permite si ya existen cortes o una venta.</p>}</div>}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 font-semibold text-slate-700">
-            <input type="checkbox" checked={form.afectaMaterial} onChange={(e) => cambiar("afectaMaterial", e.target.checked)} className="h-5 w-5" />
+            <input type="checkbox" checked={esCoordinador || form.afectaMaterial} disabled={esCoordinador} onChange={(e) => cambiar("afectaMaterial", e.target.checked)} className="h-5 w-5" />
             Afectó material
           </label>
           <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 font-semibold text-slate-700">
@@ -169,7 +180,7 @@ function NovedadAsesoriaModal({ asesoria, usuario, onClose, onSaved }) {
         <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
           <button type="button" onClick={onClose} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
           <button type="button" onClick={guardar} disabled={guardando} className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-3 font-semibold text-white hover:bg-amber-700 disabled:opacity-50">
-            <Save size={18} /> {guardando ? "Guardando..." : esSolicitudInventario ? "Enviar solicitud" : "Registrar novedad"}
+            <Save size={18} /> {guardando ? "Guardando..." : esCoordinador || esSolicitudInventario ? "Enviar solicitud" : "Registrar novedad"}
           </button>
         </div>
       </div>

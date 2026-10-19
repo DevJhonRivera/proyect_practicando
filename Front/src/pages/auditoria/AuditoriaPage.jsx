@@ -114,11 +114,20 @@ function AuditoriaPage() {
     return map;
   }, [ventas]);
 
+  const ventasPorAsesoria = useMemo(() => {
+    const map = new Map();
+    ventas.forEach((venta) => {
+      const asesoriaId = obtenerId(venta.asesoriaId);
+      if (asesoriaId) map.set(String(asesoriaId), venta);
+    });
+    return map;
+  }, [ventas]);
+
   const filas = useMemo(() => {
     return cortes.map((corte) =>
-      crearFilaAuditoria(corte, ventasPorId)
+      crearFilaAuditoria(corte, ventasPorId, ventasPorAsesoria)
     );
-  }, [cortes, ventasPorId]);
+  }, [cortes, ventasPorId, ventasPorAsesoria]);
 
   const materialesFiltro = useMemo(() => {
     return [
@@ -284,6 +293,16 @@ function AuditoriaPage() {
       header: "Instalador",
       value: (fila) => fila.instalador,
       width: 22,
+    },
+    {
+      header: "Estado instalación",
+      value: (fila) => fila.estadoInstalacion,
+      width: 20,
+    },
+    {
+      header: "Pago instalación",
+      value: (fila) => fila.valorInstalacion,
+      width: 18,
     },
     {
       header: "Cantidad material",
@@ -471,21 +490,21 @@ function AuditoriaPage() {
                       {grupo.ultimoCambio || "-"}
                     </p>
                     {grupo.instaladores && (
-                      <p>
-                        Instalador: {grupo.instaladores}
-                      </p>
+                      <><p>Instalador: {grupo.instaladores}</p><p>Pago instalación: {formatoCop.format(grupo.valorInstalacion || 0)}</p></>
                     )}
                   </div>
                 </div>
 
                 <div className="px-5 pb-5">
                   <div className="overflow-x-auto rounded-xl border border-slate-200">
-                    <table className="w-full min-w-[780px] text-sm">
+                    <table className="w-full min-w-[1080px] text-sm">
                       <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                         <tr>
                           <th className="p-3 text-left">Corte</th>
                           <th className="p-3 text-left">Servicio</th>
                           <th className="p-3 text-left">Instalador</th>
+                          <th className="p-3 text-left">Estado instalación</th>
+                          <th className="p-3 text-right">Pago instalación</th>
                           <th className="p-3 text-right">Cantidad</th>
                           <th className="p-3 text-left">Material</th>
                           <th className="p-3 text-right">Costo material</th>
@@ -507,6 +526,12 @@ function AuditoriaPage() {
                             </td>
                             <td className="p-3">
                               {fila.instalador || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {fila.estadoInstalacion || "-"}
+                            </td>
+                            <td className="p-3 text-right font-semibold text-emerald-700">
+                              {fila.instalador ? formatoCop.format(fila.valorInstalacion || 0) : "-"}
                             </td>
                             <td className="p-3 text-right font-semibold">
                               {fila.cantidadMaterialTexto}
@@ -622,10 +647,10 @@ function PanelFiltrosAuditoria({
 }) {
   return (
     <div className="border-b border-slate-200 bg-white">
-      <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-3 py-2">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
-            <Filter size={20} />
+          <div className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600">
+            <Filter size={15} />
           </div>
           <div>
             <h2 className="font-bold text-slate-800">
@@ -640,15 +665,15 @@ function PanelFiltrosAuditoria({
         <button
           type="button"
           onClick={onLimpiar}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-white text-sm font-semibold text-slate-600 hover:bg-slate-100"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold text-slate-500 hover:bg-white hover:text-slate-900"
         >
           <RotateCcw size={16} />
           Limpiar filtros
         </button>
       </div>
 
-      <div className="p-5 space-y-5 bg-slate-50/70">
-        <div className="grid xl:grid-cols-[minmax(280px,1fr)_180px_180px_minmax(240px,360px)] gap-4">
+      <div className="space-y-3 p-3">
+        <div className="grid gap-3 xl:grid-cols-[minmax(280px,1fr)_160px_160px_minmax(200px,300px)] xl:items-end">
           <BuscadorAuditoria
             value={search}
             onChange={onSearch}
@@ -671,7 +696,7 @@ function PanelFiltrosAuditoria({
           />
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className="grid gap-3 lg:grid-cols-2">
           <FiltroSegmentado
             icon={CheckCircle2}
             label="Estado de venta"
@@ -710,7 +735,7 @@ function BuscadorAuditoria({ value, onChange }) {
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Placa, cliente, material, venta..."
-          className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+          className="h-9 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
       </div>
     </label>
@@ -726,7 +751,7 @@ function MaterialSelect({ value, options, onChange }) {
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+        className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
       >
         {options.map((material) => (
           <option key={material} value={material}>
@@ -749,8 +774,8 @@ function FiltroSegmentado({
   activeClass,
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
+      <div className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-600">
         <Icon size={17} className="text-slate-400" />
         {label}
       </div>
@@ -760,7 +785,7 @@ function FiltroSegmentado({
             key={optionValue}
             type="button"
             onClick={() => onChange(optionValue)}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold border transition ${
+            className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition ${
               value === optionValue
                 ? activeClass
                 : "bg-white text-slate-600 hover:bg-slate-50"
@@ -789,7 +814,7 @@ function FechaInput({ label, value, onChange }) {
           type="date"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+          className="h-9 w-full rounded-md border border-slate-200 bg-white pl-9 pr-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
       </div>
     </label>
@@ -926,13 +951,54 @@ function crearResumenMateriales(filas) {
   );
 }
 
-function crearFilaAuditoria(corte, ventasPorId) {
+function obtenerId(value) {
+  return value?._id || value || "";
+}
+
+function normalizarComparacion(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]+/gi, " ")
+    .trim()
+    .toUpperCase();
+}
+
+function valorVentaAnterior(corte, venta) {
+  if (!venta) return 0;
+  const corteId = String(corte._id || "");
+  const material = normalizarComparacion(descripcionMaterial(corte));
+  const tipo = material.includes("PPF")
+    ? "PPF"
+    : material.includes("SEGURIDAD") || material.includes("MICRAS")
+      ? "PELICULA_SEGURIDAD"
+      : "POLARIZADO";
+
+  const item = (venta.items || []).find((detalle) => {
+    const ids = [detalle.corteId, ...(detalle.corteIds || [])]
+      .map(obtenerId)
+      .filter(Boolean)
+      .map(String);
+    if (ids.includes(corteId)) return true;
+    const tipoCompatible = detalle.tipoServicio === tipo
+      || (tipo === "POLARIZADO" && detalle.tipoServicio === "PELICULA_SEGURIDAD");
+    if (!tipoCompatible) return false;
+    const descripcion = normalizarComparacion(detalle.descripcion);
+    return material && (descripcion.includes(material) || material.includes(descripcion));
+  });
+
+  return Number(item?.total || 0);
+}
+
+function crearFilaAuditoria(corte, ventasPorId, ventasPorAsesoria) {
   const ventaId =
     corte.ventaId?._id || corte.ventaId;
-  const venta =
+  const ventaDirecta =
     corte.ventaId?._id
       ? corte.ventaId
       : ventasPorId.get(ventaId);
+  const asesoriaId = obtenerId(corte.asesoriaId);
+  const venta = ventaDirecta || ventasPorAsesoria.get(String(asesoriaId));
   const estadoClave =
     corte.ventaEstado ||
     venta?.estado ||
@@ -941,13 +1007,13 @@ function crearFilaAuditoria(corte, ventasPorId) {
       : "SIN_VENTA");
   const costoMaterial =
     Number(corte.costoMaterialCop || 0);
-  const costoVenta =
-    Number(corte.valorVenta || 0);
+  const costoVenta = Number(corte.valorVenta || 0) || valorVentaAnterior(corte, venta);
   const auditoria =
     ultimaAuditoria([
       ...(corte.auditoria || []),
       ...(venta?.auditoria || []),
     ]);
+  const asignacion = buscarAsignacionCorte(corte);
 
   return {
     id: corte._id,
@@ -969,7 +1035,11 @@ function crearFilaAuditoria(corte, ventasPorId) {
       corte.tipoServicio ||
       "",
     instalador:
-      corte.instalador || "",
+      corte.instalador || asignacion?.instaladorNombre || "",
+    estadoInstalacion:
+      asignacion?.estado?.replaceAll("_", " ") || "",
+    valorInstalacion:
+      Number(asignacion?.valorInstalacion || 0),
     cantidadMaterial:
       Number(corte.metrosUtilizados || 0),
     cantidadMaterialTexto:
@@ -992,6 +1062,25 @@ function crearFilaAuditoria(corte, ventasPorId) {
         ? `${auditoria.accion} - ${auditoria.usuarioNombre || "SISTEMA"}`
         : "",
   };
+}
+
+function buscarAsignacionCorte(corte) {
+  const asesoria = corte.asesoriaId && typeof corte.asesoriaId === "object"
+    ? corte.asesoriaId
+    : null;
+  const asignaciones = asesoria?.coordinacion?.asignaciones || [];
+  if (!asignaciones.length) return null;
+
+  const linea = String(corte.asesoriaLinea || "").toUpperCase();
+  let servicio = linea;
+  const ppfMatch = linea.match(/^PPF (\d+)$/);
+  if (ppfMatch) {
+    const ppf = asesoria.ppf?.[Number(ppfMatch[1]) - 1];
+    if (ppf?.referencia) servicio = `PPF ${String(ppf.referencia).toUpperCase()}`;
+  }
+
+  return asignaciones.find((item) => String(item.servicio || "").toUpperCase() === servicio)
+    || (asignaciones.length === 1 ? asignaciones[0] : null);
 }
 
 function formatoMetros(value) {
@@ -1055,10 +1144,15 @@ function agruparAuditoriaVisual(filas) {
       valoresUnicos(
         filasGrupo.map((item) => item.instalador)
       ).join(", ");
+    const valorInstalacion = filasGrupo.reduce(
+      (total, item) => total + Number(item.valorInstalacion || 0),
+      0
+    );
 
     return {
       ...grupo,
       instaladores,
+      valorInstalacion,
       costoMaterial:
         Math.round(costoMaterialGrupo),
       costoVenta:

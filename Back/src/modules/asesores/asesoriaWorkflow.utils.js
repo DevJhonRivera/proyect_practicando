@@ -28,6 +28,7 @@ export const recalcularComercial = (asesoria = {}) => {
     ...(asesoria.polarizados || []),
     ...(asesoria.ppf || []),
     ...(asesoria.serviciosAdicionales || []),
+    ...(asesoria.accesorios || []),
   ].reduce((total, item) => total + Number(item.valor || 0), 0);
   const descuento = Math.min(Number(asesoria.comercial?.descuento || 0), valorVenta);
   return {

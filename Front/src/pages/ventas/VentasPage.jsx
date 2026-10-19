@@ -259,7 +259,9 @@ function VentasPage() {
       .then((response) => {
         const orden = response.data?.data;
         if (!orden) return;
-        const cortesOrden = cortes.filter((corte) => String(corte.asesoriaId || "") === asesoriaId);
+        const cortesOrden = cortes.filter(
+          (corte) => String(getEntityId(corte.asesoriaId) || "") === asesoriaId
+        );
         const cortesLinea = (etiqueta) => cortesOrden.filter((corte) => corte.asesoriaLinea === etiqueta).map((corte) => corte._id);
         const items = [
           ...(orden.polarizados || []).map((item, index) => {
@@ -292,6 +294,13 @@ function VentasPage() {
             tipoServicio: ["LAVADO", "POLICHADA", "PDR", "ASEGURADA"].includes(item.tipo) ? item.tipo : "OTRO",
             descripcion: `${item.tipo}${item.detalle ? ` - ${item.detalle}` : ""}`,
             cantidad: 1, valorUnitario: Number(item.valor || 0), total: Number(item.valor || 0),
+          })),
+          ...(orden.accesorios || []).map((item) => ({
+            tipoServicio: "OTRO",
+            descripcion: `ACCESORIO - ${item.nombre} ${item.marca || ""}${item.referencia ? ` ${item.referencia}` : ""}`.trim(),
+            cantidad: Number(item.cantidad || 1),
+            valorUnitario: Number(item.precioUnitario || 0),
+            total: Number(item.valor || (Number(item.cantidad || 1) * Number(item.precioUnitario || 0))),
           })),
         ];
         setForm({
@@ -347,8 +356,8 @@ function VentasPage() {
   const total = Math.max(subtotal - descuento, 0);
 
   const gruposCortes = useMemo(
-    () => agruparCortesPorCarroMaterial(cortes),
-    [cortes]
+    () => agruparCortesPorCarroMaterial(cortes, ventas),
+    [cortes, ventas]
   );
 
   const grupoActual = gruposCortes.find(
@@ -356,7 +365,7 @@ function VentasPage() {
   );
 
   const gruposSinVenta = gruposCortes.filter(
-    (grupo) => !grupoTieneVenta(grupo)
+    (grupo) => !grupo.esGarantia && !grupoTieneVenta(grupo)
   );
 
   const placaVenta = normalizarPlaca(form.vehiculo.placa);
@@ -372,12 +381,15 @@ function VentasPage() {
   }, [gruposSinVenta, placaVenta]);
 
   const gruposConVenta = gruposCortes.filter(
-    grupoTieneVenta
+    (grupo) => !grupo.esGarantia && grupoTieneVenta(grupo)
   );
+  const gruposGarantia = gruposCortes.filter((grupo) => grupo.esGarantia);
 
   const gruposVerificacion =
     filtroVerificacion === "TODOS"
       ? gruposCortes
+      : filtroVerificacion === "GARANTIAS"
+      ? gruposGarantia
       : filtroVerificacion === "VENDIDOS"
       ? gruposConVenta
       : gruposSinVenta;
@@ -1008,6 +1020,7 @@ function VentasPage() {
           totalGrupos={gruposCortes.length}
           gruposSinVenta={gruposSinVenta.length}
           gruposConVenta={gruposConVenta.length}
+          gruposGarantia={gruposGarantia.length}
           filtro={filtroVerificacion}
           setFiltro={setFiltroVerificacion}
           onSelectCorte={cargarCorteEnVenta}
@@ -1352,13 +1365,13 @@ function VentasPage() {
 
       {vistaVentas === "historial" && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 bg-slate-50/80 p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-                <ClipboardList size={19} />
+          <div className="border-b border-slate-200 bg-slate-50/80 p-3">
+            <div className="mb-3 flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700">
+                <ClipboardList size={15} />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-800">
+                <h2 className="text-sm font-bold text-slate-800">
                   Historial de ventas
                 </h2>
                 <p className="text-xs text-slate-500">
@@ -1378,7 +1391,7 @@ function VentasPage() {
                     setSearch(event.target.value)
                   }
                   placeholder="Buscar cliente, placa o venta..."
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                  className="h-9 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
               <MonthFilter
@@ -1516,6 +1529,7 @@ function VerificacionCortesAgrupada({
   totalGrupos,
   gruposSinVenta,
   gruposConVenta,
+  gruposGarantia,
   filtro,
   setFiltro,
   onSelectCorte,
@@ -1558,7 +1572,9 @@ function VerificacionCortesAgrupada({
     {
       header: "Estado",
       value: (grupo) =>
-        grupoTieneVenta(grupo)
+        grupo.esGarantia
+          ? "Garantia - no genera cobro"
+          : grupoTieneVenta(grupo)
           ? "Con valor"
           : "Falta valor",
     },
@@ -1590,7 +1606,7 @@ function VerificacionCortesAgrupada({
         />
       </div>
 
-      <div className="p-5 grid gap-4 md:grid-cols-3">
+      <div className="p-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <ResumenVenta
           label="Total carros/material"
           value={totalGrupos}
@@ -1606,12 +1622,18 @@ function VerificacionCortesAgrupada({
           value={gruposSinVenta}
           color="text-red-700"
         />
+        <ResumenVenta
+          label="Garantias sin cobro"
+          value={gruposGarantia}
+          color="text-violet-700"
+        />
       </div>
 
       <div className="px-5 pb-4 flex flex-wrap gap-2">
         {[
           ["PENDIENTES", "Faltan por venta"],
           ["VENDIDOS", "Con valor"],
+          ["GARANTIAS", "Garantias"],
           ["TODOS", "Todos"],
         ].map(([value, label]) => (
           <button
@@ -1709,7 +1731,9 @@ function VerificacionCortesAgrupada({
                           rowSpan={grupo.cortes.length}
                           className="p-3 text-right font-bold align-top bg-white text-slate-800"
                         >
-                          {grupoTieneVenta(grupo)
+                          {grupo.esGarantia
+                            ? "No aplica"
+                            : grupoTieneVenta(grupo)
                             ? formatoCop.format(grupo.valorVenta)
                             : "-"}
                         </td>
@@ -1721,7 +1745,9 @@ function VerificacionCortesAgrupada({
                               : "text-green-700"
                           }`}
                         >
-                          {grupoTieneVenta(grupo)
+                          {grupo.esGarantia
+                            ? "No aplica"
+                            : grupoTieneVenta(grupo)
                             ? formatoCop.format(utilidadGrupo(grupo))
                             : "-"}
                         </td>
@@ -1731,12 +1757,16 @@ function VerificacionCortesAgrupada({
                         >
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              grupoTieneVenta(grupo)
+                              grupo.esGarantia
+                                ? "bg-violet-100 text-violet-700"
+                                : grupoTieneVenta(grupo)
                                 ? "bg-green-100 text-green-700"
                                 : "bg-red-100 text-red-700"
                             }`}
                           >
-                            {grupoTieneVenta(grupo)
+                            {grupo.esGarantia
+                              ? "Garantia"
+                              : grupoTieneVenta(grupo)
                               ? "Con valor"
                               : "Falta valor"}
                           </span>
@@ -1745,13 +1775,19 @@ function VerificacionCortesAgrupada({
                           rowSpan={grupo.cortes.length}
                           className="p-3 text-center align-top bg-white"
                         >
-                          <button
-                            type="button"
-                            onClick={() => onSelectCorte(grupo)}
-                            className="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold"
-                          >
-                            Cargar
-                          </button>
+                          {grupo.esGarantia ? (
+                            <span className="text-xs font-semibold text-slate-500">
+                              Sin cobro
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onSelectCorte(grupo)}
+                              className="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold"
+                            >
+                              Cargar
+                            </button>
+                          )}
                         </td>
                       </>
                     )}
@@ -2119,7 +2155,68 @@ function costoMaterialCorte(corte) {
   return Number(corte?.costoMaterialCop || 0);
 }
 
-function agruparCortesPorCarroMaterial(cortes) {
+function normalizarComparacion(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]+/gi, " ")
+    .trim()
+    .toUpperCase();
+}
+
+function ventaDeGrupo(grupo, ventas) {
+  if (!grupo.asesoriaId) return null;
+  return ventas.find(
+    (venta) => String(getEntityId(venta.asesoriaId) || "") === String(grupo.asesoriaId)
+  );
+}
+
+function valorVentaGrupo(grupo, ventas) {
+  if (grupo.valorVenta > 0) {
+    return { valor: grupo.valorVenta, tieneVenta: true };
+  }
+
+  const venta = ventaDeGrupo(grupo, ventas);
+  if (!venta) return { valor: 0, tieneVenta: false };
+
+  const idsGrupo = new Set(grupo.cortes.map((corte) => String(corte._id)));
+  const material = normalizarComparacion(grupo.material);
+  const itemsCompatibles = (venta.items || []).filter((item) => {
+    const tipoCompatible = item.tipoServicio === grupo.tipoServicio
+      || (grupo.tipoServicio === "POLARIZADO" && item.tipoServicio === "PELICULA_SEGURIDAD");
+    return tipoCompatible;
+  });
+  let candidatos = itemsCompatibles.filter((item) => {
+
+    const idsItem = [item.corteId, ...(item.corteIds || [])]
+      .map(getEntityId)
+      .filter(Boolean)
+      .map(String);
+    if (idsItem.some((id) => idsGrupo.has(id))) return true;
+
+    const descripcion = normalizarComparacion(item.descripcion);
+    return material && (descripcion.includes(material) || material.includes(descripcion));
+  });
+
+  if (!candidatos.length && grupo.tipoServicio !== "PPF") {
+    const indices = [...new Set(grupo.cortes
+      .map((corte) => String(corte.asesoriaLinea || "").match(/POLARIZADO\s+(\d+)/i)?.[1])
+      .filter(Boolean)
+      .map((numero) => Number(numero) - 1))];
+    candidatos = indices.map((indice) => itemsCompatibles[indice]).filter(Boolean);
+  }
+
+  if (!candidatos.length && itemsCompatibles.length === 1) {
+    candidatos = itemsCompatibles;
+  }
+
+  return {
+    valor: candidatos.reduce((total, item) => total + Number(item.total || 0), 0),
+    tieneVenta: true,
+  };
+}
+
+function agruparCortesPorCarroMaterial(cortes, ventas = []) {
   const grupos = new Map();
 
   cortes.forEach((corte) => {
@@ -2152,6 +2249,7 @@ function agruparCortesPorCarroMaterial(cortes) {
         costoMaterial: 0,
         valorVenta: 0,
         metrosUtilizados: 0,
+        esGarantia: false,
       };
 
     actual.cortes.push(corte);
@@ -2161,23 +2259,26 @@ function agruparCortesPorCarroMaterial(cortes) {
       Number(corte.valorVenta || 0);
     actual.metrosUtilizados +=
       Number(corte.metrosUtilizados || 0);
+    actual.esGarantia = actual.esGarantia || String(corte.tipoServicio || "").startsWith("GARANTIA");
 
     grupos.set(key, actual);
   });
 
-  return Array.from(grupos.values()).map((grupo) => ({
-    ...grupo,
-    costoMaterial:
-      Math.round(grupo.costoMaterial),
-    valorVenta:
-      Math.round(grupo.valorVenta),
-    metrosUtilizados:
-      Math.round((grupo.metrosUtilizados + Number.EPSILON) * 100) / 100,
-  }));
+  return Array.from(grupos.values()).map((grupo) => {
+    const ventaGrupo = valorVentaGrupo(grupo, ventas);
+    return {
+      ...grupo,
+      costoMaterial: Math.round(grupo.costoMaterial),
+      valorVenta: Math.round(ventaGrupo.valor),
+      tieneVentaAsociada: ventaGrupo.tieneVenta,
+      metrosUtilizados:
+        Math.round((grupo.metrosUtilizados + Number.EPSILON) * 100) / 100,
+    };
+  });
 }
 
 function grupoTieneVenta(grupo) {
-  return Number(grupo?.valorVenta || 0) > 0;
+  return Boolean(grupo?.tieneVentaAsociada) || Number(grupo?.valorVenta || 0) > 0;
 }
 
 function utilidadGrupo(grupo) {
