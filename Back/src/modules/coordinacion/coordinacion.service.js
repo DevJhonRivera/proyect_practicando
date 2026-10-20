@@ -27,7 +27,7 @@ const lineasOrden = (asesoria) => [
   ...(asesoria.ppf || []).map((item, index) => ({
     linea: `PPF ${index + 1}`,
     material: `PPF ${item.referencia}`.trim(),
-    partes: item.aplicacion === "PIEZAS" ? item.piezas || [] : [item.aplicacion],
+    partes: item.piezas?.length ? item.piezas : [item.aplicacion].filter(Boolean),
   })),
 ];
 
@@ -39,13 +39,16 @@ const agruparServiciosPpf = (items = []) => {
     actual.piezas.push(...(item.piezas?.length ? item.piezas : [item.aplicacion]).filter(Boolean));
     grupos.set(referencia, actual);
   });
-  return [...grupos.values()].map((item) => ({ ...item, descripcion: `${item.descripcion} · ${[...new Set(item.piezas)].join(", ")}` }));
+  return [...grupos.values()].map((item) => {
+    const partes = [...new Set(item.piezas)].map(mayusculas);
+    return { ...item, partes, descripcion: `${item.descripcion} · ${partes.join(", ")}` };
+  });
 };
 
 const serviciosOrden = (asesoria) => [
-  ...(asesoria.polarizados || []).map((item, index) => ({ servicio: `POLARIZADO ${index + 1}`, descripcion: `${item.material} ${item.porcentaje}` })),
+  ...(asesoria.polarizados || []).map((item, index) => ({ servicio: `POLARIZADO ${index + 1}`, descripcion: `${item.material} ${item.porcentaje}`, partes: (item.partes || []).map(mayusculas) })),
   ...agruparServiciosPpf(asesoria.ppf || []),
-  ...(asesoria.serviciosAdicionales || []).map((item, index) => ({ servicio: `ADICIONAL ${index + 1}`, descripcion: `${item.tipo} ${item.detalle || ""}`.trim() })),
+  ...(asesoria.serviciosAdicionales || []).map((item, index) => ({ servicio: `ADICIONAL ${index + 1}`, descripcion: `${item.tipo} ${item.detalle || ""}`.trim(), partes: [item.detalle || item.tipo].filter(Boolean).map(mayusculas) })),
 ];
 
 const obtenerOrden = async (id) => {
@@ -138,6 +141,19 @@ export const guardarPropuesta = async (id, data, user) => {
   const faltanAsignaciones = servicios.filter((item) => !entradasAsignacion.some((asignacion) => mayusculas(asignacion.servicio) === item.servicio));
   if (faltanAsignaciones.length) throw new Error(`Falta asignar instalador para: ${faltanAsignaciones.map((item) => item.descripcion).join(", ")}`);
   if (entradasAsignacion.some((item) => !texto(item.descripcion))) throw new Error("Indique que parte del trabajo realizara cada instalador");
+  for (const servicio of servicios) {
+    const partesEsperadas = new Set((servicio.partes || []).map(mayusculas));
+    if (!partesEsperadas.size) continue;
+    const partesAsignadas = entradasAsignacion
+      .filter((item) => mayusculas(item.servicio) === servicio.servicio)
+      .flatMap((item) => mayusculas(item.descripcion).split(/\s*(?:\||,)\s*/).filter(Boolean));
+    const desconocidas = partesAsignadas.filter((parte) => !partesEsperadas.has(parte));
+    if (desconocidas.length) throw new Error(`Hay partes no validas en ${servicio.descripcion}`);
+    const duplicadas = partesAsignadas.filter((parte, index) => partesAsignadas.indexOf(parte) !== index);
+    if (duplicadas.length) throw new Error(`Una parte no puede asignarse a dos instaladores en ${servicio.descripcion}`);
+    const faltantesPartes = [...partesEsperadas].filter((parte) => !partesAsignadas.includes(parte));
+    if (faltantesPartes.length) throw new Error(`Falta asignar: ${faltantesPartes.join(", ")}`);
+  }
 
   const ids = [...new Set(entradasAsignacion.map((item) => String(item.instaladorId || "")))];
   if (ids.some((item) => !mongoose.Types.ObjectId.isValid(item))) throw new Error("Seleccione instaladores validos");

@@ -71,7 +71,7 @@ const etapasActivas = new Set([
 
 const lineasOrden = (orden) => [
   ...(orden.polarizados || []).map((item, index) => ({ linea: `POLARIZADO ${index + 1}`, material: `${item.material} ${item.porcentaje}`, partes: item.partes || [] })),
-  ...(orden.ppf || []).map((item, index) => ({ linea: `PPF ${index + 1}`, material: `PPF ${item.referencia}`, partes: item.aplicacion === "PIEZAS" ? item.piezas || [] : [item.aplicacion] })),
+  ...(orden.ppf || []).map((item, index) => ({ linea: `PPF ${index + 1}`, material: `PPF ${item.referencia}`, partes: item.piezas?.length ? item.piezas : [item.aplicacion].filter(Boolean) })),
 ];
 
 const agruparServiciosPpf = (items = []) => {
@@ -82,14 +82,24 @@ const agruparServiciosPpf = (items = []) => {
     actual.piezas.push(...(item.piezas?.length ? item.piezas : [item.aplicacion]).filter(Boolean));
     grupos.set(referencia, actual);
   });
-  return [...grupos.entries()].map(([referencia, item]) => ({ servicio: item.servicio, descripcion: `PPF ${referencia} · ${[...new Set(item.piezas)].join(", ")}` }));
+  return [...grupos.entries()].map(([referencia, item]) => {
+    const partes = [...new Set(item.piezas)];
+    return { servicio: item.servicio, descripcion: `PPF ${referencia} · ${partes.join(", ")}`, partes };
+  });
 };
 
 const serviciosOrden = (orden) => [
-  ...(orden.polarizados || []).map((item, index) => ({ servicio: `POLARIZADO ${index + 1}`, descripcion: `${item.material} ${item.porcentaje} · ${(item.partes || []).join(", ")}` })),
+  ...(orden.polarizados || []).map((item, index) => ({ servicio: `POLARIZADO ${index + 1}`, descripcion: `${item.material} ${item.porcentaje} · ${(item.partes || []).join(", ")}`, partes: item.partes || [] })),
   ...agruparServiciosPpf(orden.ppf || []),
-  ...(orden.serviciosAdicionales || []).map((item, index) => ({ servicio: `ADICIONAL ${index + 1}`, descripcion: `${item.tipo} ${item.detalle || ""}`.trim() })),
+  ...(orden.serviciosAdicionales || []).map((item, index) => ({ servicio: `ADICIONAL ${index + 1}`, descripcion: `${item.tipo} ${item.detalle || ""}`.trim(), partes: [item.detalle || item.tipo].filter(Boolean) })),
 ];
+
+const partesGuardadas = (servicio, descripcion) => {
+  const textoGuardado = normalizarNombre(descripcion);
+  return (servicio.partes || [])
+    .filter((parte) => textoGuardado.includes(normalizarNombre(parte)))
+    .join(" | ");
+};
 
 const valorCobradoServicio = (orden, servicio) => {
   const nombre = String(servicio || "").trim().toUpperCase();
@@ -379,8 +389,14 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
   }));
   const [asignaciones, setAsignaciones] = useState(() => servicios.flatMap((servicio) => {
     const existentes = (orden.coordinacion?.asignaciones || []).filter((item) => item.servicio === servicio.servicio);
-    if (!existentes.length) return [{ ...servicio, instaladorId: "", valorInstalacion: "" }];
-    return existentes.map((item) => ({ ...servicio, ...item, instaladorId: item.instaladorId || "", valorInstalacion: item.valorInstalacion || "" }));
+    if (!existentes.length) return [{ ...servicio, descripcion: (servicio.partes || []).join(" | "), instaladorId: "", valorInstalacion: "" }];
+    return existentes.map((item) => ({
+      ...servicio,
+      ...item,
+      descripcion: partesGuardadas(servicio, item.descripcion),
+      instaladorId: item.instaladorId || "",
+      valorInstalacion: item.valorInstalacion || "",
+    }));
   }));
   useEffect(() => {
     getMedidasVehiculos().then((response) => {
@@ -394,6 +410,22 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
   }, [orden]);
   const guardar = async () => {
     try {
+      const cortesLargos = propuesta.filter((item) => Number(item.metrosPropuestos || 0) > 3);
+      if (cortesLargos.length) {
+        const detalle = cortesLargos.map((item) =>
+          `${item.material}: ${Number(item.metrosPropuestos).toFixed(2)} m para ${(item.partes || []).join(", ") || item.linea}`
+        ).join("\n");
+        const confirmacion = await Swal.fire({
+          icon: "warning",
+          title: "Propuesta superior a 3 metros",
+          text: `${detalle}\n\n¿Está seguro de enviar estos cortes a Inventario?`,
+          showCancelButton: true,
+          confirmButtonText: "Sí, enviar propuesta",
+          cancelButtonText: "Revisar medidas",
+          confirmButtonColor: "#2563eb",
+        });
+        if (!confirmacion.isConfirmed) return;
+      }
       await savePropuestaCoordinacion(orden._id, { propuesta, asignaciones });
       Swal.fire({ icon: "success", title: "Responsables asignados" });
       onSaved();
@@ -426,7 +458,7 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
           <div className="space-y-4">{servicios.map((servicio) => <div key={servicio.servicio} className="overflow-hidden rounded-lg border border-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-slate-50 px-3 py-2"><div><p className="text-sm font-black text-slate-800">{servicio.descripcion}</p><p className="text-[10px] font-bold uppercase text-slate-400">{servicio.servicio}</p></div><button type="button" onClick={() => dividirServicio(servicio)} className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-white px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50"><Plus size={14}/>Dividir entre otro instalador</button></div>
             <div className="divide-y divide-slate-100">{asignaciones.map((item, index) => item.servicio === servicio.servicio ? <div key={`${item.servicio}-${index}`} className="grid items-end gap-3 p-3 md:grid-cols-[minmax(0,1fr)_220px_170px_auto]">
-              <label className="text-xs font-bold text-slate-500">Trabajo o partes asignadas<input value={item.descripcion} onChange={(event) => actualizarAsignacion(index, { descripcion: event.target.value.toUpperCase() })} placeholder="Ej: VENTANAS DELANTERAS" className="mt-1 h-10 w-full rounded-lg border px-3 text-sm font-normal text-slate-800"/></label>
+              <SelectorPartes partes={servicio.partes || []} value={item.descripcion} onChange={(value) => actualizarAsignacion(index, { descripcion: value })} />
               <label className="text-xs font-bold text-slate-500">Instalador<select value={item.instaladorId} onChange={(event) => actualizarAsignacion(index, { instaladorId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border bg-white px-3 text-sm font-normal"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></label>
               <Input label="Precio instalación" value={item.valorInstalacion} onChange={(value) => actualizarAsignacion(index, { valorInstalacion: value })}/>
               <button type="button" onClick={() => quitarAsignacion(index, item.servicio)} title="Quitar esta asignación" className="mb-0.5 flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"><Trash2 size={16}/></button>
@@ -442,6 +474,26 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
 function resumenFichaMedidas(ficha) {
   const labels = { delanteras: "Delanteras", traseras: "Traseras", panoramico: "Panorámico", luneta: "Luneta", fijos: "Fijos", custodias: "Custodias", sunroof: "Sun roof" };
   return Object.entries(ficha.medidas || {}).filter(([, item]) => Number(item?.anchoCm) > 0 && Number(item?.largoCm) > 0).map(([key, item]) => `${labels[key] || key} ${item.anchoCm}×${item.largoCm} cm (${item.cantidad})`).join(" · ") || "Sin dimensiones registradas";
+}
+
+function SelectorPartes({ partes, value, onChange }) {
+  const seleccionadas = new Set(String(value || "").split(/\s*(?:\||,)\s*/).filter(Boolean));
+  const cambiar = (parte) => {
+    const nuevas = new Set(seleccionadas);
+    if (nuevas.has(parte)) nuevas.delete(parte);
+    else nuevas.add(parte);
+    onChange(partes.filter((item) => nuevas.has(item)).join(" | "));
+  };
+
+  return <fieldset className="min-w-0">
+    <legend className="text-xs font-bold text-slate-500">Partes asignadas</legend>
+    <div className="mt-1 grid max-h-28 gap-1 overflow-y-auto rounded-lg border bg-slate-50 p-2 sm:grid-cols-2">
+      {partes.map((parte) => <label key={parte} className="flex cursor-pointer items-center gap-2 rounded-md bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-blue-50">
+        <input type="checkbox" checked={seleccionadas.has(parte)} onChange={() => cambiar(parte)} className="h-4 w-4 accent-blue-600" />
+        <span className="break-words">{parte}</span>
+      </label>)}
+    </div>
+  </fieldset>;
 }
 
 function OrdenCard({ orden, destacada, usuario, onPrepare, onReview, onWork, onSales, onReport }) {
