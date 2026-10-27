@@ -88,6 +88,9 @@ const asesoriaSchema = new mongoose.Schema(
       motivo: { type: String, default: "", trim: true, uppercase: true },
       instalador: { type: String, default: "", trim: true, uppercase: true },
       instaladorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      ordenOrigenId: { type: mongoose.Schema.Types.ObjectId, ref: "Asesoria", default: null },
+      codigoOrdenOrigen: { type: String, default: "", trim: true, uppercase: true },
+      fechaOrdenOrigen: { type: Date, default: null },
       costoMaterial: { type: Number, default: 0, min: 0 },
       estado: {
         type: String,
@@ -125,7 +128,7 @@ const asesoriaSchema = new mongoose.Schema(
     pago: {
       estado: {
         type: String,
-        enum: ["PENDIENTE", "PARCIAL", "PAGADO", "RECHAZADO"],
+        enum: ["NO_APLICA", "PENDIENTE", "PARCIAL", "PAGADO", "RECHAZADO"],
         default: "PENDIENTE",
       },
       valorRecibido: { type: Number, default: 0, min: 0 },
@@ -263,6 +266,8 @@ const asesoriaSchema = new mongoose.Schema(
         observacionRevision: { type: String, default: "" },
         fechaResolucion: { type: Date, default: null },
         resueltoPorNombre: { type: String, default: "" },
+        costoMaterialReal: { type: Number, default: 0, min: 0 },
+        cortesReposicion: { type: [mongoose.Schema.Types.ObjectId], ref: "Corte", default: [] },
       }],
       default: [],
     },
@@ -296,5 +301,8 @@ const asesoriaSchema = new mongoose.Schema(
 
 asesoriaSchema.index({ "cliente.cedula": 1, createdAt: -1 });
 asesoriaSchema.index({ "vehiculo.placa": 1, createdAt: -1 });
+asesoriaSchema.index({ "flujo.etapa": 1, updatedAt: -1 });
+asesoriaSchema.index({ "coordinacion.asignaciones.instaladorId": 1, updatedAt: -1 });
+asesoriaSchema.index({ creadoPor: 1, createdAt: -1 });
 
 export default mongoose.model("Asesoria", asesoriaSchema);

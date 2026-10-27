@@ -1,6 +1,6 @@
 import { RefreshCcw } from "lucide-react";
 
-function FinanzasHeader({ onRefresh }) {
+function FinanzasHeader({ onRefresh, soloCosteo = false }) {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
@@ -8,7 +8,9 @@ function FinanzasHeader({ onRefresh }) {
           Costos por pedido
         </h1>
         <p className="text-slate-500">
-          Calcula el costo real de cada rollo y revisa rentabilidad.
+          {soloCosteo
+            ? "Calcula el costo real de cada rollo antes de pasarlo a uso."
+            : "Calcula el costo real de cada rollo y revisa rentabilidad."}
         </p>
       </div>
 

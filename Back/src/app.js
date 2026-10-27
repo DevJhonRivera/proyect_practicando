@@ -22,6 +22,8 @@ import coordinacionRoutes from "./modules/coordinacion/coordinacion.routes.js";
 import medidaVehiculoRoutes from "./modules/medidasVehiculos/medidaVehiculo.routes.js";
 import accesorioRoutes from "./modules/accesorios/accesorio.routes.js";
 import ordenTrabajoRoutes from "./modules/ordenesTrabajo/ordenTrabajo.routes.js";
+import inventarioRoutes from "./modules/inventario/inventario.routes.js";
+import servicioAdicionalRoutes from "./modules/serviciosAdicionales/servicioAdicional.routes.js";
 import {
   corsOptions,
   securityHeaders,
@@ -106,6 +108,8 @@ app.use("/api/coordinacion", coordinacionRoutes);
 app.use("/api/medidas-vehiculos", medidaVehiculoRoutes);
 app.use("/api/accesorios", accesorioRoutes);
 app.use("/api/ordenes-trabajo", ordenTrabajoRoutes);
+app.use("/api/inventario", inventarioRoutes);
+app.use("/api/servicios-adicionales", servicioAdicionalRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -14,7 +14,7 @@ const getRollosData = (res) =>
 const getRetazosData = (res) =>
   res.data.data || res.data || [];
 
-export function useCortesData() {
+export function useCortesData({ desde, hasta } = {}) {
   const [cortes, setCortes] = useState([]);
   const [retazos, setRetazos] = useState([]);
   const [rollos, setRollos] = useState([]);
@@ -26,7 +26,7 @@ export function useCortesData() {
 
       const [cortesRes, rollosRes, retazosRes] =
         await Promise.all([
-          getCortes(),
+          getCortes({ desde, hasta, limite: 1000 }),
           getRollos(),
           getRetazosDisponibles(),
         ]);
@@ -54,7 +54,7 @@ export function useCortesData() {
       try {
         const [cortesRes, rollosRes, retazosRes] =
           await Promise.all([
-            getCortes(),
+            getCortes({ desde, hasta, limite: 1000 }),
             getRollos(),
             getRetazosDisponibles(),
           ]);
@@ -84,7 +84,7 @@ export function useCortesData() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [desde, hasta]);
 
   return {
     cargar,

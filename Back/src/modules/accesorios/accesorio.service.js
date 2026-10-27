@@ -65,10 +65,31 @@ export const listarAccesorios = async (query = {}) => {
   return { items, pagination: { page, limit, total, totalPages: Math.max(Math.ceil(total / limit), 1) } };
 };
 
+export const obtenerCatalogoAccesorios = async () => {
+  const productos = await Accesorio.find({ activo: { $ne: false } })
+    .select("codigo categoria nombre marca referencia stock stockMinimo costoUnitario precioSugerido")
+    .sort({ categoria: 1, referencia: 1, nombre: 1 })
+    .lean();
+  return {
+    categorias: [...new Set(productos.map((item) => item.categoria).filter(Boolean))],
+    referencias: productos,
+  };
+};
+
 export const crearAccesorio = async (data, user) => {
   const preparado = preparar(data);
   const codigo = mayusculas(data.codigo) || `ACC-${Date.now()}`;
   if (await Accesorio.exists({ codigo })) throw new Error("Ya existe un accesorio con este codigo");
+  const duplicado = await Accesorio.findOne({
+    activo: { $ne: false },
+    categoria: preparado.categoria,
+    nombre: preparado.nombre,
+    marca: preparado.marca,
+    referencia: preparado.referencia,
+  }).select("codigo stock");
+  if (duplicado) {
+    throw new Error(`Esta referencia ya existe como ${duplicado.codigo}. Registre una entrada de stock sobre ese producto`);
+  }
   const stockInicial = preparado.stock;
   const accesorio = await Accesorio.create({
     ...preparado,
@@ -85,6 +106,14 @@ export const actualizarAccesorio = async (id, data) => {
   if (!actual) throw new Error("Accesorio no encontrado");
   const preparado = preparar({ ...data, stock: actual.stock });
   if (data.codigo && mayusculas(data.codigo) !== actual.codigo && await Accesorio.exists({ codigo: mayusculas(data.codigo), _id: { $ne: id } })) throw new Error("Ya existe un accesorio con este codigo");
+  if (await Accesorio.exists({
+    _id: { $ne: id },
+    activo: { $ne: false },
+    categoria: preparado.categoria,
+    nombre: preparado.nombre,
+    marca: preparado.marca,
+    referencia: preparado.referencia,
+  })) throw new Error("Ya existe otro accesorio con esta categoría, nombre, marca y referencia");
   Object.assign(actual, preparado, { codigo: mayusculas(data.codigo) || actual.codigo });
   return actual.save();
 };

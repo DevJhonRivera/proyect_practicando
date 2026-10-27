@@ -80,6 +80,9 @@ const retazoSchema = new mongoose.Schema(
   }
 );
 
+retazoSchema.index({ estado: 1, createdAt: -1 });
+retazoSchema.index({ tipoPolarizado: 1, unidadMedida: 1, porcentaje: 1, ancho: 1, largoDisponible: 1 });
+
 export default mongoose.model(
   "Retazo",
   retazoSchema

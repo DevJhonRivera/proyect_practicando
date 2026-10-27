@@ -19,6 +19,15 @@ test("una novedad resuelta deja continuar el flujo", () => {
   assert.doesNotThrow(() => validarSinNovedadesBloqueantes(asesoria));
 });
 
+test("una repeticion de corte bloquea hasta consumir el nuevo material", () => {
+  const pendiente = { novedades: [{ tipo: "REPETICION_CORTE", estado: "APROBADA" }] };
+  assert.equal(novedadesBloqueantes(pendiente).length, 1);
+  assert.throws(() => validarSinNovedadesBloqueantes(pendiente), /REPETICION CORTE/);
+
+  pendiente.novedades[0].estado = "RESUELTA";
+  assert.doesNotThrow(() => validarSinNovedadesBloqueantes(pendiente));
+});
+
 test("recalcula el total despues de retirar un servicio", () => {
   const comercial = recalcularComercial({
     polarizados: [{ valor: 500000 }],

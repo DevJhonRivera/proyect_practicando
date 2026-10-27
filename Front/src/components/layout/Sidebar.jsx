@@ -114,8 +114,8 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
         {
           icon: CircleDollarSign,
           text: "Costos por pedido",
-          url: "/finanzas",
-          modulo: "finanzas",
+          url: usuario?.rol === "INVENTARIO" ? "/costeo-pedidos" : "/finanzas",
+          modulo: usuario?.rol === "INVENTARIO" ? "pedidos" : "finanzas",
           accion: "read",
         },
       ],

@@ -34,7 +34,7 @@ export function TipoBadge({ tipo }) {
 
   return (
     <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${style}`}>
-      {tipo}
+      {String(tipo || "ALERTA").replaceAll("_", " ")}
     </span>
   );
 }

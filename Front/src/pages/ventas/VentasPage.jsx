@@ -20,6 +20,7 @@ import { getCortes } from "../../api/cortes.api";
 import { getAsesoriaPorId } from "../../api/asesores.api";
 import {
   createVenta,
+  getVentaById,
   getVentas,
   updateVenta,
   createMovimientoPago,
@@ -168,6 +169,17 @@ const llenarEntidadesPago = (popup, metodo) => {
   select.innerHTML = `<option value="">Seleccione...</option>${opciones.map((item) => `<option value="${item}">${item}</option>`).join("")}`;
 };
 
+const parametrosMes = (mes) => {
+  if (!/^\d{4}-\d{2}$/.test(String(mes || ""))) return { limite: 500 };
+  const [year, month] = mes.split("-").map(Number);
+  const ultimoDia = new Date(year, month, 0).getDate();
+  return {
+    desde: `${mes}-01`,
+    hasta: `${mes}-${String(ultimoDia).padStart(2, "0")}`,
+    limite: 1000,
+  };
+};
+
 function VentasPage() {
   const usuario = obtenerUsuarioActual();
   const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(usuario?.rol);
@@ -199,8 +211,8 @@ function VentasPage() {
       setLoading(true);
       const [ventasRes, cortesRes] =
         await Promise.all([
-          getVentas(),
-          getCortes(),
+          getVentas(parametrosMes(mesVentas)),
+          getCortes(parametrosMes(mesVentas)),
         ]);
 
       setVentas(ventasRes.data || []);
@@ -223,8 +235,8 @@ function VentasPage() {
       try {
         const [ventasRes, cortesRes] =
           await Promise.all([
-            getVentas(),
-            getCortes(),
+            getVentas(parametrosMes(mesVentas)),
+            getCortes(parametrosMes(mesVentas)),
           ]);
 
         if (active) {
@@ -249,19 +261,20 @@ function VentasPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [mesVentas]);
 
   useEffect(() => {
     const asesoriaId = searchParams.get("asesoria");
     if (!asesoriaId || loading || asesoriaCargadaRef.current === asesoriaId) return;
     asesoriaCargadaRef.current = asesoriaId;
-    getAsesoriaPorId(asesoriaId)
-      .then((response) => {
+    Promise.all([
+      getAsesoriaPorId(asesoriaId),
+      getCortes({ asesoriaId, limite: 100 }),
+    ])
+      .then(([response, cortesResponse]) => {
         const orden = response.data?.data;
         if (!orden) return;
-        const cortesOrden = cortes.filter(
-          (corte) => String(getEntityId(corte.asesoriaId) || "") === asesoriaId
-        );
+        const cortesOrden = cortesResponse.data?.data || cortesResponse.data || [];
         const cortesLinea = (etiqueta) => cortesOrden.filter((corte) => corte.asesoriaLinea === etiqueta).map((corte) => corte._id);
         const items = [
           ...(orden.polarizados || []).map((item, index) => {
@@ -324,7 +337,7 @@ function VentasPage() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       })
       .catch((error) => Swal.fire({ icon: "error", title: "No se pudo cargar la orden", text: error.response?.data?.message || "Intente nuevamente." }));
-  }, [cortes, loading, searchParams]);
+  }, [loading, searchParams]);
 
   const ventasFiltradas = useMemo(() => {
     const texto = search.toLowerCase();
@@ -1969,27 +1982,32 @@ function VentaCard({ venta, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
         {canEdit && venta.estado !== "ANULADA" && netoRecibido > 0 && <button type="button" onClick={() => onRefund(venta)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">Registrar devolución</button>}
         </div>
       </div>
-      {venta.pagos?.length > 0 && <details className="rounded-xl border border-slate-200 bg-white"><summary className="cursor-pointer px-3 py-2 text-xs font-bold text-slate-600">Ver pagos y comprobantes ({venta.pagos.length})</summary><div className="divide-y divide-slate-100">{[...venta.pagos].reverse().map((movimiento) => <div key={movimiento._id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-xs"><div className="flex min-w-0 items-center gap-3">{movimiento.comprobanteImagen && <button type="button" onClick={() => abrirComprobantePago(movimiento)} title="Ver comprobante de pago" className="group relative shrink-0 overflow-hidden rounded-lg border border-blue-200 bg-blue-50"><img src={movimiento.comprobanteImagen} alt="Comprobante de pago" className="h-14 w-14 object-cover transition group-hover:opacity-70" /><span className="absolute inset-0 flex items-center justify-center text-blue-700 opacity-0 transition group-hover:opacity-100"><Eye size={20} /></span></button>}<div><p className={`font-bold ${movimiento.tipo === "DEVOLUCION" ? "text-red-700" : "text-emerald-700"}`}>{movimiento.tipo} · {movimiento.metodoPago.replaceAll("_", " ")}{movimiento.entidadPago ? ` · ${movimiento.entidadPago}` : ""}</p><p className="text-slate-500">{new Date(movimiento.fecha).toLocaleString("es-CO")} · {movimiento.usuarioNombre || "Usuario"}{movimiento.observacion ? ` · ${movimiento.observacion}` : ""}</p>{movimiento.comprobanteImagen && <button type="button" onClick={() => abrirComprobantePago(movimiento)} className="mt-1 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900"><Eye size={13} /> Ver comprobante</button>}</div></div><strong>{movimiento.tipo === "DEVOLUCION" ? "- " : "+ "}{formatoCop.format(movimiento.valor)}</strong></div>)}</div></details>}
+      {venta.pagos?.length > 0 && <details className="rounded-xl border border-slate-200 bg-white"><summary className="cursor-pointer px-3 py-2 text-xs font-bold text-slate-600">Ver pagos y comprobantes ({venta.pagos.length})</summary><div className="divide-y divide-slate-100">{[...venta.pagos].reverse().map((movimiento) => <div key={movimiento._id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-xs"><div className="flex min-w-0 items-center gap-3"><div><p className={`font-bold ${movimiento.tipo === "DEVOLUCION" ? "text-red-700" : "text-emerald-700"}`}>{movimiento.tipo} · {movimiento.metodoPago.replaceAll("_", " ")}{movimiento.entidadPago ? ` · ${movimiento.entidadPago}` : ""}</p><p className="text-slate-500">{new Date(movimiento.fecha).toLocaleString("es-CO")} · {movimiento.usuarioNombre || "Usuario"}{movimiento.observacion ? ` · ${movimiento.observacion}` : ""}</p>{movimiento.comprobanteNombre && <button type="button" onClick={() => abrirComprobantePago(venta._id, movimiento._id)} className="mt-1 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900"><Eye size={13} /> Ver comprobante</button>}</div></div><strong>{movimiento.tipo === "DEVOLUCION" ? "- " : "+ "}{formatoCop.format(movimiento.valor)}</strong></div>)}</div></details>}
     </article>
   );
 }
 
-function abrirComprobantePago(movimiento) {
-  if (!movimiento?.comprobanteImagen) return;
+async function abrirComprobantePago(ventaId, movimientoId) {
+  try {
+    Swal.fire({ title: "Cargando comprobante...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    const response = await getVentaById(ventaId);
+    const movimiento = response.data?.pagos?.find((item) => String(item._id) === String(movimientoId));
+    if (!movimiento?.comprobanteImagen) throw new Error("La venta no tiene una imagen adjunta");
 
-  Swal.fire({
-    title: "Comprobante de pago",
-    text: movimiento.comprobanteNombre || "Imagen adjunta al movimiento",
-    imageUrl: movimiento.comprobanteImagen,
-    imageAlt: "Comprobante de pago",
-    imageWidth: "100%",
-    width: 720,
-    confirmButtonText: "Cerrar",
-    confirmButtonColor: "#2563eb",
-    customClass: {
-      image: "max-h-[65vh] object-contain rounded-lg border border-slate-200",
-    },
-  });
+    Swal.fire({
+      title: "Comprobante de pago",
+      text: movimiento.comprobanteNombre || "Imagen adjunta al movimiento",
+      imageUrl: movimiento.comprobanteImagen,
+      imageAlt: "Comprobante de pago",
+      imageWidth: "100%",
+      width: 720,
+      confirmButtonText: "Cerrar",
+      confirmButtonColor: "#2563eb",
+      customClass: { image: "max-h-[65vh] object-contain rounded-lg border border-slate-200" },
+    });
+  } catch (error) {
+    Swal.fire({ icon: "error", title: "No se pudo abrir el comprobante", text: error.response?.data?.message || error.message });
+  }
 }
 
 function ItemCortesRelacionados({ item }) {

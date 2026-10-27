@@ -38,6 +38,9 @@ new mongoose.Schema({
   timestamps: true
 });
 
+recepcionSchema.index({ createdAt: -1 });
+recepcionSchema.index({ estado: 1, createdAt: -1 });
+
 export default mongoose.model(
   "Recepcion",
   recepcionSchema

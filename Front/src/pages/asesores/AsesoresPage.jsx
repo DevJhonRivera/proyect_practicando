@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BadgeDollarSign, Boxes, ClipboardPlus, Search } from "lucide-react";
+import { BadgeDollarSign, Boxes, ClipboardPlus, ListPlus, Search } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -9,6 +9,8 @@ import { usePagination } from "../../hooks/usePagination";
 import TablePagination from "../../components/ui/TablePagination";
 import AsesoriaFormModal from "./AsesoriaFormModal";
 import AsesoriasHistorial from "./AsesoriasHistorial";
+import ServiciosAdicionalesModal from "./ServiciosAdicionalesModal";
+import { getSessionItem } from "../../utils/session";
 
 const formatoMetros = (value) => `${Number(value || 0).toFixed(2)} m`;
 
@@ -27,6 +29,9 @@ function AsesoresPage() {
   const [loading, setLoading] = useState(true);
   const [nuevaRecepcion, setNuevaRecepcion] = useState(false);
   const [historialVersion, setHistorialVersion] = useState(0);
+  const [gestionarServicios, setGestionarServicios] = useState(false);
+  const usuario = (() => { try { return JSON.parse(getSessionItem("usuario") || "{}"); } catch { return {}; } })();
+  const administraCatalogo = ["ADMIN", "SUPERUSUARIO"].includes(usuario.rol);
 
   const cargar = async () => {
     try {
@@ -87,6 +92,7 @@ function AsesoresPage() {
             </div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            {administraCatalogo && <button type="button" onClick={() => setGestionarServicios(true)} className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50"><ListPlus size={18}/>Servicios</button>}
             <button
               type="button"
               onClick={() => setNuevaRecepcion(true)}
@@ -168,6 +174,7 @@ function AsesoresPage() {
           onSaved={() => setHistorialVersion((value) => value + 1)}
         />
       )}
+      {gestionarServicios && <ServiciosAdicionalesModal onClose={() => setGestionarServicios(false)} />}
     </div>
   );
 }

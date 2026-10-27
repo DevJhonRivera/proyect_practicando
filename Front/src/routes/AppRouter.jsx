@@ -3,29 +3,29 @@ import {
   Route,
   Navigate
 } from "react-router-dom";
+import { lazy, Suspense } from "react";
 
-import LoginPage from "../pages/auth/LoginPage";
-import RegisterPage from "../pages/auth/RegisterPage";
-import DashboardPage from "../pages/dashboard/DashboardPage";
-
-import PedidoList from "../pages/pedidos/PedidoList";
-import PedidoCreate from "../pages/pedidos/PedidoCreate";
-import RecepcionList from "../pages/recepciones/RecepcionList";
-import ReservaPage from "../pages/reserva/ReservaPage";
-import UsoPage from "../pages/uso/UsoPage";
-import CortesPage from "../pages/cortes/CortesPage";
-import PiezasPpfPage from "../pages/piezasPpf/PiezasPpfPage";
-import AlertasPage from "../pages/alertas/AlertasPage";
-import RetazosPage from "../pages/retazos/RetazosPage";
-import FinanzasPage from "../pages/finanzas/FinanzasPage";
-import VentasPage from "../pages/ventas/VentasPage";
-import AuditoriaPage from "../pages/auditoria/AuditoriaPage";
-import UsuariosPage from "../pages/usuarios/UsuariosPage";
-import AsesoresPage from "../pages/asesores/AsesoresPage";
-import CoordinacionPage from "../pages/coordinacion/CoordinacionPage";
-import MedidasVehiculosPage from "../pages/medidasVehiculos/MedidasVehiculosPage";
-import AccesoriosPage from "../pages/accesorios/AccesoriosPage";
-import OrdenesTrabajoPage from "../pages/ordenesTrabajo/OrdenesTrabajoPage";
+const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
+const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
+const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
+const PedidoList = lazy(() => import("../pages/pedidos/PedidoList"));
+const PedidoCreate = lazy(() => import("../pages/pedidos/PedidoCreate"));
+const RecepcionList = lazy(() => import("../pages/recepciones/RecepcionList"));
+const ReservaPage = lazy(() => import("../pages/reserva/ReservaPage"));
+const UsoPage = lazy(() => import("../pages/uso/UsoPage"));
+const CortesPage = lazy(() => import("../pages/cortes/CortesPage"));
+const PiezasPpfPage = lazy(() => import("../pages/piezasPpf/PiezasPpfPage"));
+const AlertasPage = lazy(() => import("../pages/alertas/AlertasPage"));
+const RetazosPage = lazy(() => import("../pages/retazos/RetazosPage"));
+const FinanzasPage = lazy(() => import("../pages/finanzas/FinanzasPage"));
+const VentasPage = lazy(() => import("../pages/ventas/VentasPage"));
+const AuditoriaPage = lazy(() => import("../pages/auditoria/AuditoriaPage"));
+const UsuariosPage = lazy(() => import("../pages/usuarios/UsuariosPage"));
+const AsesoresPage = lazy(() => import("../pages/asesores/AsesoresPage"));
+const CoordinacionPage = lazy(() => import("../pages/coordinacion/CoordinacionPage"));
+const MedidasVehiculosPage = lazy(() => import("../pages/medidasVehiculos/MedidasVehiculosPage"));
+const AccesoriosPage = lazy(() => import("../pages/accesorios/AccesoriosPage"));
+const OrdenesTrabajoPage = lazy(() => import("../pages/ordenesTrabajo/OrdenesTrabajoPage"));
 
 import PrivateRoute from "./PrivateRoute";
 import MainLayout from "../layouts/MainLayout";
@@ -51,6 +51,7 @@ function RutaPermitida({ modulo, accion = "read", children }) {
 
 function AppRouter() {
   return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-600">Cargando módulo...</div>}>
     <Routes>
 
       <Route
@@ -205,6 +206,15 @@ function AppRouter() {
           />
 
           <Route
+            path="/costeo-pedidos"
+            element={
+              <RutaPermitida modulo="pedidos" accion="read">
+                <FinanzasPage soloCosteo />
+              </RutaPermitida>
+            }
+          />
+
+          <Route
             path="/ventas"
             element={
               <RutaPermitida modulo="ventas" accion="write">
@@ -245,6 +255,7 @@ function AppRouter() {
       </Route>
 
     </Routes>
+    </Suspense>
   );
 }
 

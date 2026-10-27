@@ -638,19 +638,29 @@ export const crearVenta = async (data, user) => {
   return venta;
 };
 
-export const obtenerVentas = async ({ asesoriaIds } = {}) => {
+export const obtenerVentas = async ({ asesoriaIds, desde, hasta, limite } = {}) => {
   const ids = String(asesoriaIds || "")
     .split(",")
     .map((id) => id.trim())
     .filter((id) => mongoose.Types.ObjectId.isValid(id));
   const query = asesoriaIds !== undefined ? { asesoriaId: { $in: ids } } : {};
+  if (desde || hasta) {
+    query.createdAt = {};
+    if (desde) query.createdAt.$gte = new Date(`${desde}T00:00:00`);
+    if (hasta) query.createdAt.$lte = new Date(`${hasta}T23:59:59.999`);
+  }
+  const maximo = Math.min(Math.max(Number(limite) || 500, 1), 1000);
   return await Venta.find(query)
+    // Las fotos base64 se consultan solo al abrir un comprobante. Incluirlas en
+    // el historial multiplica innecesariamente el peso de cada respuesta.
+    .select("-pagos.comprobanteImagen")
     .populate("asesoriaId", "cliente vehiculo codigo")
     .populate("items.corteId")
     .populate("items.corteIds")
     .sort({
       createdAt: -1,
     })
+    .limit(maximo)
     .lean();
 };
 

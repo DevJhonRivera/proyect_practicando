@@ -9,6 +9,9 @@ export const getClienteAsesoria = (cedula) =>
 export const searchClientesAsesoria = (buscar) =>
   api.get("/asesores/clientes", { params: { buscar } });
 
+export const getOrigenesGarantia = (cedula, placa) =>
+  api.get("/asesores/garantias/origenes", { params: { cedula, placa } });
+
 export const createBorradorAsesoria = (data) =>
   api.post("/asesores/borradores", data);
 

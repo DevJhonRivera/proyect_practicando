@@ -6,6 +6,9 @@ export const createVenta = (data) =>
 export const getVentas = (params = {}) =>
   api.get("/ventas", { params });
 
+export const getVentaById = (id) =>
+  api.get(`/ventas/${id}`);
+
 export const updateVenta = (id, data) =>
   api.put(`/ventas/${id}`, data);
 

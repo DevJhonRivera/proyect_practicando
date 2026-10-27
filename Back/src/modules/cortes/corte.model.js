@@ -92,6 +92,17 @@ const corteSchema = new mongoose.Schema(
             trim: true
         },
 
+        asesoriaLineaOrigen: {
+            type: String,
+            default: "",
+            trim: true
+        },
+
+        novedadId: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null
+        },
+
         partesServicio: {
             type: [String],
             default: []

@@ -25,7 +25,7 @@ export const getRecepciones =
   async (req, res) => {
     try {
       const recepciones =
-        await obtenerRecepciones();
+        await obtenerRecepciones(req.query);
 
       res.json(recepciones);
     } catch (error) {

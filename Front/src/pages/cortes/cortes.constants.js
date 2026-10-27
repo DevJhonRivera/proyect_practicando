@@ -23,6 +23,8 @@ export const tipoCorteLabels = {
 export const initialCorteForm = {
   asesoriaId: "",
   asesoriaLinea: "",
+  asesoriaLineaOrigen: "",
+  novedadId: "",
   partesServicio: [],
   origenMaterial: "ROLLO",
   rolloId: "",

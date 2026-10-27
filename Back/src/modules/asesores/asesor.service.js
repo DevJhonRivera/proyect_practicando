@@ -16,6 +16,7 @@ import {
   cerrarAlertaSolicitudGarantia,
   cerrarAlertaVentaPendiente,
   sincronizarAlertasAccesorios,
+  crearAlerta,
 } from "../alertas/alerta.service.js";
 
 const redondearMetros = (value) =>
@@ -24,6 +25,25 @@ const redondearMetros = (value) =>
 const texto = (value) => String(value || "").trim();
 const mayusculas = (value) => texto(value).toUpperCase();
 const soloDigitos = (value) => texto(value).replace(/\D/g, "");
+const PARTES_POLARIZADO = new Set([
+  "PANORAMICO", "DELANTERAS", "TRASERAS", "LUNETA", "FIJOS",
+  "CUSTODIAS", "SUNROOF", "U", "COMPLETO",
+]);
+const PARTES_U = new Set(["DELANTERAS", "TRASERAS", "LUNETA", "FIJOS", "CUSTODIAS"]);
+
+const normalizarPartesPolarizado = (partes = []) => {
+  const normalizadas = [...new Set(partes.map(mayusculas).filter(Boolean))];
+  if (normalizadas.some((parte) => !PARTES_POLARIZADO.has(parte))) {
+    throw new Error("Una de las partes seleccionadas para polarizado no es valida");
+  }
+  if (normalizadas.includes("COMPLETO") && normalizadas.length > 1) {
+    throw new Error("Carro completo no se puede combinar con otras partes");
+  }
+  if (normalizadas.includes("U") && normalizadas.some((parte) => PARTES_U.has(parte))) {
+    throw new Error("La opcion U ya incluye delanteras, traseras, luneta, fijos y custodias");
+  }
+  return normalizadas;
+};
 
 const agruparPpfPorReferencia = (items = []) => {
   const grupos = new Map();
@@ -273,7 +293,7 @@ const prepararDatosAsesoria = (data) => {
   const polarizados = (data.polarizados || []).map((item) => ({
     material: mayusculas(item.material),
     porcentaje: mayusculas(item.porcentaje),
-    partes: (item.partes || []).map(mayusculas).filter(Boolean),
+    partes: normalizarPartesPolarizado(item.partes || []),
     valor: esGarantia ? 0 : Math.round(Number(item.valor || 0)),
   })).filter((item) => item.material && item.porcentaje && item.partes.length);
   const ppf = agruparPpfPorReferencia((data.ppf || []).map((item) => ({
@@ -281,7 +301,7 @@ const prepararDatosAsesoria = (data) => {
     aplicacion: ["INTERIOR", "EXTERIOR", "COMPLETO", "PIEZAS"].includes(item.aplicacion)
       ? item.aplicacion
       : "EXTERIOR",
-    piezas: (item.piezas || []).map(mayusculas).filter(Boolean),
+    piezas: [...new Set((item.piezas || []).map(mayusculas).filter(Boolean))],
     valor: esGarantia ? 0 : Math.round(Number(item.valor || 0)),
   })).filter((item) => item.referencia && item.piezas.length));
   const serviciosAdicionales = (data.serviciosAdicionales || []).map((item) => ({
@@ -296,6 +316,7 @@ const prepararDatosAsesoria = (data) => {
     motivo: mayusculas(data.garantia?.motivo),
     instalador: mayusculas(data.garantia?.instalador),
     instaladorId: mongoose.Types.ObjectId.isValid(data.garantia?.instaladorId) ? data.garantia.instaladorId : null,
+    ordenOrigenId: mongoose.Types.ObjectId.isValid(data.garantia?.ordenOrigenId) ? data.garantia.ordenOrigenId : null,
     costoMaterial: Math.max(Number(data.garantia?.costoMaterial || 0), 0),
     estado: data.garantia?.esGarantia ? "PENDIENTE" : "NO_APLICA",
     responsable: "POR_DEFINIR",
@@ -376,6 +397,39 @@ const prepararDatosAsesoria = (data) => {
 
 export const crearBorradorAsesoria = async (data, user) => {
   const datosAsesoria = prepararDatosAsesoria(data);
+  if (datosAsesoria.garantia.esGarantia) {
+    const filtroOrigen = {
+      "cliente.cedula": datosAsesoria.cliente.cedula,
+      "vehiculo.placa": datosAsesoria.vehiculo.placa,
+      "garantia.esGarantia": { $ne: true },
+      "flujo.etapa": "FINALIZADA",
+    };
+    if (datosAsesoria.garantia.ordenOrigenId) {
+      filtroOrigen._id = datosAsesoria.garantia.ordenOrigenId;
+    }
+    const ordenOrigen = await Asesoria.findOne(filtroOrigen)
+      .sort({ createdAt: -1 }).select("codigo createdAt coordinacion.asignaciones.instaladorId").lean();
+    if (datosAsesoria.garantia.ordenOrigenId && !ordenOrigen) {
+      throw new Error("El servicio original seleccionado no corresponde a este cliente y vehículo");
+    }
+    if (ordenOrigen) {
+      datosAsesoria.garantia.ordenOrigenId = ordenOrigen._id;
+      datosAsesoria.garantia.codigoOrdenOrigen = ordenOrigen.codigo;
+      datosAsesoria.garantia.fechaOrdenOrigen = ordenOrigen.createdAt;
+      const instaladoresOrigen = new Set(
+        (ordenOrigen.coordinacion?.asignaciones || [])
+          .map((item) => String(item.instaladorId || ""))
+          .filter(Boolean)
+      );
+      if (
+        datosAsesoria.garantia.tipo === "GARANTIA_INSTALADOR" &&
+        instaladoresOrigen.size &&
+        !instaladoresOrigen.has(String(datosAsesoria.garantia.instaladorId || ""))
+      ) {
+        throw new Error("El instalador responsable no participó en el servicio original seleccionado");
+      }
+    }
+  }
   const accesorios = await prepararAccesorios(datosAsesoria.accesoriosEntrada);
   delete datosAsesoria.accesoriosEntrada;
   if (datosAsesoria.garantia.esGarantia) {
@@ -399,7 +453,7 @@ export const crearBorradorAsesoria = async (data, user) => {
     ...datosAsesoria,
     codigo,
     pago: {
-      estado: "PENDIENTE",
+      estado: datosAsesoria.garantia.esGarantia ? "NO_APLICA" : "PENDIENTE",
       valorRecibido: 0,
     },
     creadoPor: user._id,
@@ -784,6 +838,15 @@ export const revisarNovedadAsesoria = async (id, novedadId, data, user) => {
   await asesoria.save();
   try {
     await cerrarAlertaSolicitudNovedad(asesoria._id, novedad._id);
+    if (decision === "APROBAR" && novedad.tipo === "REPETICION_CORTE") {
+      await crearAlerta(
+        "PROPUESTA_CORTE",
+        `Nuevo corte aprobado para ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}). Material a descontar a ${novedad.instaladorNombre || "INSTALADOR"}.`,
+        asesoria._id,
+        `repeticion-corte:${asesoria._id}:${novedad._id}`,
+        `/cortes?asesoria=${asesoria._id}&novedad=${novedad._id}`
+      );
+    }
   } catch (error) {
     console.error("No se pudo cerrar la alerta de novedad:", error.message);
   }
@@ -911,7 +974,7 @@ export const enviarAsesoriaAVentas = async (id) => {
     throw new Error("La orden tiene una solicitud pendiente de revision administrativa");
   }
   const cortes = await Corte.find({ asesoriaId: id })
-    .select("asesoriaLinea tipoCorte tipoCorteDetalle")
+    .select("asesoriaLinea tipoCorte tipoCorteDetalle costoMaterialCop")
     .lean();
   const faltantes = [];
   (asesoria.polarizados || []).forEach((linea, index) => {
@@ -927,10 +990,15 @@ export const enviarAsesoriaAVentas = async (id) => {
     throw new Error(`Faltan cortes por registrar: ${faltantes.join(", ")}`);
   }
   const esGarantiaSinCobro = Boolean(asesoria.garantia?.esGarantia) && Number(asesoria.comercial?.totalAcordado || 0) <= 0;
+  const costoMaterialGarantia = cortes.reduce(
+    (total, corte) => total + Number(corte.costoMaterialCop || 0), 0
+  );
   const actualizada = await Asesoria.findByIdAndUpdate(
     id,
     { $set: esGarantiaSinCobro ? {
       "garantia.estado": "FINALIZADA",
+      "garantia.costoMaterial": costoMaterialGarantia,
+      "pago.estado": "NO_APLICA",
       "flujo.etapa": "FINALIZADA",
       "flujo.fechaFinalizacion": new Date(),
     } : {
@@ -955,6 +1023,23 @@ export const buscarClienteAsesoria = async (cedula) => {
     .lean();
 
   return ultima;
+};
+
+export const listarOrigenesGarantia = async ({ cedula, placa }) => {
+  const cedulaNormalizada = soloDigitos(cedula);
+  const placaNormalizada = mayusculas(placa).replace(/\s+/g, "");
+  if (cedulaNormalizada.length < 5 || placaNormalizada.length < 5) return [];
+
+  return Asesoria.find({
+    "cliente.cedula": cedulaNormalizada,
+    "vehiculo.placa": placaNormalizada,
+    "garantia.esGarantia": { $ne: true },
+    "flujo.etapa": "FINALIZADA",
+  })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .select("codigo createdAt polarizados ppf serviciosAdicionales coordinacion.asignaciones.instaladorId coordinacion.asignaciones.instaladorNombre")
+    .lean();
 };
 
 export const buscarClientesAsesoria = async (termino) => {

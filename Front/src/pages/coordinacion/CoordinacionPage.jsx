@@ -93,7 +93,7 @@ const agruparServiciosPpf = (items = []) => {
 };
 
 const serviciosOrden = (orden) => [
-  ...(orden.polarizados || []).map((item, index) => ({ servicio: `POLARIZADO ${index + 1}`, descripcion: `${item.material} ${item.porcentaje} · ${(item.partes || []).join(", ")}`, partes: item.partes || [] })),
+  ...(orden.polarizados || []).map((item, index) => ({ servicio: `POLARIZADO ${index + 1}`, descripcion: `${item.material} ${item.porcentaje} · ${(item.partes || []).join(", ")}`, partes: expandirPartesMedibles(item.partes || []) })),
   ...agruparServiciosPpf(orden.ppf || []),
   ...(orden.serviciosAdicionales || []).map((item, index) => ({ servicio: `ADICIONAL ${index + 1}`, descripcion: `${item.tipo} ${item.detalle || ""}`.trim(), partes: [item.detalle || item.tipo].filter(Boolean) })),
 ];
@@ -170,10 +170,16 @@ function CoordinacionPage() {
     const garantiaInstalador = orden.garantia?.esGarantia && (orden.garantia?.responsable === "INSTALADOR" || orden.garantia?.tipo === "GARANTIA_INSTALADOR");
     const garantiaCorresponde = usuario?.rol !== "INSTALADOR" || String(orden.garantia?.instaladorId || "") === String(usuario._id) || nombresCompatibles(orden.garantia?.instalador, usuario.nombre);
     const filas = asignaciones.map((item) => ({ ...item, ordenId: orden._id, codigo: orden.codigo, placa: orden.vehiculo?.placa || "", vehiculo: `${orden.vehiculo?.marca || ""} ${orden.vehiculo?.modelo || ""}`.trim(), cliente: orden.cliente?.nombre || "", fecha: item.fechaFinalizacion || item.fechaInicio || orden.createdAt, valorCobrado: valorCobradoServicio(orden, item.servicio), descuentoGarantia: 0, valorNeto: Number(item.valorInstalacion || 0) }));
-    if (garantiaInstalador && garantiaCorresponde) {
+    if (garantiaInstalador && garantiaCorresponde && orden.garantia?.estado === "FINALIZADA") {
       const costoMaterial = Number(orden.garantia?.costoMaterial || 0);
       filas.push({ _id: `garantia-${orden._id}`, ordenId: orden._id, codigo: orden.codigo, placa: orden.vehiculo?.placa || "", vehiculo: `${orden.vehiculo?.marca || ""} ${orden.vehiculo?.modelo || ""}`.trim(), cliente: orden.cliente?.nombre || "", instaladorId: orden.garantia.instaladorId, instaladorNombre: orden.garantia.instalador || "INSTALADOR SIN NOMBRE", servicio: "DESCUENTO GARANTIA", descripcion: "GARANTÍA - COSTO DE MATERIAL", estado: "COMPLETADA", fecha: orden.flujo?.fechaFinalizacion || orden.createdAt, valorInstalacion: 0, descuentoGarantia: costoMaterial, valorNeto: -costoMaterial, costoPendiente: costoMaterial <= 0, esAjusteGarantia: true });
     }
+    (orden.novedades || [])
+      .filter((item) => item.tipo === "REPETICION_CORTE" && item.responsableCosto === "INSTALADOR" && item.estado === "RESUELTA")
+      .forEach((item) => {
+        const costoMaterial = Number(item.costoMaterialReal || 0);
+        filas.push({ _id: `repeticion-${item._id}`, ordenId: orden._id, codigo: orden.codigo, placa: orden.vehiculo?.placa || "", vehiculo: `${orden.vehiculo?.marca || ""} ${orden.vehiculo?.modelo || ""}`.trim(), cliente: orden.cliente?.nombre || "", instaladorId: item.instaladorId, instaladorNombre: item.instaladorNombre || "INSTALADOR SIN NOMBRE", servicio: "DESCUENTO MATERIAL", descripcion: `REPETICIÓN DE CORTE - ${(item.serviciosAfectados || []).join(", ")}`, estado: "COMPLETADA", fecha: item.fechaResolucion || item.fecha, valorInstalacion: 0, descuentoGarantia: costoMaterial, valorNeto: -costoMaterial, costoPendiente: costoMaterial <= 0, esAjusteGarantia: true });
+      });
     return filas.filter((item) => {
       if (usuario?.rol !== "INSTALADOR") return true;
       if (String(item.instaladorId || "") === String(usuario._id)) return true;
@@ -200,8 +206,15 @@ function CoordinacionPage() {
       && (!filtrosInstalador.buscar || texto.includes(filtrosInstalador.buscar.toLowerCase()));
   }), [instalacionesPropias, filtrosInstalador]);
 
-  const ordenesFiltradasIds = useMemo(() => new Set(instalacionesFiltradas.map((item) => String(item.ordenId))), [instalacionesFiltradas]);
-  const visibles = usuario?.rol === "INSTALADOR" ? ordenesBase.filter((orden) => ordenesFiltradasIds.has(String(orden._id))) : ordenesBase;
+  const visibles = usuario?.rol === "INSTALADOR"
+    ? ordenesBase.filter((orden) => {
+        const tieneAsignacionActiva = (orden.coordinacion?.asignaciones || []).some(
+          (item) => String(item.instaladorId) === String(usuario._id) && item.estado !== "COMPLETADA"
+        );
+        const ordenActiva = !["FINALIZADA", "CANCELADA"].includes(orden.flujo?.etapa);
+        return tieneAsignacionActiva && ordenActiva;
+      })
+    : ordenesBase;
   const visiblesOrdenadas = useMemo(() => {
     if (!asesoriaObjetivo) return visibles;
     const objetivo = ordenesBase.find((item) => String(item._id) === asesoriaObjetivo);
@@ -223,7 +236,7 @@ function CoordinacionPage() {
   }, [asesoriaObjetivo, loading, ordenesBase, setSearchParams]);
   const instalacionesCompletadas = instalacionesFiltradas.filter((item) => item.estado === "COMPLETADA");
   const solicitudesDescuentoMaterial = useMemo(() => ordenes.flatMap((orden) => (orden.novedades || [])
-    .filter((item) => item.tipo === "REPETICION_CORTE" && item.responsableCosto === "INSTALADOR" && item.estado !== "RECHAZADA" && (usuario?.rol !== "INSTALADOR" || String(item.instaladorId || "") === String(usuario._id)))
+    .filter((item) => item.tipo === "REPETICION_CORTE" && item.responsableCosto === "INSTALADOR" && ["PENDIENTE", "APROBADA"].includes(item.estado) && (usuario?.rol !== "INSTALADOR" || String(item.instaladorId || "") === String(usuario._id)))
     .map((item) => ({ ...item, ordenId: orden._id, codigo: orden.codigo, placa: orden.vehiculo?.placa || "", vehiculo: `${orden.vehiculo?.marca || ""} ${orden.vehiculo?.modelo || ""}`.trim() }))), [ordenes, usuario]);
   const trabajosCompletados = instalacionesCompletadas.filter((item) => !item.esAjusteGarantia);
   const ajustesGarantia = instalacionesCompletadas.filter((item) => item.esAjusteGarantia);
@@ -491,7 +504,7 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
           {fichaMedidas ? <div className="mb-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800"><strong>Medidas encontradas:</strong> {resumenFichaMedidas(fichaMedidas)}</div> : <div className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">No hay una ficha para este vehículo. El coordinador puede ingresar las medidas tomadas para cada pieza.</div>}
           {propuesta.map((item, index) => <div key={item.linea} className="mb-3 overflow-hidden rounded-xl border border-slate-200">
             <div className="grid items-end gap-3 bg-slate-50 p-3 md:grid-cols-[1fr_180px]">
-              <div><p className="font-bold text-slate-900">{item.material}</p><p className="text-xs text-slate-500">{item.partes.join(", ") || item.linea}</p></div>
+              <div><p className="text-[10px] font-black uppercase text-blue-700">{item.linea}</p><p className="font-bold text-slate-900">{item.material}</p><p className="text-xs text-slate-500">{item.partes.join(", ") || item.linea}</p></div>
               <Input label="Metros propuestos" step="0.01" value={item.metrosPropuestos} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, metrosPropuestos: value } : fila))} />
             </div>
             {item.medidasPiezas.length > 0 && <div className="divide-y divide-slate-100">
@@ -505,13 +518,13 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
           </div>)}
         </section>
         <section>
-          <div className="mb-3"><h3 className="font-bold">Instaladores y precios</h3><p className="text-xs text-slate-500">Puede asignar toda la instalación a una persona o dividir cada servicio entre varios instaladores.</p>{garantiaInstalador && <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">Garantía por instalador: el precio de instalación es opcional y puede dejarse vacío.</p>}</div>
+          <div className="mb-3"><h3 className="font-bold">Instaladores y precios</h3><p className="text-xs text-slate-500">Puede asignar toda la instalación a una persona o dividir cada servicio entre varios instaladores.</p>{garantiaInstalador && <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">Garantía por instalador: únicamente el responsable de la garantía puede quedar sin pago. Si otro instalador realiza el trabajo, debe registrar su precio.</p>}</div>
           <div className="space-y-4">{servicios.map((servicio) => <div key={servicio.servicio} className="overflow-hidden rounded-lg border border-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-slate-50 px-3 py-2"><div><p className="text-sm font-black text-slate-800">{servicio.descripcion}</p><p className="text-[10px] font-bold uppercase text-slate-400">{servicio.servicio}</p></div><button type="button" onClick={() => dividirServicio(servicio)} className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-white px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50"><Plus size={14}/>Dividir entre otro instalador</button></div>
             <div className="divide-y divide-slate-100">{asignaciones.map((item, index) => item.servicio === servicio.servicio ? <div key={`${item.servicio}-${index}`} className="grid items-end gap-3 p-3 md:grid-cols-[minmax(0,1fr)_220px_170px_auto]">
               <SelectorPartes partes={servicio.partes || []} value={item.descripcion} onChange={(value) => actualizarAsignacion(index, { descripcion: value })} />
               <label className="text-xs font-bold text-slate-500">Instalador<select value={item.instaladorId} onChange={(event) => actualizarAsignacion(index, { instaladorId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border bg-white px-3 text-sm font-normal"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></label>
-              <Input label={garantiaInstalador ? "Precio instalación (opcional)" : "Precio instalación"} value={item.valorInstalacion} onChange={(value) => actualizarAsignacion(index, { valorInstalacion: value })}/>
+              <Input label={garantiaInstalador && String(item.instaladorId) === String(orden.garantia?.instaladorId || "") ? "Precio instalación (opcional)" : "Precio instalación"} value={item.valorInstalacion} onChange={(value) => actualizarAsignacion(index, { valorInstalacion: value })}/>
               <button type="button" onClick={() => quitarAsignacion(index, item.servicio)} title="Quitar esta asignación" className="mb-0.5 flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"><Trash2 size={16}/></button>
             </div> : null)}</div>
           </div>)}</div>
@@ -557,7 +570,7 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
   const propias = usuario?.rol === "INSTALADOR" ? asignaciones.filter((item) => String(item.instaladorId) === String(usuario._id)) : asignaciones;
   const instalacionesPendientes = asignaciones.filter((item) => item.estado !== "COMPLETADA");
   const instalacionesCompletas = asignaciones.length > 0 && instalacionesPendientes.length === 0;
-  const tiposBloqueantes = ["FALTA_MATERIAL", "MATERIAL_DEFECTUOSO", "ROLLO_EQUIVOCADO", "ERROR_REGISTRO", "TRABAJO_PENDIENTE"];
+  const tiposBloqueantes = ["FALTA_MATERIAL", "MATERIAL_DEFECTUOSO", "ROLLO_EQUIVOCADO", "ERROR_REGISTRO", "TRABAJO_PENDIENTE", "REPETICION_CORTE"];
   const novedadesActivas = (orden.novedades || []).filter((item) => item.estado === "PENDIENTE" || (item.estado === "APROBADA" && tiposBloqueantes.includes(item.tipo)));
   const accesoriosPendientes = (orden.accesorios || []).filter((item) => Number(item.cantidadPendiente || 0) > 0);
   const puedeProponer = ["COORDINADOR", "ADMIN", "SUPERUSUARIO"].includes(usuario?.rol) && (etapa === "PENDIENTE_COORDINACION" || orden.coordinacion?.estadoPropuesta === "RECHAZADA");

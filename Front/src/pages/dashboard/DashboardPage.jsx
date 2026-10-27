@@ -8,8 +8,12 @@ import DashboardCharts from "./components/DashboardCharts";
 import DashboardInventory from "./components/DashboardInventory";
 import DashboardTopMateriales from "./components/DashboardTopMateriales";
 import DashboardQuickActions from "./components/DashboardQuickActions";
+import InventoryWorkQueue from "./components/InventoryWorkQueue";
+import { obtenerUsuarioActual } from "../../utils/permisos";
 
 function DashboardPage() {
+
+    const usuario = obtenerUsuarioActual();
 
     const [stats, setStats] = useState(null);
 
@@ -38,6 +42,10 @@ function DashboardPage() {
     };
 
     useEffect(() => {
+        if (usuario?.rol === "INVENTARIO") {
+            setLoading(false);
+            return undefined;
+        }
         let active = true;
 
         const loadInitialDashboard = async () => {
@@ -62,7 +70,7 @@ function DashboardPage() {
             active = false;
         };
 
-    }, []);
+    }, [usuario?.rol]);
 
     const indicadores = useMemo(() => {
 
@@ -97,6 +105,10 @@ function DashboardPage() {
         };
 
     }, [stats]);
+
+    if (usuario?.rol === "INVENTARIO") {
+        return <InventoryWorkQueue />;
+    }
 
     if (loading) {
 

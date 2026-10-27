@@ -47,6 +47,21 @@ export const requirePermission =
     next();
   };
 
+export const requireAnyPermission = (...permissions) => async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "No autenticado" });
+  }
+  if (req.user.rol === "SUPERUSUARIO") return next();
+
+  const resultados = await Promise.all(
+    permissions.map(([modulo, accion = "read"]) => hasPermission(req.user.rol, modulo, accion))
+  );
+  if (!resultados.some(Boolean)) {
+    return res.status(403).json({ message: "No tienes permisos para realizar esta accion" });
+  }
+  next();
+};
+
 export const requireRole = (...roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ message: "No autenticado" });

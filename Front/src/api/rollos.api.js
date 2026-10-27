@@ -25,6 +25,9 @@ api.patch(
   data
 );
 
+export const darBajaMaterial = (id, data) =>
+  api.patch(`/rollos/${id}/baja-material`, data);
+
 export const getRollos =
   () =>
     api.get("/rollos");

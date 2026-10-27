@@ -13,6 +13,13 @@ const piezaPpfSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      uppercase: true,
+    },
+
+    anio: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
     ubicacion: {
@@ -68,6 +75,7 @@ const piezaPpfSchema = new mongoose.Schema(
 piezaPpfSchema.index({
   marca: 1,
   modelo: 1,
+  anio: 1,
   ubicacion: 1,
   pieza: 1,
 });

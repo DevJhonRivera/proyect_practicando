@@ -17,7 +17,8 @@ const regexExacto = (value) =>
 
 const prepararData = (data = {}) => {
   const marca = mayusculas(data.marca);
-  const modelo = soloNumeros(data.modelo);
+  const modelo = mayusculas(data.modelo);
+  const anio = soloNumeros(data.anio).slice(0, 4);
   const ubicacion = mayusculas(data.ubicacion);
   const pieza = mayusculas(data.pieza);
 
@@ -37,17 +38,26 @@ const prepararData = (data = {}) => {
     throw new Error("Ingrese la pieza del carro");
   }
 
+  if (anio && anio.length !== 4) {
+    throw new Error("El año debe tener 4 numeros");
+  }
+
+  const anchoCm = Number(data.anchoCm || 0);
+  const largoCm = Number(data.largoCm || 0);
+  const cantidad = Number(data.cantidad || 1);
+  if (![anchoCm, largoCm, cantidad].every(Number.isFinite) || anchoCm < 0 || largoCm < 0 || cantidad < 1) {
+    throw new Error("Revise las medidas y la cantidad de la pieza");
+  }
+
   return {
     marca,
     modelo,
+    anio,
     ubicacion,
     pieza,
-    anchoCm:
-      Number(data.anchoCm || 0),
-    largoCm:
-      Number(data.largoCm || 0),
-    cantidad:
-      Math.max(1, Number(data.cantidad || 1)),
+    anchoCm,
+    largoCm,
+    cantidad: Math.max(1, Math.floor(cantidad)),
     observaciones:
       normalizarTexto(data.observaciones),
     activa:
@@ -61,6 +71,8 @@ const validarDuplicado = async (data, idIgnorado) => {
       regexExacto(data.marca),
     modelo:
       data.modelo,
+    anio:
+      data.anio || "",
     ubicacion:
       data.ubicacion,
     pieza:
@@ -106,8 +118,18 @@ export const listarPiezasPpf = async (query = {}) => {
     filtro.marca = regexExacto(query.marca);
   }
 
+  const condiciones = [];
   if (query.modelo) {
-    filtro.modelo = soloNumeros(query.modelo);
+    const modelo = mayusculas(query.modelo);
+    const anio = soloNumeros(query.anio).slice(0, 4);
+    // Los registros antiguos guardaban el año dentro de `modelo`.
+    condiciones.push({ $or: [
+      { modelo: regexExacto(modelo), ...(anio ? { anio: { $in: [anio, "", null] } } : {}) },
+      ...(anio ? [{ modelo: anio, anio: { $in: ["", null] } }] : []),
+    ] });
+  } else if (query.anio) {
+    const anio = soloNumeros(query.anio).slice(0, 4);
+    condiciones.push({ $or: [{ anio }, { modelo: anio, anio: { $in: ["", null] } }] });
   }
 
   if (
@@ -120,7 +142,7 @@ export const listarPiezasPpf = async (query = {}) => {
 
   if (query.search) {
     const texto = escapeRegex(query.search);
-    filtro.$or = [
+    condiciones.push({ $or: [
       {
         marca: {
           $regex: texto,
@@ -145,12 +167,15 @@ export const listarPiezasPpf = async (query = {}) => {
           $options: "i",
         },
       },
-    ];
+    ] });
   }
+
+  if (condiciones.length) filtro.$and = condiciones;
 
   return await PiezaPpf.find(filtro).sort({
     marca: 1,
     modelo: -1,
+    anio: -1,
     ubicacion: 1,
     pieza: 1,
   });

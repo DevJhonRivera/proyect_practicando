@@ -42,6 +42,9 @@ const alertaSchema =
     }
   );
 
+alertaSchema.index({ destinatarioId: 1, atendida: 1, activa: 1, createdAt: -1 });
+alertaSchema.index({ tipo: 1, createdAt: -1 });
+
 export default mongoose.model(
   "Alerta",
   alertaSchema

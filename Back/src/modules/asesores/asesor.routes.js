@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { requirePermission, requireRole } from "../../middlewares/permission.middleware.js";
+import { requireAnyPermission, requirePermission, requireRole } from "../../middlewares/permission.middleware.js";
 import {
   createBorradorAsesoria,
   getCatalogoDisponible,
@@ -15,6 +15,7 @@ import {
   reviewNovedadAsesoria,
   reviewGarantiaAsesoria,
   resolveNovedadAsesoria,
+  getOrigenesGarantia,
 } from "./asesor.controller.js";
 
 const router = Router();
@@ -62,6 +63,13 @@ router.patch(
 );
 
 router.get(
+  "/garantias/origenes",
+  authMiddleware,
+  requirePermission("asesores", "read"),
+  getOrigenesGarantia
+);
+
+router.get(
   "/servicios",
   authMiddleware,
   requirePermission("asesores", "read"),
@@ -71,7 +79,7 @@ router.get(
 router.get(
   "/servicios/:id",
   authMiddleware,
-  requirePermission("cortes", "read"),
+  requireAnyPermission(["asesores", "read"], ["cortes", "read"], ["ventas", "read"]),
   getAsesoriaPorId
 );
 

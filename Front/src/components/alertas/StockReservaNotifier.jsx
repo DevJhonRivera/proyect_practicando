@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
   AlertTriangle,
@@ -29,15 +29,22 @@ const TIPO_MATERIAL_LISTO = "MATERIAL_LISTO";
 const TIPO_ASIGNACION_TRABAJO = "ASIGNACION_TRABAJO";
 const TIPO_INSTALACION_COMPLETA = "INSTALACION_COMPLETA";
 const TIPO_PROPUESTA_CORTE = "PROPUESTA_CORTE";
+const TIPO_ACCESORIO_PENDIENTE = "ACCESORIO_PENDIENTE";
+const TIPO_ROLLO_BAJO = "ROLLO_BAJO";
+const TIPO_SOLICITUD_NOVEDAD = "SOLICITUD_NOVEDAD";
+const TIPO_SOLICITUD_GARANTIA = "SOLICITUD_GARANTIA";
 const TIPOS_NOTIFICABLES = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
   TIPO_STOCK_RESERVA_DOS_ROLLOS,
   TIPO_RECEPCION_NUEVA,
   TIPO_SERVICIO_ASESOR_NUEVO,
   TIPO_PROPUESTA_CORTE,
+  TIPO_ACCESORIO_PENDIENTE,
+  TIPO_ROLLO_BAJO,
 ];
 
 function StockReservaNotifier() {
+  const navigate = useNavigate();
   const usuario = obtenerUsuarioActual();
   const [alertas, setAlertas] = useState([]);
   const notificadasRef = useRef(
@@ -60,7 +67,7 @@ function StockReservaNotifier() {
   );
 
   useEffect(() => {
-    if (!["INVENTARIO", "VENTAS", "COORDINADOR", "INSTALADOR"].includes(usuario?.rol)) {
+    if (!["INVENTARIO", "VENTAS", "COORDINADOR", "INSTALADOR", "ADMIN"].includes(usuario?.rol)) {
       setAlertas([]);
       return undefined;
     }
@@ -79,6 +86,7 @@ function StockReservaNotifier() {
           VENTAS: [TIPO_SERVICIO_LISTO_PAGO],
           COORDINADOR: [TIPO_COORDINACION_NUEVA, TIPO_MATERIAL_LISTO, TIPO_INSTALACION_COMPLETA],
           INSTALADOR: [TIPO_ASIGNACION_TRABAJO],
+          ADMIN: [TIPO_SOLICITUD_NOVEDAD, TIPO_SOLICITUD_GARANTIA, TIPO_ACCESORIO_PENDIENTE],
         };
         const tiposRol = tiposPorRol[usuario?.rol] || [];
         const pendientes = data.filter(
@@ -149,7 +157,7 @@ function StockReservaNotifier() {
   }, [usuario?.rol]);
 
   if (
-    !["INVENTARIO", "VENTAS", "COORDINADOR", "INSTALADOR"].includes(usuario?.rol) ||
+    !["INVENTARIO", "VENTAS", "COORDINADOR", "INSTALADOR", "ADMIN"].includes(usuario?.rol) ||
     alertas.length === 0
   ) {
     return null;
@@ -183,6 +191,16 @@ function StockReservaNotifier() {
         text: "Intentalo de nuevo.",
       });
     }
+  };
+
+  const abrirPrincipal = async () => {
+    try {
+      await atenderAlerta(principal._id);
+      setAlertas((actuales) => actuales.filter((alerta) => alerta._id !== principal._id));
+    } catch {
+      // La navegación no debe bloquearse por un fallo temporal al marcarla.
+    }
+    navigate(principal.accionUrl || "/alertas");
   };
 
   const ocultarAviso = () => {
@@ -267,12 +285,13 @@ function StockReservaNotifier() {
               Atender
             </button>
 
-            <Link
-              to={principal.accionUrl || "/alertas"}
+            <button
+              type="button"
+              onClick={abrirPrincipal}
               className={`${esRecepcion || esServicio || esPago || esFlujo ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"} inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold text-white transition`}
             >
               {esPago ? "Abrir venta" : esServicio ? "Abrir corte" : esFlujo ? "Abrir trabajo" : "Ver alertas"}
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -290,6 +309,10 @@ function tituloAlerta(tipo) {
     [TIPO_ASIGNACION_TRABAJO]: "Nueva instalación asignada",
     [TIPO_INSTALACION_COMPLETA]: "Instalación completada",
     [TIPO_PROPUESTA_CORTE]: "Propuesta de corte pendiente",
+    [TIPO_ACCESORIO_PENDIENTE]: "Accesorio pendiente",
+    [TIPO_ROLLO_BAJO]: "Rollo con poco material",
+    [TIPO_SOLICITUD_NOVEDAD]: "Solicitud por revisar",
+    [TIPO_SOLICITUD_GARANTIA]: "Garantía por revisar",
   };
   return titulos[tipo] || "Alerta de bodega";
 }

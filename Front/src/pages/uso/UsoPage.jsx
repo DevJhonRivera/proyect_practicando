@@ -21,6 +21,7 @@ import {
   normalizarAncho,
 } from "../../utils/anchos";
 import { etiquetaDetalle } from "../../utils/materiales";
+import { solicitarBajaMaterial } from "../../utils/bajaMaterial";
 
 function UsoPage() {
   const [rollos, setRollos] = useState([]);
@@ -496,6 +497,7 @@ function UsoPage() {
                   <th className="p-4 text-left">Disponible</th>
                   <th className="p-4 text-left">Consumido</th>
                   <th className="p-4 text-left">Utilización</th>
+                  <th className="p-4 text-center">Acción</th>
                 </tr>
               </thead>
 
@@ -566,6 +568,15 @@ function UsoPage() {
                             {uso.toFixed(1)}%
                           </span>
                         </div>
+                      </td>
+                      <td className="p-4 text-center">
+                        <button
+                          type="button"
+                          onClick={async () => { if (await solicitarBajaMaterial(rollo)) cargar(); }}
+                          className="whitespace-nowrap rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                        >
+                          Reportar daño
+                        </button>
                       </td>
                     </tr>
                   );

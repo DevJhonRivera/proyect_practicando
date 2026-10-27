@@ -89,7 +89,7 @@ const agruparServiciosPpf = (items = []) => {
 };
 
 const serviciosOrden = (asesoria) => [
-  ...(asesoria.polarizados || []).map((item, index) => ({ servicio: `POLARIZADO ${index + 1}`, descripcion: `${item.material} ${item.porcentaje}`, partes: (item.partes || []).map(mayusculas) })),
+  ...(asesoria.polarizados || []).map((item, index) => ({ servicio: `POLARIZADO ${index + 1}`, descripcion: `${item.material} ${item.porcentaje}`, partes: expandirPartesMedibles(item.partes || []) })),
   ...agruparServiciosPpf(asesoria.ppf || []),
   ...(asesoria.serviciosAdicionales || []).map((item, index) => ({ servicio: `ADICIONAL ${index + 1}`, descripcion: `${item.tipo} ${item.detalle || ""}`.trim(), partes: [item.detalle || item.tipo].filter(Boolean).map(mayusculas) })),
 ];
@@ -113,10 +113,15 @@ export const listarOrdenesCoordinacion = async (user) => {
     { "garantia.tipo": "GARANTIA_INSTALADOR", "garantia.instalador": { $in: nombresCompatibles } },
     { "novedades.instaladorId": user._id },
   ];
+  // Coordinacion e Inventario trabajan sobre la bandeja activa. El historial
+  // completo se consulta paginado desde Ordenes de trabajo.
+  if (user.rol !== "INSTALADOR") {
+    query["flujo.etapa"] = { $nin: ["FINALIZADA", "CANCELADA"] };
+  }
   const ordenes = await Asesoria.find(query)
     .select("codigo cliente vehiculo polarizados ppf serviciosAdicionales garantia comercial coordinacion flujo novedades asesorNombre createdAt")
     .sort({ createdAt: -1 })
-    .limit(200)
+    .limit(500)
     .lean();
   const garantiasIds = ordenes.filter((orden) => orden.garantia?.esGarantia).map((orden) => orden._id);
   const costos = garantiasIds.length ? await Corte.aggregate([
@@ -140,6 +145,12 @@ export const listarOrdenesCoordinacion = async (user) => {
   return resultado.map((orden) => ({
     ...orden,
     comercial: undefined,
+    coordinacion: {
+      ...orden.coordinacion,
+      asignaciones: (orden.coordinacion?.asignaciones || []).filter(
+        (item) => String(item.instaladorId || "") === String(user._id)
+      ),
+    },
     polarizados: (orden.polarizados || []).map(ocultarValor),
     ppf: (orden.ppf || []).map(ocultarValor),
     serviciosAdicionales: (orden.serviciosAdicionales || []).map(ocultarValor),
@@ -189,6 +200,13 @@ export const guardarPropuesta = async (id, data, user) => {
   ))) {
     throw new Error("Complete ancho y largo para cada pieza medida");
   }
+  if (propuesta.some((item) => item.medidasPiezas.some((medida) =>
+    !Number.isFinite(medida.anchoCm) || medida.anchoCm < 0 ||
+    !Number.isFinite(medida.largoCm) || medida.largoCm < 0 ||
+    !Number.isInteger(medida.cantidad) || medida.cantidad < 1
+  ))) {
+    throw new Error("Revise las medidas y cantidades de cada parte del vehículo");
+  }
 
   const servicios = serviciosOrden(asesoria);
   const entradasAsignacion = data.asignaciones || [];
@@ -221,6 +239,14 @@ export const guardarPropuesta = async (id, data, user) => {
   const garantiaInstalador = asesoria.garantia?.esGarantia && (
     asesoria.garantia?.tipo === "GARANTIA_INSTALADOR" || asesoria.garantia?.responsable === "INSTALADOR"
   );
+  const instaladorResponsableId = String(asesoria.garantia?.instaladorId || "");
+  const asignacionesSinPago = entradasAsignacion.filter((item) => {
+    const esResponsableGarantia = garantiaInstalador && instaladorResponsableId && String(item.instaladorId) === instaladorResponsableId;
+    return !esResponsableGarantia && Number(item.valorInstalacion || 0) <= 0;
+  });
+  if (asignacionesSinPago.length) {
+    throw new Error("Ingrese el precio de instalación para cada instalador. Solo el responsable de una garantía puede quedar sin pago");
+  }
 
   asesoria.coordinacion.propuesta = propuesta;
   asesoria.coordinacion.asignaciones = entradasAsignacion.map((item) => ({
@@ -228,7 +254,7 @@ export const guardarPropuesta = async (id, data, user) => {
     descripcion: mayusculas(item.descripcion),
     instaladorId: item.instaladorId,
     instaladorNombre: mayusculas(porId.get(String(item.instaladorId))?.nombre),
-    valorInstalacion: garantiaInstalador && !texto(item.valorInstalacion)
+    valorInstalacion: garantiaInstalador && String(item.instaladorId) === instaladorResponsableId && !texto(item.valorInstalacion)
       ? 0
       : Math.max(Number(item.valorInstalacion || 0), 0),
     estado: "ESPERANDO_MATERIAL",
@@ -301,6 +327,13 @@ export const actualizarAsignacion = async (id, asignacionId, data, user) => {
   asignacion.observacion = mayusculas(data.observacion);
   if (estado === "EN_PROCESO") asignacion.fechaInicio = asignacion.fechaInicio || new Date();
   if (estado === "COMPLETADA") asignacion.fechaFinalizacion = new Date();
+  asesoria.auditoria.push({
+    accion: estado === "COMPLETADA" ? "INSTALACION_COMPLETADA" : "INSTALACION_INICIADA",
+    descripcion: `${asignacion.servicio} · ${asignacion.descripcion} · ${asignacion.instaladorNombre}`,
+    usuarioId: user._id,
+    usuarioNombre: mayusculas(user.nombre || user.rol),
+    fecha: new Date(),
+  });
   const todasCompletas = asesoria.coordinacion.asignaciones.every((item) => item.estado === "COMPLETADA");
   asesoria.flujo.etapa = "EN_INSTALACION";
   await asesoria.save();
@@ -325,10 +358,17 @@ export const enviarTrabajoAVentas = async (id) => {
     throw new Error(`Faltan instalaciones por completar: ${detalle}`);
   }
   const garantiaSinCobro = asesoria.garantia?.esGarantia && Number(asesoria.comercial?.totalAcordado || 0) <= 0;
+  if (asesoria.garantia?.esGarantia) {
+    const cortesGarantia = await Corte.find({ asesoriaId: asesoria._id }).select("costoMaterialCop").lean();
+    asesoria.garantia.costoMaterial = cortesGarantia.reduce(
+      (total, corte) => total + Number(corte.costoMaterialCop || 0), 0
+    );
+  }
   asesoria.flujo.etapa = garantiaSinCobro ? "FINALIZADA" : "PENDIENTE_PAGO";
   asesoria.flujo.fechaEnvioVentas = garantiaSinCobro ? null : new Date();
   asesoria.flujo.fechaFinalizacion = garantiaSinCobro ? new Date() : null;
   if (garantiaSinCobro) asesoria.garantia.estado = "FINALIZADA";
+  if (garantiaSinCobro) asesoria.pago.estado = "NO_APLICA";
   await asesoria.save();
   if (!garantiaSinCobro) await crearAlertaServicioListoPago(asesoria);
   await cerrarAlertaFlujo(`material-listo:${asesoria._id}`);

@@ -22,6 +22,16 @@ export function currentMonthRange() {
   };
 }
 
+export function monthValueRange(month) {
+  if (!/^\d{4}-\d{2}$/.test(String(month || ""))) return {};
+  const [year, monthNumber] = month.split("-").map(Number);
+  const lastDay = new Date(year, monthNumber, 0).getDate();
+  return {
+    desde: `${month}-01`,
+    hasta: `${month}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
 export function useMonthFilter(
   items,
   getDate = (item) => item.createdAt

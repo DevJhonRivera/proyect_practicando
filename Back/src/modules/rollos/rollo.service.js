@@ -154,8 +154,7 @@ export const registrarRollo = async (data) => {
   }
 
   // Crear rollo PRIMERO
-  const rollo =
-    await Rollo.create({
+  const rollo = await Rollo.create({
       ...data,
       unidadMedida,
       pedidoId: pedido._id,
@@ -164,13 +163,13 @@ export const registrarRollo = async (data) => {
       largoDisponible,
     });
 
-  const costeo =
-    await CosteoPedido.findOne({
+  let detalleIncrementado = false;
+  try {
+    const costeo = await CosteoPedido.findOne({
       pedidoId: pedido._id,
     });
 
-  const detalleCosteo =
-    costeo?.detalles?.find(
+    const detalleCosteo = costeo?.detalles?.find(
       (item) =>
         item.tipoPolarizado ===
           rollo.tipoPolarizado &&
@@ -183,9 +182,8 @@ export const registrarRollo = async (data) => {
             Number(rollo.ancho))
     );
 
-  if (detalleCosteo) {
-    const costoUnitarioCop =
-      Number(
+    if (detalleCosteo) {
+      const costoUnitarioCop = Number(
         detalleCosteo.costoFinalUnitarioCop || 0
       );
 
@@ -203,20 +201,38 @@ export const registrarRollo = async (data) => {
     rollo.costoAsignadoAt =
       new Date();
 
-    await rollo.save();
-  }
+      await rollo.save();
+    }
 
   // Si llegó aquí, el rollo sí existe
 
-  detalle.cantidadRecibida += 1;
+    const detalleActualizado = await detallePedido.findOneAndUpdate(
+      {
+        _id: detalle._id,
+        $expr: { $lt: ["$cantidadRecibida", "$cantidadRollos"] },
+      },
+      { $inc: { cantidadRecibida: 1 } },
+      { new: true }
+    );
+    if (!detalleActualizado) {
+      throw new Error("Ya se completo el material de este pedido");
+    }
+    detalleIncrementado = true;
+    await actualizarEstadoPedido(pedido._id);
+  } catch (error) {
+    await Rollo.findByIdAndDelete(rollo._id).catch(() => {});
+    if (detalleIncrementado) {
+      await detallePedido.findByIdAndUpdate(detalle._id, { $inc: { cantidadRecibida: -1 } }).catch(() => {});
+      await actualizarEstadoPedido(pedido._id).catch(() => {});
+    }
+    throw error;
+  }
 
-  await detalle.save();
-
-  await actualizarEstadoPedido(
-    pedido._id
-  );
-
-  await verificarStockReserva();
+  try {
+    await verificarStockReserva();
+  } catch (error) {
+    console.error("No se pudo actualizar la alerta de reserva:", error.message);
+  }
 
   return rollo;
 };
@@ -267,6 +283,53 @@ async (id) => {
   await verificarStockReserva();
 
   return rollo;
+};
+
+export const registrarBajaMaterial = async (id, data = {}, user) => {
+  const rollo = await Rollo.findById(id);
+  if (!rollo) throw new Error("Rollo no encontrado");
+  if (rollo.estado === "AGOTADO" || Number(rollo.largoDisponible || 0) <= 0) {
+    throw new Error("El rollo ya no tiene material disponible");
+  }
+
+  const tipo = String(data.tipo || "").toUpperCase();
+  const causa = String(data.causa || "").toUpperCase();
+  const observacion = String(data.observacion || "").trim().toUpperCase();
+  const causasValidas = ["DEFECTO_PROVEEDOR", "HUMEDAD", "GOLPE", "MALA_MANIPULACION", "VENCIMIENTO", "OTRO"];
+  if (!["DANO_PARCIAL", "BAJA_TOTAL"].includes(tipo)) throw new Error("Seleccione el tipo de baja");
+  if (!causasValidas.includes(causa)) throw new Error("Seleccione la causa del daño");
+  if (observacion.length < 5) throw new Error("Describa el daño y lo ocurrido");
+
+  const disponibleAntes = roundMeters(rollo.largoDisponible);
+  const metros = tipo === "BAJA_TOTAL" ? disponibleAntes : roundMeters(data.metros);
+  if (metros <= 0) throw new Error("Ingrese los metros dañados");
+  if (metros > disponibleAntes) throw new Error(`No puede retirar más de ${disponibleAntes.toFixed(2)} m disponibles`);
+
+  const costoPerdidaCop = Math.round(Number(rollo.costoPorMetroCop || 0) * metros);
+  rollo.largoDisponible = roundMeters(disponibleAntes - metros);
+  rollo.bajasMaterial.push({
+    tipo,
+    causa,
+    metros,
+    costoPerdidaCop,
+    observacion,
+    usuarioId: user._id,
+    usuarioNombre: user.nombre || user.rol,
+    fecha: new Date(),
+  });
+
+  if (rollo.largoDisponible <= 0) {
+    rollo.largoDisponible = 0;
+    rollo.estado = "AGOTADO";
+    rollo.fechaAgotado = rollo.fechaAgotado || new Date();
+  }
+  await rollo.save();
+  try {
+    await verificarStockReserva();
+  } catch (error) {
+    console.error("No se pudo actualizar la alerta después de la baja de material:", error.message);
+  }
+  return { rollo, metrosRetirados: metros, costoPerdidaCop };
 };
 
 export const cerrarRolloAgotado =
@@ -355,7 +418,9 @@ export const obtenerRollos =
       .populate("recepcionId")
       .sort({
         createdAt: -1,
-      });
+      })
+      .limit(2000)
+      .lean();
   };
 
 export const obtenerRolloPorId =

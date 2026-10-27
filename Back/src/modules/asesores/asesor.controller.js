@@ -11,7 +11,16 @@ import {
   revisarNovedadAsesoria,
   revisarGarantiaAsesoria,
   resolverNovedadAsesoria,
+  listarOrigenesGarantia,
 } from "./asesor.service.js";
+
+export const getOrigenesGarantia = async (req, res) => {
+  try {
+    res.json({ success: true, data: await listarOrigenesGarantia(req.query) });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
 
 export const resolveNovedadAsesoria = async (req, res) => {
   try {

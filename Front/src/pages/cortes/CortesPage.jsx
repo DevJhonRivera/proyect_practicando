@@ -102,7 +102,9 @@ function CortesPage() {
     }
     const yaRegistrado = cortes.some((corte) =>
       String(corte.asesoriaId || "") === String(ordenAsesoria?._id || "") &&
-      corte.asesoriaLinea === linea.etiqueta
+      (linea.novedadId
+        ? String(corte.novedadId || "") === String(linea.novedadId) && corte.asesoriaLineaOrigen === linea.etiqueta
+        : corte.asesoriaLinea === linea.etiqueta)
     );
     if (yaRegistrado) {
       Swal.fire({ icon: "warning", title: "Corte ya registrado", text: "Esta línea de material ya fue descontada. Use el historial si necesita corregirla." });
@@ -149,14 +151,18 @@ function CortesPage() {
       ...actual,
       asesoriaId: ordenAsesoria._id,
       asesoriaLinea: linea.etiqueta,
+      asesoriaLineaOrigen: linea.novedadId ? linea.etiqueta : "",
+      novedadId: linea.novedadId || "",
       partesServicio: partes,
       placa: ordenAsesoria.vehiculo?.placa || "",
       marca: ordenAsesoria.vehiculo?.marca || "",
       modelo: ordenAsesoria.vehiculo?.anio || String(ordenAsesoria.vehiculo?.modelo || "").replace(/\D/g, ""),
-      tipoServicio: ordenAsesoria.garantia?.esGarantia
+      tipoServicio: linea.novedadId
+        ? "GARANTIA_INSTALADOR"
+        : ordenAsesoria.garantia?.esGarantia
         ? ordenAsesoria.garantia.tipo || "GARANTIA"
         : "VENTA",
-      instalador: ordenAsesoria.garantia?.instalador || "",
+      instalador: linea.instaladorNombre || ordenAsesoria.garantia?.instalador || "",
       tipoCorte,
       tipoCorteDetalle: tipoCorte === "OTROS" ? partes.join(" + ") : "",
       rolloId: rollo?._id || "",
@@ -449,7 +455,7 @@ function CortesPage() {
 }
 
 function OrdenAsesoriaPanel({ orden, cortes, onLoad, onBatch, registrandoPropuesta, onFinish, onReport, onReview }) {
-  const tiposBloqueantes = ["FALTA_MATERIAL", "MATERIAL_DEFECTUOSO", "ROLLO_EQUIVOCADO", "ERROR_REGISTRO", "TRABAJO_PENDIENTE"];
+  const tiposBloqueantes = ["FALTA_MATERIAL", "MATERIAL_DEFECTUOSO", "ROLLO_EQUIVOCADO", "ERROR_REGISTRO", "TRABAJO_PENDIENTE", "REPETICION_CORTE"];
   const solicitudPendiente = orden.novedades?.some((item) => item.estado === "PENDIENTE" || (item.estado === "APROBADA" && tiposBloqueantes.includes(item.tipo)));
   const garantiaBloqueada = orden.garantia?.esGarantia && orden.garantia.estado !== "APROBADA";
   const propuestaPendiente = orden.flujo?.etapa === "PENDIENTE_APROBACION_CORTE";
@@ -457,6 +463,17 @@ function OrdenAsesoriaPanel({ orden, cortes, onLoad, onBatch, registrandoPropues
     ...(orden.polarizados || []).map((item, index) => ({ ...item, clase: "POLARIZADO", etiqueta: `POLARIZADO ${index + 1}` })),
     ...(orden.ppf || []).map((item, index) => ({ ...item, clase: "PPF", material: item.referencia, partes: item.piezas?.length ? item.piezas : [item.aplicacion].filter(Boolean), etiqueta: `PPF ${index + 1}` })),
   ];
+  const lineasReposicion = (orden.novedades || [])
+    .filter((item) => item.tipo === "REPETICION_CORTE" && item.estado === "APROBADA")
+    .flatMap((novedad) => (novedad.serviciosAfectados || []).map((etiqueta) => {
+      const original = lineas.find((linea) => linea.etiqueta === etiqueta);
+      return original ? {
+        ...original,
+        novedadId: novedad._id,
+        instaladorNombre: novedad.instaladorNombre,
+        esReposicion: true,
+      } : null;
+    }).filter(Boolean));
   const pendientes = lineas.filter((linea) => !cortes.some((corte) => String(obtenerIdEntidad(corte.asesoriaId)) === String(orden._id) && corte.asesoriaLinea === linea.etiqueta));
   return <section className="mb-5 overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
     <div className="flex items-start gap-3 bg-blue-50 p-4"><ClipboardList className="mt-0.5 text-blue-700" size={22} /><div><h2 className="font-black text-slate-900">Servicio {orden.codigo}</h2><p className="text-sm text-slate-600">{orden.vehiculo?.placa} · {orden.vehiculo?.marca} {orden.vehiculo?.modelo} {orden.vehiculo?.anio} · Asesor: {orden.asesorNombre}</p>{orden.garantia?.esGarantia && <p className="mt-1 text-xs font-bold text-violet-700">Garantía {orden.garantia.estado} · {(orden.garantia.responsable || "POR_DEFINIR").replaceAll("_", " ")} · {orden.garantia.motivo}</p>}</div></div>
@@ -465,6 +482,10 @@ function OrdenAsesoriaPanel({ orden, cortes, onLoad, onBatch, registrandoPropues
         const registrado = cortes.some((corte) => String(obtenerIdEntidad(corte.asesoriaId)) === String(orden._id) && corte.asesoriaLinea === linea.etiqueta);
         const propuesta = orden.coordinacion?.propuesta?.find((item) => item.linea === linea.etiqueta);
         return <div key={linea.etiqueta} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-500">{(linea.partes || []).join(" + ") || linea.aplicacion} · Propuesta: {propuesta?.metrosPropuestos || 0} m · Venta: ${Number(linea.valor || 0).toLocaleString("es-CO")}</p>{propuesta?.medidasPiezas?.some((item) => Number(item.anchoCm) > 0 && Number(item.largoCm) > 0) && <p className="mt-1 text-xs font-semibold text-blue-700">Medidas: {propuesta.medidasPiezas.filter((item) => Number(item.anchoCm) > 0 && Number(item.largoCm) > 0).map((item) => `${item.pieza} ${item.anchoCm} × ${item.largoCm} cm${Number(item.cantidad || 1) > 1 ? ` (x${item.cantidad})` : ""}`).join(" · ")}</p>}</div><button type="button" disabled={registrado || garantiaBloqueada || propuestaPendiente} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : garantiaBloqueada || propuestaPendiente ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}>{registrado ? "Corte registrado" : propuestaPendiente ? "Revise la propuesta" : garantiaBloqueada ? "Esperando aprobación" : "Cargar corte agrupado"}</button></div>;
+      })}
+      {lineasReposicion.map((linea) => {
+        const registrado = cortes.some((corte) => String(corte.novedadId || "") === String(linea.novedadId) && corte.asesoriaLineaOrigen === linea.etiqueta);
+        return <div key={`${linea.novedadId}-${linea.etiqueta}`} className="flex flex-col gap-3 border-l-4 border-amber-400 bg-amber-50/60 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-xs font-black uppercase text-amber-700">Reposición aprobada por material dañado</p><p className="mt-1 text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-600">{(linea.partes || []).join(" + ") || linea.aplicacion} · Descuento de material a: {linea.instaladorNombre || "INSTALADOR"}</p></div><button type="button" disabled={registrado} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : "bg-amber-600 text-white hover:bg-amber-700"}`}>{registrado ? "Reposición registrada" : "Cargar nuevo corte"}</button></div>;
       })}
       {!lineas.length && <p className="p-4 text-sm text-slate-500">Esta orden solo contiene servicios que no requieren corte.</p>}
     </div>

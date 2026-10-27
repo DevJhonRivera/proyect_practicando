@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import { getPedidos } from "../../api/pedidos.api";
@@ -26,7 +27,8 @@ import {
   obtenerTotalRollosPedido,
 } from "./finanzas.helpers";
 
-function FinanzasPage() {
+function FinanzasPage({ soloCosteo = false }) {
+  const [searchParams] = useSearchParams();
   const [pedidos, setPedidos] = useState([]);
   const [costeos, setCosteos] = useState([]);
   const [reporte, setReporte] = useState(null);
@@ -90,17 +92,11 @@ function FinanzasPage() {
   );
 
   const cargarDatos = useCallback(async () => {
-    const [
-      pedidosRes,
-      costeosRes,
-      resumenRes,
-      reporteRes,
-    ] =
-      await Promise.all([
+    const [pedidosRes, costeosRes, resumenRes, reporteRes] = await Promise.all([
         getPedidos(),
         getCosteos(),
-        getResumenFinanciero(),
-        getReporteFinanciero(),
+        soloCosteo ? Promise.resolve({ data: null }) : getResumenFinanciero(),
+        soloCosteo ? Promise.resolve({ data: null }) : getReporteFinanciero(),
       ]);
 
     return {
@@ -109,7 +105,7 @@ function FinanzasPage() {
       resumen: resumenRes.data || null,
       reporte: reporteRes.data || null,
     };
-  }, []);
+  }, [soloCosteo]);
 
   const refrescar = useCallback(async () => {
     try {
@@ -150,7 +146,10 @@ function FinanzasPage() {
             .filter(Boolean)
             .map(String)
         );
+        const pedidoObjetivo = searchParams.get("pedido");
         const primerPendiente = data.pedidos.find(
+          (pedido) => String(pedido._id) === String(pedidoObjetivo)
+        ) || data.pedidos.find(
           (pedido) => !costeadosIds.has(String(pedido._id))
         );
 
@@ -177,7 +176,7 @@ function FinanzasPage() {
     return () => {
       active = false;
     };
-  }, [cargarDatos]);
+  }, [cargarDatos, searchParams]);
 
   useEffect(() => {
     if (!selectedPedidoId || !pedidoSeleccionado) {
@@ -346,18 +345,19 @@ function FinanzasPage() {
 
   return (
     <div className="space-y-6">
-      <FinanzasHeader onRefresh={refrescar} />
+      <FinanzasHeader onRefresh={refrescar} soloCosteo={soloCosteo} />
 
-      <FinanzasStats resumen={resumen} />
+      {!soloCosteo && <FinanzasStats resumen={resumen} />}
 
       <FinanzasTabs
         vista={vistaFinanzas}
         onChange={setVistaFinanzas}
         pendientes={pedidosParaNuevoCosteo.length}
         costeos={costeos.length}
+        soloCosteo={soloCosteo}
       />
 
-      {vistaFinanzas === "rentabilidad" && (
+      {!soloCosteo && vistaFinanzas === "rentabilidad" && (
         <ReporteRentabilidad reporte={reporte} />
       )}
 
@@ -401,6 +401,7 @@ function FinanzasTabs({
   onChange,
   pendientes,
   costeos,
+  soloCosteo,
 }) {
   const tabs = [
     {
@@ -413,16 +414,16 @@ function FinanzasTabs({
       label: "Historial",
       detail: `${costeos} costeos`,
     },
-    {
+    ...(!soloCosteo ? [{
       id: "rentabilidad",
       label: "Rentabilidad",
       detail: "Resumen comercial",
-    },
+    }] : []),
   ];
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-      <div className="grid gap-2 md:grid-cols-3">
+      <div className={`grid gap-2 ${soloCosteo ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
         {tabs.map((tab) => {
           const activo = vista === tab.id;
 

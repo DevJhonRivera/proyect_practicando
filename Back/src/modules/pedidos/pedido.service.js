@@ -80,10 +80,19 @@ export const crearPedido = async (data) => {
   return await Pedido.create(data);
 };
 
-export const obtenerPedidos =async () => {
+export const obtenerPedidos =async ({ desde, hasta, limite, estadoActivo } = {}) => {
+    const query = {};
+    if (String(estadoActivo) === "true") query.estado = { $ne: "COMPLETADO" };
+    if (desde || hasta) {
+      query.createdAt = {};
+      if (desde) query.createdAt.$gte = new Date(`${desde}T00:00:00`);
+      if (hasta) query.createdAt.$lte = new Date(`${hasta}T23:59:59.999`);
+    }
+    const maximo = Math.min(Math.max(Number(limite) || 500, 1), 1000);
     const pedidos =
-      await Pedido.find()
+      await Pedido.find(query)
         .sort({ createdAt: -1 })
+        .limit(maximo)
         .lean();
 
     const detalles =
@@ -93,13 +102,16 @@ export const obtenerPedidos =async () => {
         },
       }).lean();
 
+    const detallesPorPedido = detalles.reduce((mapa, detalle) => {
+      const clave = String(detalle.pedidoId);
+      if (!mapa.has(clave)) mapa.set(clave, []);
+      mapa.get(clave).push(detalle);
+      return mapa;
+    }, new Map());
+
     return pedidos.map((pedido) => ({
       ...pedido,
-      detalles: detalles.filter(
-        (detalle) =>
-          String(detalle.pedidoId) ===
-          String(pedido._id)
-      ),
+      detalles: detallesPorPedido.get(String(pedido._id)) || [],
     }));
   };
 

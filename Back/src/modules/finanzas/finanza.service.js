@@ -4,6 +4,7 @@ import DetallePedido from "../pedidos/detallePedido.model.js";
 import Rollo from "../rollos/rollo.model.js";
 import Corte from "../cortes/corte.model.js";
 import Retazo from "../retazos/retazo.model.js";
+import Venta from "../ventas/venta.model.js";
 
 const roundMoney = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -143,6 +144,9 @@ export const calcularCosteo = async (data) => {
   }
 
   const moneda = data.moneda || "COP";
+  if (!["COP", "USD"].includes(moneda)) {
+    throw new Error("Seleccione una moneda valida");
+  }
   const trm =
     moneda === "USD"
       ? Number(data.trm || 0)
@@ -175,6 +179,10 @@ export const calcularCosteo = async (data) => {
 
     const valorUnitario =
       Number(entrada.valorUnitario || 0);
+
+    if (!Number.isFinite(valorUnitario) || valorUnitario <= 0) {
+      throw new Error(`Ingrese el valor unitario de ${detalle.tipoPolarizado}`);
+    }
 
     const subtotalOriginal =
       valorUnitario * cantidadRollos;
@@ -230,6 +238,9 @@ export const calcularCosteo = async (data) => {
   const flete = Number(data.flete || 0);
   const otrosCostos =
     Number(data.otrosCostos || 0);
+  if (![flete, otrosCostos].every(Number.isFinite) || flete < 0 || otrosCostos < 0) {
+    throw new Error("Revise el flete y los otros costos");
+  }
 
   if (moneda === "USD" && flete > 0 && trmFlete <= 0) {
     throw new Error(
@@ -274,6 +285,9 @@ export const calcularCosteo = async (data) => {
 
   const metodoProrrateoFlete =
     data.metodoProrrateoFlete || "VALOR";
+  if (!["VALOR", "CANTIDAD"].includes(metodoProrrateoFlete)) {
+    throw new Error("Seleccione un metodo valido para repartir los costos");
+  }
 
   const detallesCalculados =
     detalles.map((detalle) => {
@@ -478,32 +492,29 @@ export const obtenerCosteoPorPedido =
 
 export const obtenerResumenFinanciero =
   async () => {
-    const costeos =
-      await CosteoPedido.find();
-
-    const totalCosteado =
-      costeos.reduce(
-        (acc, item) =>
-          acc + Number(item.totalCop || 0),
-        0
-      );
-
-    const totalRollos =
-      costeos.reduce(
-        (acc, item) =>
-          acc +
-          item.detalles.reduce(
-            (sum, detalle) =>
-              sum +
-              Number(detalle.cantidadRollos || 0),
-            0
-          ),
-        0
-      );
+    const [resumen = {}] = await CosteoPedido.aggregate([
+      { $project: {
+        totalCop: { $ifNull: ["$totalCop", 0] },
+        totalRollosPedido: { $sum: { $map: {
+          input: { $ifNull: ["$detalles", []] },
+          as: "detalle",
+          in: { $ifNull: ["$$detalle.cantidadRollos", 0] },
+        } } },
+      } },
+      { $group: {
+        _id: null,
+        pedidosCosteados: { $sum: 1 },
+        totalCosteado: { $sum: "$totalCop" },
+        totalRollos: { $sum: "$totalRollosPedido" },
+      } },
+      { $project: { _id: 0, pedidosCosteados: 1, totalCosteado: 1, totalRollos: 1 } },
+    ]);
+    const totalCosteado = Number(resumen.totalCosteado || 0);
+    const totalRollos = Number(resumen.totalRollos || 0);
 
     return {
       pedidosCosteados:
-        costeos.length,
+        Number(resumen.pedidosCosteados || 0),
       totalCosteado:
         roundMoney(totalCosteado),
       totalRollos,
@@ -518,23 +529,17 @@ export const obtenerResumenFinanciero =
 
 export const obtenerReporteFinanciero =
   async () => {
-    const cortes =
-      await Corte.find().lean();
-
-    const totalVentas =
-      cortes.reduce(
-        (acc, corte) =>
-          acc + Number(corte.valorVenta || 0),
-        0
-      );
-
-    const costoMaterial =
-      cortes.reduce(
-        (acc, corte) =>
-          acc +
-          Number(corte.costoMaterialCop || 0),
-        0
-      );
+    const [[ventas = {}], [costos = {}]] = await Promise.all([
+      Venta.aggregate([
+        { $match: { estado: { $ne: "ANULADA" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$total", 0] } } } },
+      ]),
+      Corte.aggregate([
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$costoMaterialCop", 0] } } } },
+      ]),
+    ]);
+    const totalVentas = Number(ventas.total || 0);
+    const costoMaterial = Number(costos.total || 0);
 
     const utilidadBruta =
       totalVentas - costoMaterial;

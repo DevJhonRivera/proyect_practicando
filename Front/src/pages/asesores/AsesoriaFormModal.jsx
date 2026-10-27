@@ -6,6 +6,7 @@ import {
   createBorradorAsesoria,
   getCatalogoDisponible,
   getClienteAsesoria,
+  getOrigenesGarantia,
   searchClientesAsesoria,
   updateAsesoria,
 } from "../../api/asesores.api";
@@ -15,6 +16,7 @@ import { obtenerReferenciaPpf } from "../../utils/materiales";
 import { getPiezasPpf } from "../../api/piezasPpf.api";
 import { getInstaladoresCoordinacion } from "../../api/coordinacion.api";
 import { getAccesorios } from "../../api/accesorios.api";
+import { getServiciosAdicionales } from "../../api/serviciosAdicionales.api";
 
 const PIEZAS_PPF_EXTERIOR = ["PUERTAS", "BOMPER DELANTERO", "BOMPER TRASERO", "TECHO", "SPOILER", "PARALES", "STOPS", "RETROVISORES", "TRIANGULOS", "FAROLAS", "CAPOT", "BAUL", "GUARDAFANGOS", "ESTRIBOS", "MANIJAS"];
 const PIEZAS_PPF_INTERIOR = ["PANTALLA", "CAJA CAMBIOS", "NEGRO PIANO", "CONSOLA CENTRAL", "TABLERO", "BOTONERA", "MOLDURAS", "PUERTAS INTERIORES"];
@@ -23,9 +25,12 @@ const piezasParaAplicacion = (catalogo, aplicacion) => {
   const ubicaciones = aplicacion === "COMPLETO" ? ["INTERIOR", "EXTERIOR"] : [aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR"];
   return ubicaciones.flatMap((ubicacion) => {
     const registradas = (catalogo || []).filter((pieza) => pieza.ubicacion === ubicacion);
-    if (registradas.length) return registradas;
     const base = ubicacion === "INTERIOR" ? PIEZAS_PPF_INTERIOR : PIEZAS_PPF_EXTERIOR;
-    return base.map((pieza) => ({ pieza, ubicacion, anchoCm: 0, largoCm: 0, _id: `${ubicacion}-${pieza}` }));
+    const porNombre = new Map(
+      base.map((pieza) => [pieza, { pieza, ubicacion, anchoCm: 0, largoCm: 0, _id: `${ubicacion}-${pieza}` }])
+    );
+    registradas.forEach((pieza) => porNombre.set(pieza.pieza, pieza));
+    return [...porNombre.values()];
   });
 };
 
@@ -43,7 +48,7 @@ const inicial = {
   ppf: [],
   serviciosAdicionales: [],
   accesorios: [],
-  garantia: { esGarantia: false, tipo: "GARANTIA_EMPRESA", motivo: "", instalador: "", instaladorId: "" },
+  garantia: { esGarantia: false, tipo: "GARANTIA_EMPRESA", motivo: "", instalador: "", instaladorId: "", ordenOrigenId: "" },
   comercial: {
     valorVenta: "",
     aplicaDescuento: false,
@@ -171,7 +176,10 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   const [piezasPpf, setPiezasPpf] = useState([]);
   const [cargandoPiezas, setCargandoPiezas] = useState(false);
   const [instaladores, setInstaladores] = useState([]);
+  const [origenesGarantia, setOrigenesGarantia] = useState([]);
+  const [cargandoOrigenes, setCargandoOrigenes] = useState(false);
   const [catalogoAccesorios, setCatalogoAccesorios] = useState([]);
+  const [catalogoServicios, setCatalogoServicios] = useState([]);
   const ppfAgrupado = useMemo(() => agruparPpfPorMaterial(form.ppf), [form.ppf]);
   const valorServicios = useMemo(
     () => [...form.polarizados, ...ppfAgrupado, ...form.serviciosAdicionales]
@@ -179,6 +187,23 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       form.accesorios.reduce((total, item) => total + Number(item.cantidad || 0) * Number(item.precioUnitario || 0), 0),
     [form.polarizados, ppfAgrupado, form.serviciosAdicionales, form.accesorios]
   );
+  const origenGarantiaSeleccionado = useMemo(
+    () => origenesGarantia.find((item) => String(item._id) === String(form.garantia.ordenOrigenId)),
+    [origenesGarantia, form.garantia.ordenOrigenId]
+  );
+  const idsInstaladoresOrigen = useMemo(
+    () => new Set((origenGarantiaSeleccionado?.coordinacion?.asignaciones || []).map((item) => String(item.instaladorId || "")).filter(Boolean)),
+    [origenGarantiaSeleccionado]
+  );
+  const instaladoresGarantia = idsInstaladoresOrigen.size
+    ? instaladores.filter((item) => idsInstaladoresOrigen.has(String(item._id)))
+    : instaladores;
+
+  useEffect(() => {
+    getServiciosAdicionales()
+      .then((response) => setCatalogoServicios(response.data?.data || []))
+      .catch(() => setCatalogoServicios([]));
+  }, []);
 
   useEffect(() => {
     getInstaladoresCoordinacion()
@@ -187,9 +212,59 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   }, []);
 
   useEffect(() => {
-    getAccesorios({ page: 1, limit: 100 })
-      .then((response) => setCatalogoAccesorios(response.data?.data?.items || []))
-      .catch(() => setCatalogoAccesorios([]));
+    if (!form.garantia.esGarantia || soloDigitos(form.cliente.cedula).length < 5 || form.vehiculo.placa.trim().length < 5) {
+      setOrigenesGarantia([]);
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      try {
+        setCargandoOrigenes(true);
+        const response = await getOrigenesGarantia(form.cliente.cedula, form.vehiculo.placa);
+        const origenes = response.data?.data || [];
+        setOrigenesGarantia(origenes);
+        setForm((actual) => {
+          const seleccionValida = origenes.some((item) => String(item._id) === String(actual.garantia.ordenOrigenId));
+          return {
+            ...actual,
+            garantia: {
+              ...actual.garantia,
+              ordenOrigenId: seleccionValida ? actual.garantia.ordenOrigenId : origenes[0]?._id || "",
+            },
+          };
+        });
+      } catch {
+        setOrigenesGarantia([]);
+      } finally {
+        setCargandoOrigenes(false);
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [form.garantia.esGarantia, form.cliente.cedula, form.vehiculo.placa]);
+
+  useEffect(() => {
+    let activo = true;
+    const cargarAccesorios = async () => {
+      try {
+        const primera = await getAccesorios({ page: 1, limit: 100 });
+        const data = primera.data?.data || {};
+        const totalPages = Number(data.pagination?.totalPages || 1);
+        const restantes = totalPages > 1
+          ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) =>
+              getAccesorios({ page: index + 2, limit: 100 })
+            ))
+          : [];
+        if (activo) {
+          setCatalogoAccesorios([
+            ...(data.items || []),
+            ...restantes.flatMap((response) => response.data?.data?.items || []),
+          ]);
+        }
+      } catch {
+        if (activo) setCatalogoAccesorios([]);
+      }
+    };
+    cargarAccesorios();
+    return () => { activo = false; };
   }, []);
 
   useEffect(() => {
@@ -233,14 +308,15 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
 
   useEffect(() => {
     const marca = form.vehiculo.marca.trim();
+    const modelo = form.vehiculo.modelo.trim();
     const anio = form.vehiculo.anio.trim();
-    if (!marca || anio.length !== 4) {
+    if (!marca || !modelo) {
       setPiezasPpf([]);
       return;
     }
     let activo = true;
     setCargandoPiezas(true);
-    getPiezasPpf({ marca, modelo: anio })
+    getPiezasPpf({ marca, modelo, anio })
       .then((response) => {
         if (activo) setPiezasPpf(response.data?.data || response.data || []);
       })
@@ -251,7 +327,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
         if (activo) setCargandoPiezas(false);
       });
     return () => { activo = false; };
-  }, [form.vehiculo.anio, form.vehiculo.marca]);
+  }, [form.vehiculo.anio, form.vehiculo.marca, form.vehiculo.modelo]);
 
   const opcionesMaterial = useMemo(() => {
     const grupos = new Map();
@@ -433,6 +509,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
         motivo: esGarantia ? actual.garantia.motivo : "",
         instalador: esGarantia && actual.garantia.tipo === "GARANTIA_INSTALADOR" ? actual.garantia.instalador : "",
         instaladorId: esGarantia && actual.garantia.tipo === "GARANTIA_INSTALADOR" ? actual.garantia.instaladorId : "",
+        ordenOrigenId: esGarantia ? actual.garantia.ordenOrigenId : "",
       },
       comercial: {
         ...actual.comercial,
@@ -557,6 +634,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
             </button>
           </div>
           {form.garantia.esGarantia && <div className="grid gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 md:grid-cols-3">
+            <div className="md:col-span-3"><Field label="Servicio anterior al que corresponde la garantía"><select value={form.garantia.ordenOrigenId || ""} onChange={(e) => setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, ordenOrigenId: e.target.value } }))} disabled={cargandoOrigenes || !origenesGarantia.length} className="w-full rounded-xl border bg-white p-3"><option value="">{cargandoOrigenes ? "Buscando servicios de esta placa..." : origenesGarantia.length ? "Seleccione el servicio original" : "No hay servicios finalizados para esta cédula y placa"}</option>{origenesGarantia.map((origen) => { const materiales = [...(origen.polarizados || []).map((item) => `${item.material} ${item.porcentaje}`), ...(origen.ppf || []).map((item) => `PPF ${item.referencia}`), ...(origen.serviciosAdicionales || []).map((item) => item.tipo)].join(" · "); return <option key={origen._id} value={origen._id}>{origen.codigo} · {new Date(origen.createdAt).toLocaleDateString("es-CO")} · {materiales || "Servicio registrado"}</option>; })}</select><p className="mt-1 text-xs text-violet-700">La cédula identifica al cliente y la placa identifica el carro. Si esta placa tuvo varios trabajos, elija exactamente el que presenta la garantía.</p></Field></div>
             <Field label="Responsable propuesto">
               <select value={form.garantia.tipo} onChange={(e) => setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, tipo: e.target.value, instalador: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instalador : "", instaladorId: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instaladorId : "" } }))} className="w-full rounded-xl border bg-white p-3">
                 <option value="GARANTIA_EMPRESA">Garantía empresa</option>
@@ -565,7 +643,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
               </select>
             </Field>
             <Field label="Motivo de la garantía"><input value={form.garantia.motivo} placeholder="Ej: MATERIAL DEFECTUOSO" onChange={(e) => cambiar("garantia", "motivo", mayusculas(e.target.value))} className="w-full rounded-xl border p-3" /></Field>
-            {form.garantia.tipo === "GARANTIA_INSTALADOR" && <Field label="Instalador responsable"><select value={form.garantia.instaladorId || ""} onChange={(e) => { const instalador = instaladores.find((item) => item._id === e.target.value); setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, instaladorId: e.target.value, instalador: instalador?.nombre || "" } })); }} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></Field>}
+            {form.garantia.tipo === "GARANTIA_INSTALADOR" && <Field label="Instalador responsable"><select value={form.garantia.instaladorId || ""} onChange={(e) => { const instalador = instaladoresGarantia.find((item) => item._id === e.target.value); setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, instaladorId: e.target.value, instalador: instalador?.nombre || "" } })); }} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione instalador</option>{instaladoresGarantia.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></Field>}
             <p className="text-xs text-violet-800 md:col-span-3">Administración aprobará la garantía y confirmará quién asume el costo real del material.</p>
           </div>}
         </FormSection>
@@ -764,16 +842,23 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="Otros trabajos"
             button="Agregar servicio"
-            onAdd={() => agregarItem("serviciosAdicionales", { tipo: "LAVADO", detalle: "", valor: "" })}
+            onAdd={() => agregarItem("serviciosAdicionales", { tipo: "", detalle: "", valor: "", catalogoId: "" })}
           />
           {form.serviciosAdicionales.map((item, index) => (
             <ServiceRow key={`adicional-${index}`} onRemove={() => quitarItem("serviciosAdicionales", index)}>
-              <Field label="Servicio">
-                <select value={item.tipo} onChange={(e) => editarItem("serviciosAdicionales", index, "tipo", e.target.value)} className="w-full rounded-xl border bg-white p-3">
-                  {["LAVADO", "POLICHADA", "DETAILING", "PDR", "PINTURA", "ASEGURADA", "OTRO"].map((opcion) => <option key={opcion}>{opcion}</option>)}
+              <div className="md:col-span-3"><Field label="Servicio del catálogo">
+                <select
+                  value={item.catalogoId || catalogoServicios.find((opcion) => opcion.categoria === item.tipo && opcion.nombre === item.detalle)?._id || ""}
+                  onChange={(e) => {
+                    const servicio = catalogoServicios.find((opcion) => opcion._id === e.target.value);
+                    setForm((actual) => ({ ...actual, serviciosAdicionales: actual.serviciosAdicionales.map((fila, posicion) => posicion === index ? { ...fila, catalogoId: servicio?._id || "", tipo: servicio?.categoria || "", detalle: servicio?.nombre || "", valor: servicio?.precioSugerido ? String(servicio.precioSugerido) : fila.valor } : fila) }));
+                  }}
+                  className="w-full rounded-xl border bg-white p-3"
+                >
+                  <option value="">Seleccione el trabajo...</option>
+                  {catalogoServicios.map((opcion) => <option key={opcion._id} value={opcion._id}>{opcion.categoria} · {opcion.nombre}{opcion.precioSugerido ? ` · $${Number(opcion.precioSugerido).toLocaleString("es-CO")}` : ""}</option>)}
                 </select>
-              </Field>
-              <div className="md:col-span-2"><Field label="Detalle"><input value={item.detalle} placeholder="Ej: LAVADO PREMIUM CON MOTOR" onChange={(e) => editarItem("serviciosAdicionales", index, "detalle", mayusculas(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>
+              </Field></div>
               {!form.garantia.esGarantia && <div className="md:col-span-3"><Field label="Precio del servicio"><input value={formatearMiles(item.valor)} inputMode="numeric" placeholder="Ej: 80.000" onChange={(e) => editarItem("serviciosAdicionales", index, "valor", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>}
             </ServiceRow>
           ))}

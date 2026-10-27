@@ -188,6 +188,9 @@ const costeoPedidoSchema =
     }
   );
 
+costeoPedidoSchema.index({ updatedAt: -1 });
+costeoPedidoSchema.index({ estado: 1, updatedAt: -1 });
+
 export default mongoose.model(
   "CosteoPedido",
   costeoPedidoSchema

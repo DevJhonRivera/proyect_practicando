@@ -30,7 +30,7 @@ export const getPedidos = async (
 ) => {
   try {
     const pedidos =
-      await pedidoService.obtenerPedidos();
+      await pedidoService.obtenerPedidos(req.query);
 
     res.json(pedidos);
   } catch (error) {

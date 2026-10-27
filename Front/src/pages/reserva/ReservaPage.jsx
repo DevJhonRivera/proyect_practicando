@@ -25,6 +25,7 @@ import TablePagination from "../../components/ui/TablePagination";
 import { usePagination } from "../../hooks/usePagination";
 import { anchoLabel } from "../../utils/anchos";
 import { etiquetaDetalle } from "../../utils/materiales";
+import { solicitarBajaMaterial } from "../../utils/bajaMaterial";
 
 function ReservaPage() {
   const navigate = useNavigate();
@@ -761,23 +762,20 @@ function ReservaPage() {
                   </td>
 
                   <td className="p-4 text-center">
-
-                    <button
-                      onClick={() =>
-                        pasar(
-                          rollo
-                        )
-                      }
-                      className="
-                      bg-blue-600
-                      hover:bg-blue-700
-                      text-white
-                      px-4
-                      py-2
-                      rounded-lg"
-                    >
-                      Pasar a uso
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => pasar(rollo)}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                      >
+                        Pasar a uso
+                      </button>
+                      <button
+                        onClick={async () => { if (await solicitarBajaMaterial(rollo)) cargar(); }}
+                        className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                      >
+                        Reportar daño
+                      </button>
+                    </div>
 
                   </td>
 

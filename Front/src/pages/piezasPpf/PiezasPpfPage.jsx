@@ -53,6 +53,7 @@ const piezasInteriores = [
 const formInicial = {
   marca: "",
   modelo: "",
+  anio: "",
   ubicacion: "EXTERIOR",
   pieza: "",
   piezaPersonalizada: "",
@@ -145,7 +146,8 @@ function PiezasPpfPage() {
   const actualizarForm = (field, value) => {
     const normalizers = {
       marca: mayusculas,
-      modelo: soloNumeros,
+      modelo: mayusculas,
+      anio: (value) => soloNumeros(value).slice(0, 4),
       piezaPersonalizada: mayusculas,
     };
     const normalizar =
@@ -180,6 +182,8 @@ function PiezasPpfPage() {
         actual.marca,
       modelo:
         actual.modelo,
+      anio:
+        actual.anio,
       ubicacion:
         actual.ubicacion || "EXTERIOR",
     }));
@@ -274,6 +278,8 @@ function PiezasPpfPage() {
         pieza.marca || "",
       modelo:
         pieza.modelo || "",
+      anio:
+        pieza.anio || (/^\d{4}$/.test(pieza.modelo || "") ? pieza.modelo : ""),
       ubicacion:
         pieza.ubicacion || "EXTERIOR",
       pieza:
@@ -504,7 +510,7 @@ function PiezasPpfPage() {
               )}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <Field label="Marca">
                 <input
                   value={form.marca}
@@ -523,10 +529,20 @@ function PiezasPpfPage() {
                   onChange={(event) =>
                     actualizarForm("modelo", event.target.value)
                   }
-                  placeholder="Ej: 2024"
-                  inputMode="numeric"
+                  placeholder="Ej: MODEL Y"
                   className={inputClass}
                   required
+                />
+              </Field>
+
+              <Field label="Año (opcional)">
+                <input
+                  value={form.anio}
+                  onChange={(event) => actualizarForm("anio", event.target.value)}
+                  placeholder="Ej: 2025"
+                  inputMode="numeric"
+                  maxLength={4}
+                  className={inputClass}
                 />
               </Field>
             </div>
@@ -793,7 +809,7 @@ function PiezasPpfPage() {
                           {pieza.marca}
                         </p>
                         <p className="text-xs text-slate-500">
-                          Modelo {pieza.modelo}
+                          Modelo {pieza.modelo}{pieza.anio ? ` · ${pieza.anio}` : ""}
                         </p>
                       </td>
                       <td className="p-4">

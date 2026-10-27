@@ -4,6 +4,7 @@ export const TIPOS_NOVEDAD_BLOQUEANTE = new Set([
   "ROLLO_EQUIVOCADO",
   "ERROR_REGISTRO",
   "TRABAJO_PENDIENTE",
+  "REPETICION_CORTE",
 ]);
 
 export const novedadesBloqueantes = (asesoria = {}) =>
