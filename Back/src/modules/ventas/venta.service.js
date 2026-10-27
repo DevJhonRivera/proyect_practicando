@@ -638,14 +638,20 @@ export const crearVenta = async (data, user) => {
   return venta;
 };
 
-export const obtenerVentas = async () => {
-  return await Venta.find()
+export const obtenerVentas = async ({ asesoriaIds } = {}) => {
+  const ids = String(asesoriaIds || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => mongoose.Types.ObjectId.isValid(id));
+  const query = asesoriaIds !== undefined ? { asesoriaId: { $in: ids } } : {};
+  return await Venta.find(query)
     .populate("asesoriaId", "cliente vehiculo codigo")
     .populate("items.corteId")
     .populate("items.corteIds")
     .sort({
       createdAt: -1,
-    });
+    })
+    .lean();
 };
 
 export const obtenerVentaPorId = async (id) => {

@@ -245,6 +245,7 @@ export const listarAsesorias = async (filtros, user) => {
 const prepararDatosAsesoria = (data) => {
   const cedula = soloDigitos(data.cliente?.cedula);
   const placa = mayusculas(data.vehiculo?.placa).replace(/\s+/g, "");
+  const esGarantia = Boolean(data.garantia?.esGarantia);
   const recepcion = {
     tieneRayones: Boolean(data.recepcion?.tieneRayones),
     detalleRayones: mayusculas(data.recepcion?.detalleRayones),
@@ -252,8 +253,8 @@ const prepararDatosAsesoria = (data) => {
     detalleObjetos: mayusculas(data.recepcion?.detalleObjetos),
     observaciones: mayusculas(data.recepcion?.observaciones),
   };
-  let valorVenta = Math.round(Number(data.comercial?.valorVenta || 0));
-  const aplicaDescuento = Boolean(data.comercial?.aplicaDescuento);
+  let valorVenta = esGarantia ? 0 : Math.round(Number(data.comercial?.valorVenta || 0));
+  const aplicaDescuento = !esGarantia && Boolean(data.comercial?.aplicaDescuento);
   const descuento = aplicaDescuento
     ? Math.round(Number(data.comercial?.descuento || 0))
     : 0;
@@ -266,14 +267,14 @@ const prepararDatosAsesoria = (data) => {
     "CREDITO",
     "MIXTO",
   ];
-  const metodoPagoPrevisto = metodosPago.includes(data.comercial?.metodoPagoPrevisto)
+  const metodoPagoPrevisto = !esGarantia && metodosPago.includes(data.comercial?.metodoPagoPrevisto)
     ? data.comercial.metodoPagoPrevisto
     : "POR_DEFINIR";
   const polarizados = (data.polarizados || []).map((item) => ({
     material: mayusculas(item.material),
     porcentaje: mayusculas(item.porcentaje),
     partes: (item.partes || []).map(mayusculas).filter(Boolean),
-    valor: Math.round(Number(item.valor || 0)),
+    valor: esGarantia ? 0 : Math.round(Number(item.valor || 0)),
   })).filter((item) => item.material && item.porcentaje && item.partes.length);
   const ppf = agruparPpfPorReferencia((data.ppf || []).map((item) => ({
     referencia: mayusculas(item.referencia),
@@ -281,16 +282,16 @@ const prepararDatosAsesoria = (data) => {
       ? item.aplicacion
       : "EXTERIOR",
     piezas: (item.piezas || []).map(mayusculas).filter(Boolean),
-    valor: Math.round(Number(item.valor || 0)),
+    valor: esGarantia ? 0 : Math.round(Number(item.valor || 0)),
   })).filter((item) => item.referencia && item.piezas.length));
   const serviciosAdicionales = (data.serviciosAdicionales || []).map((item) => ({
     tipo: mayusculas(item.tipo),
     detalle: mayusculas(item.detalle),
-    valor: Math.round(Number(item.valor || 0)),
+    valor: esGarantia ? 0 : Math.round(Number(item.valor || 0)),
   })).filter((item) => item.tipo);
   const accesoriosEntrada = Array.isArray(data.accesorios) ? data.accesorios : [];
   const garantia = {
-    esGarantia: Boolean(data.garantia?.esGarantia),
+    esGarantia,
     tipo: mayusculas(data.garantia?.tipo),
     motivo: mayusculas(data.garantia?.motivo),
     instalador: mayusculas(data.garantia?.instalador),
@@ -301,7 +302,7 @@ const prepararDatosAsesoria = (data) => {
   };
   valorVenta = [...polarizados, ...ppf, ...serviciosAdicionales]
     .reduce((total, item) => total + Number(item.valor || 0), 0);
-  totalAcordado = Math.max(valorVenta - descuento, 0);
+  totalAcordado = esGarantia ? 0 : Math.max(valorVenta - descuento, 0);
 
   if (cedula.length < 5 || cedula.length > 15) {
     throw new Error("La cedula debe tener entre 5 y 15 numeros");
@@ -377,6 +378,12 @@ export const crearBorradorAsesoria = async (data, user) => {
   const datosAsesoria = prepararDatosAsesoria(data);
   const accesorios = await prepararAccesorios(datosAsesoria.accesoriosEntrada);
   delete datosAsesoria.accesoriosEntrada;
+  if (datosAsesoria.garantia.esGarantia) {
+    accesorios.forEach((item) => {
+      item.precioUnitario = 0;
+      item.valor = 0;
+    });
+  }
   datosAsesoria.accesorios = accesorios;
   datosAsesoria.comercial.valorVenta += accesorios.reduce((total, item) => total + item.valor, 0);
   datosAsesoria.comercial.totalAcordado = Math.max(datosAsesoria.comercial.valorVenta - datosAsesoria.comercial.descuento, 0);
@@ -435,6 +442,12 @@ export const actualizarAsesoria = async (id, data, user) => {
   const datosAsesoria = prepararDatosAsesoria(data);
   const accesorios = await prepararAccesorios(datosAsesoria.accesoriosEntrada, actual.accesorios || []);
   delete datosAsesoria.accesoriosEntrada;
+  if (datosAsesoria.garantia.esGarantia) {
+    accesorios.forEach((item) => {
+      item.precioUnitario = 0;
+      item.valor = 0;
+    });
+  }
   datosAsesoria.accesorios = accesorios;
   datosAsesoria.comercial.valorVenta += accesorios.reduce((total, item) => total + item.valor, 0);
   datosAsesoria.comercial.totalAcordado = Math.max(datosAsesoria.comercial.valorVenta - datosAsesoria.comercial.descuento, 0);

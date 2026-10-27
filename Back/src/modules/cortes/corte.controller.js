@@ -75,7 +75,7 @@ export const getCortes =
   async (req, res) => {
     try {
       const cortes =
-        await obtenerCortes();
+        await obtenerCortes(req.query);
 
       if (rolesConCostos.includes(req.user?.rol)) {
         return res.json(cortes);

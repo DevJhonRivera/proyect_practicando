@@ -92,10 +92,14 @@ const PARTES_POLARIZADO = [
   ["DELANTERAS", "Ventanas delanteras"],
   ["TRASERAS", "Ventanas traseras"],
   ["LUNETA", "Luneta"],
-  ["FIJOS", "Fijos / custodias"],
+  ["FIJOS", "Fijos"],
+  ["CUSTODIAS", "Custodias"],
   ["SUNROOF", "Sunroof"],
+  ["U", "U (todo menos panorámico y Sunroof)"],
   ["COMPLETO", "Carro completo"],
 ];
+
+const PARTES_INCLUIDAS_EN_U = new Set(["DELANTERAS", "TRASERAS", "LUNETA", "FIJOS", "CUSTODIAS"]);
 
 const prepararFormulario = (asesoria) => {
   if (!asesoria) {
@@ -348,9 +352,14 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       polarizados: actual.polarizados.map((item, posicion) => {
         if (posicion !== index) return item;
         const partes = item.partes || [];
-        const nuevasPartes = partes.includes(parte)
+        let nuevasPartes = partes.includes(parte)
           ? partes.filter((actual) => actual !== parte)
           : [...partes.filter((actual) => actual !== "COMPLETO"), parte];
+        if (parte === "U" && !partes.includes(parte)) {
+          nuevasPartes = [...partes.filter((actual) => !PARTES_INCLUIDAS_EN_U.has(actual) && actual !== "COMPLETO"), "U"];
+        } else if (PARTES_INCLUIDAS_EN_U.has(parte) && !partes.includes(parte)) {
+          nuevasPartes = [...partes.filter((actual) => actual !== "U" && actual !== "COMPLETO"), parte];
+        }
         return {
           ...item,
           partes: parte === "COMPLETO" && !partes.includes(parte)
@@ -410,6 +419,31 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
     setClientesSugeridos([]);
   };
 
+  const cambiarTipoRecepcion = (esGarantia) => {
+    setForm((actual) => ({
+      ...actual,
+      polarizados: actual.polarizados.map((item) => ({ ...item, valor: esGarantia ? "" : item.valor })),
+      ppf: actual.ppf.map((item) => ({ ...item, valor: esGarantia ? "" : item.valor })),
+      serviciosAdicionales: actual.serviciosAdicionales.map((item) => ({ ...item, valor: esGarantia ? "" : item.valor })),
+      accesorios: actual.accesorios.map((item) => ({ ...item, precioUnitario: esGarantia ? "" : item.precioUnitario })),
+      garantia: {
+        ...actual.garantia,
+        esGarantia,
+        tipo: esGarantia ? actual.garantia.tipo || "GARANTIA_EMPRESA" : "",
+        motivo: esGarantia ? actual.garantia.motivo : "",
+        instalador: esGarantia && actual.garantia.tipo === "GARANTIA_INSTALADOR" ? actual.garantia.instalador : "",
+        instaladorId: esGarantia && actual.garantia.tipo === "GARANTIA_INSTALADOR" ? actual.garantia.instaladorId : "",
+      },
+      comercial: {
+        ...actual.comercial,
+        valorVenta: esGarantia ? "" : actual.comercial.valorVenta,
+        aplicaDescuento: esGarantia ? false : actual.comercial.aplicaDescuento,
+        descuento: esGarantia ? "" : actual.comercial.descuento,
+        metodoPagoPrevisto: esGarantia ? "POR_DEFINIR" : actual.comercial.metodoPagoPrevisto,
+      },
+    }));
+  };
+
   const guardar = async () => {
     const placa = form.vehiculo.placa.trim();
     if (soloDigitos(form.cliente.cedula).length < 5) {
@@ -441,7 +475,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
     );
     const preciosValidos = [...form.polarizados, ...ppfAgrupado, ...form.serviciosAdicionales]
       .every((item) => Number(item.valor || 0) > 0);
-    const accesoriosValidos = form.accesorios.every((item) => item.accesorioId && Number(item.cantidad) > 0 && Number(item.precioUnitario) > 0);
+    const accesoriosValidos = form.accesorios.every((item) => item.accesorioId && Number(item.cantidad) > 0 && (form.garantia.esGarantia || Number(item.precioUnitario) > 0));
     if (!form.polarizados.length && !form.ppf.length && !form.serviciosAdicionales.length && !form.accesorios.length) {
       return Swal.fire({ icon: "warning", title: "Agregue al menos un servicio" });
     }
@@ -473,9 +507,13 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       setGuardando(true);
       const payload = {
         ...form,
-        comercial: { ...form.comercial, valorVenta: valorServicios },
-        polarizados: form.polarizados.map((item) => ({ ...item, partes: item.partes })),
-        ppf: ppfAgrupado.map((item) => ({ ...item, piezas: item.piezas })),
+        comercial: form.garantia.esGarantia
+          ? { valorVenta: 0, aplicaDescuento: false, descuento: 0, metodoPagoPrevisto: "POR_DEFINIR" }
+          : { ...form.comercial, valorVenta: valorServicios },
+        polarizados: form.polarizados.map((item) => ({ ...item, partes: item.partes, valor: form.garantia.esGarantia ? 0 : item.valor })),
+        ppf: ppfAgrupado.map((item) => ({ ...item, piezas: item.piezas, valor: form.garantia.esGarantia ? 0 : item.valor })),
+        serviciosAdicionales: form.serviciosAdicionales.map((item) => ({ ...item, valor: form.garantia.esGarantia ? 0 : item.valor })),
+        accesorios: form.accesorios.map((item) => ({ ...item, precioUnitario: form.garantia.esGarantia ? 0 : item.precioUnitario })),
       };
       const response = asesoria
         ? await updateAsesoria(asesoria._id, payload)
@@ -507,6 +545,31 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       onClose={onClose}
     >
       <div className="space-y-6">
+        <FormSection title="Tipo de recepción">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button type="button" onClick={() => cambiarTipoRecepcion(false)} className={`rounded-xl border p-4 text-left transition ${!form.garantia.esGarantia ? "border-blue-600 bg-blue-50 ring-2 ring-blue-100" : "border-slate-200 bg-white hover:border-blue-300"}`}>
+              <span className="block font-black text-slate-900">Servicio nuevo</span>
+              <span className="mt-1 block text-xs text-slate-500">Se registra el precio de cada servicio y el cliente realiza el pago.</span>
+            </button>
+            <button type="button" onClick={() => cambiarTipoRecepcion(true)} className={`rounded-xl border p-4 text-left transition ${form.garantia.esGarantia ? "border-violet-600 bg-violet-50 ring-2 ring-violet-100" : "border-slate-200 bg-white hover:border-violet-300"}`}>
+              <span className="block font-black text-slate-900">Garantía</span>
+              <span className="mt-1 block text-xs text-slate-500">No genera cobro al cliente; se selecciona únicamente el material y trabajo requerido.</span>
+            </button>
+          </div>
+          {form.garantia.esGarantia && <div className="grid gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 md:grid-cols-3">
+            <Field label="Responsable propuesto">
+              <select value={form.garantia.tipo} onChange={(e) => setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, tipo: e.target.value, instalador: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instalador : "", instaladorId: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instaladorId : "" } }))} className="w-full rounded-xl border bg-white p-3">
+                <option value="GARANTIA_EMPRESA">Garantía empresa</option>
+                <option value="GARANTIA_INSTALADOR">Garantía instalador</option>
+                <option value="GARANTIA_PROVEEDOR">Garantía proveedor / material</option>
+              </select>
+            </Field>
+            <Field label="Motivo de la garantía"><input value={form.garantia.motivo} placeholder="Ej: MATERIAL DEFECTUOSO" onChange={(e) => cambiar("garantia", "motivo", mayusculas(e.target.value))} className="w-full rounded-xl border p-3" /></Field>
+            {form.garantia.tipo === "GARANTIA_INSTALADOR" && <Field label="Instalador responsable"><select value={form.garantia.instaladorId || ""} onChange={(e) => { const instalador = instaladores.find((item) => item._id === e.target.value); setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, instaladorId: e.target.value, instalador: instalador?.nombre || "" } })); }} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></Field>}
+            <p className="text-xs text-violet-800 md:col-span-3">Administración aprobará la garantía y confirmará quién asume el costo real del material.</p>
+          </div>}
+        </FormSection>
+
         <FormSection title="Datos del cliente">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Cédula">
@@ -633,11 +696,11 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
                   </select>
                 </Field>
               </div>
-              <div className="md:col-span-3">
+              {!form.garantia.esGarantia && <div className="md:col-span-3">
                 <Field label="Precio de este servicio">
                   <input value={formatearMiles(item.valor)} inputMode="numeric" placeholder="Ej: 450.000" onChange={(e) => editarItem("polarizados", index, "valor", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3" />
                 </Field>
-              </div>
+              </div>}
               <div className="md:col-span-3">
                 <span className="mb-2 block text-xs font-semibold uppercase text-slate-500">Partes del carro</span>
                 <div className="flex flex-wrap gap-2">
@@ -693,8 +756,8 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
                   </div>
                 )}
               </div>
-              <div className="md:col-span-3"><Field label="Precio del PPF"><input value={formatearMiles(item.valor)} inputMode="numeric" placeholder="Ej: 800.000" onChange={(e) => editarItem("ppf", index, "valor", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>
-              <p className="text-xs text-slate-500 md:col-span-3">Todas las piezas de esta referencia PPF se cobran y se envían como un solo servicio.</p>
+              {!form.garantia.esGarantia && <div className="md:col-span-3"><Field label="Precio del PPF"><input value={formatearMiles(item.valor)} inputMode="numeric" placeholder="Ej: 800.000" onChange={(e) => editarItem("ppf", index, "valor", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>}
+              <p className="text-xs text-slate-500 md:col-span-3">Todas las piezas de esta referencia PPF se envían como un solo servicio{form.garantia.esGarantia ? " sin cobro al cliente" : " y se cobran juntas"}.</p>
             </ServiceRow>
           ))}
 
@@ -711,7 +774,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
                 </select>
               </Field>
               <div className="md:col-span-2"><Field label="Detalle"><input value={item.detalle} placeholder="Ej: LAVADO PREMIUM CON MOTOR" onChange={(e) => editarItem("serviciosAdicionales", index, "detalle", mayusculas(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>
-              <div className="md:col-span-3"><Field label="Precio del servicio"><input value={formatearMiles(item.valor)} inputMode="numeric" placeholder="Ej: 80.000" onChange={(e) => editarItem("serviciosAdicionales", index, "valor", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>
+              {!form.garantia.esGarantia && <div className="md:col-span-3"><Field label="Precio del servicio"><input value={formatearMiles(item.valor)} inputMode="numeric" placeholder="Ej: 80.000" onChange={(e) => editarItem("serviciosAdicionales", index, "valor", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>}
             </ServiceRow>
           ))}
 
@@ -725,22 +788,14 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
             return <ServiceRow key={`accesorio-${index}`} onRemove={() => quitarItem("accesorios", index)}>
               <div className="md:col-span-3"><Field label="Accesorio"><select value={item.accesorioId} onChange={(e) => seleccionarAccesorio(index, e.target.value)} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione producto...</option>{catalogoAccesorios.map((opcion) => { const usado = form.accesorios.some((actual, posicion) => posicion !== index && actual.accesorioId === opcion._id); return <option key={opcion._id} value={opcion._id} disabled={usado}>{opcion.nombre} · {opcion.marca}{opcion.referencia ? ` · ${opcion.referencia}` : ""} · {opcion.stock > 0 ? `${opcion.stock} disponibles` : "AGOTADO · SE SOLICITARÁ"}</option>; })}</select>{producto?.stock <= 0 && item.accesorioId && <span className="mt-1 block text-xs font-semibold text-amber-700">Puede incluirlo. Inventario y Administración recibirán una alerta para pedirlo.</span>}</Field></div>
               <Field label="Cantidad"><input value={item.cantidad} inputMode="numeric" onChange={(e) => editarItem("accesorios", index, "cantidad", soloDigitos(e.target.value).slice(0, 3))} className="w-full rounded-xl border p-3"/><span className="mt-1 block text-xs text-slate-500">Máximo disponible: {producto?.stock || 0}</span></Field>
-              <div className="md:col-span-2"><Field label="Precio unitario"><input value={formatearMiles(item.precioUnitario)} inputMode="numeric" placeholder="Ej: 120.000" onChange={(e) => editarItem("accesorios", index, "precioUnitario", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3"/><span className="mt-1 block text-xs font-semibold text-blue-700">Subtotal: ${Number(Number(item.cantidad || 0) * Number(item.precioUnitario || 0)).toLocaleString("es-CO")}</span></Field></div>
+              {!form.garantia.esGarantia && <div className="md:col-span-2"><Field label="Precio unitario"><input value={formatearMiles(item.precioUnitario)} inputMode="numeric" placeholder="Ej: 120.000" onChange={(e) => editarItem("accesorios", index, "precioUnitario", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3"/><span className="mt-1 block text-xs font-semibold text-blue-700">Subtotal: ${Number(Number(item.cantidad || 0) * Number(item.precioUnitario || 0)).toLocaleString("es-CO")}</span></Field></div>}
             </ServiceRow>;
           })}
           {form.serviciosAdicionales.some((item) => item.tipo === "ASEGURADA") && <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">Para una asegurada general, agregue aquí los marcos, tapetes u otros productos que se entregarán. El stock se descontará al guardar.</p>}
 
-          <Inspection label="El cliente viene por garantía" checked={form.garantia.esGarantia} onChange={(checked) => cambiar("garantia", "esGarantia", checked)}>
-            {form.garantia.esGarantia && <div className="mt-3 grid gap-3 md:grid-cols-3">
-              <select value={form.garantia.tipo} onChange={(e) => setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, tipo: e.target.value, instalador: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instalador : "", instaladorId: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instaladorId : "" } }))} className="rounded-xl border bg-white p-3"><option value="GARANTIA_EMPRESA">Garantía empresa</option><option value="GARANTIA_INSTALADOR">Garantía instalador</option><option value="GARANTIA_PROVEEDOR">Garantía proveedor</option></select>
-              <input value={form.garantia.motivo} placeholder="Motivo de la garantía" onChange={(e) => cambiar("garantia", "motivo", mayusculas(e.target.value))} className="rounded-xl border p-3" />
-              {form.garantia.tipo === "GARANTIA_INSTALADOR" && <select value={form.garantia.instaladorId || ""} onChange={(e) => { const instalador = instaladores.find((item) => item._id === e.target.value); setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, instaladorId: e.target.value, instalador: instalador?.nombre || "" } })); }} className="rounded-xl border bg-white p-3"><option value="">Seleccione instalador responsable</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select>}
-              <p className="text-xs text-slate-500 md:col-span-3">La solicitud quedará pendiente de aprobación administrativa. Si no habrá cobro, puede dejar los precios en cero.</p>
-            </div>}
-          </Inspection>
         </FormSection>
 
-        <FormSection title="Acuerdo comercial">
+        {!form.garantia.esGarantia ? <FormSection title="Acuerdo comercial">
           <div className="grid gap-4 md:grid-cols-3">
             <Field label="Valor de venta">
               <input
@@ -797,7 +852,12 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <p className="text-xs text-slate-500">
             El pago queda pendiente. Ventas lo confirmará cuando el servicio esté completo.
           </p>
-        </FormSection>
+        </FormSection> : <FormSection title="Tratamiento económico de la garantía">
+          <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-900">
+            <p className="font-bold">Esta orden no genera venta ni pago del cliente.</p>
+            <p className="mt-1 text-xs">Inventario calculará el costo real del material consumido. Si responde el instalador se descontará de su liquidación; si responde la empresa será un costo interno; si responde el proveedor quedará registrado para reclamación.</p>
+          </div>
+        </FormSection>}
 
         <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:justify-end">
           <button type="button" onClick={onClose} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>

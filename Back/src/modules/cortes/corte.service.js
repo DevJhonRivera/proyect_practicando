@@ -563,7 +563,7 @@ export const registrarCorte =
 
 const tipoCorteDesdePartes = (clase, partes = []) => {
   if (clase === "PPF") return { tipoCorte: "PIEZAS_PPF", tipoCorteDetalle: "" };
-  const tipos = ["PANORAMICO", "LUNETA", "DELANTERAS", "TRASERAS", "FIJOS", "SUNROOF", "COMPLETO"];
+  const tipos = ["PANORAMICO", "LUNETA", "DELANTERAS", "TRASERAS", "FIJOS", "CUSTODIAS", "SUNROOF", "U", "COMPLETO"];
   const parte = partes[0] || "";
   if (partes.length === 1 && tipos.includes(parte)) return { tipoCorte: parte, tipoCorteDetalle: "" };
   return { tipoCorte: partes.length ? "OTROS" : "COMPLETO", tipoCorteDetalle: partes.join(" + ") };
@@ -608,14 +608,17 @@ export const registrarPropuestaCompleta = async (asesoriaId, user) => {
     if (!rollo) throw new Error(`No hay un rollo en uso compatible con stock suficiente para ${linea.etiqueta}: ${linea.material}`);
     disponibleVirtual.set(String(rollo._id), roundMeters(disponibleVirtual.get(String(rollo._id)) - metros));
     const detalle = tipoCorteDesdePartes(linea.clase, linea.partes);
-    const piezasPpf = linea.clase === "PPF" ? linea.partes.map((pieza) => ({
-      pieza,
-      ubicacion: linea.aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR",
-      cantidad: linea.partes.length === 1 ? Math.max(Number(propuesta?.cantidad || 1), 1) : 1,
-      anchoCm: Number(propuesta?.anchoCm || 0),
-      largoCm: Number(propuesta?.largoCm || 0),
-      rotada: false,
-    })) : [];
+    const piezasPpf = linea.clase === "PPF" ? linea.partes.map((pieza) => {
+      const medida = (propuesta?.medidasPiezas || []).find((item) => item.pieza === pieza);
+      return {
+        pieza,
+        ubicacion: linea.aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR",
+        cantidad: Math.max(Number(medida?.cantidad || (linea.partes.length === 1 ? propuesta?.cantidad : 1) || 1), 1),
+        anchoCm: Number(medida?.anchoCm || propuesta?.anchoCm || 0),
+        largoCm: Number(medida?.largoCm || propuesta?.largoCm || 0),
+        rotada: false,
+      };
+    }) : [];
     return {
       asesoriaId: asesoria._id,
       asesoriaLinea: linea.etiqueta,
@@ -644,15 +647,22 @@ export const registrarPropuestaCompleta = async (asesoriaId, user) => {
 };
 
 
-export const obtenerCortes =async () => {
-    return await Corte.find()
+export const obtenerCortes =async ({ desde, hasta } = {}) => {
+    const query = {};
+    if (desde || hasta) {
+      query.createdAt = {};
+      if (desde) query.createdAt.$gte = new Date(`${desde}T00:00:00`);
+      if (hasta) query.createdAt.$lte = new Date(`${hasta}T23:59:59.999`);
+    }
+    return await Corte.find(query)
       .populate("rolloId")
       .populate("retazoId")
       .populate("ventaId")
       .populate("asesoriaId", "coordinacion.asignaciones polarizados ppf cliente vehiculo codigo")
       .sort({
         createdAt: -1,
-      });
+      })
+      .lean();
   };
 
 export const actualizarCorte = async (id, data, user) => {

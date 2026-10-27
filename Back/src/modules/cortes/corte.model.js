@@ -165,7 +165,9 @@ const corteSchema = new mongoose.Schema(
                 "DELANTERAS",
                 "TRASERAS",
                 "FIJOS",
+                "CUSTODIAS",
                 "SUNROOF", 
+                "U",
                 "COMPLETO",
                 "PIEZAS_PPF",
                 "OTROS"
@@ -257,6 +259,8 @@ corteSchema.index({
     modelo: 1,
     createdAt: -1
 });
+
+corteSchema.index({ createdAt: -1 });
 
 corteSchema.index(
     { asesoriaId: 1, asesoriaLinea: 1 },

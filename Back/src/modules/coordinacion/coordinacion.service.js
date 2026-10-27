@@ -4,6 +4,7 @@ import { validarSinNovedadesBloqueantes } from "../asesores/asesoriaWorkflow.uti
 import Asesoria from "../asesores/asesoria.model.js";
 import Corte from "../cortes/corte.model.js";
 import User from "../users/user.model.js";
+import MedidaVehiculo from "../medidasVehiculos/medidaVehiculo.model.js";
 import {
   cerrarAlertaFlujo,
   crearAlertaInventarioCorte,
@@ -18,11 +19,53 @@ import {
 const texto = (value) => String(value || "").trim();
 const mayusculas = (value) => texto(value).toUpperCase();
 
+const claveMedidaPorPieza = {
+  DELANTERAS: "delanteras",
+  TRASERAS: "traseras",
+  PANORAMICO: "panoramico",
+  "PANORÁMICO": "panoramico",
+  LUNETA: "luneta",
+  FIJOS: "fijos",
+  CUSTODIAS: "custodias",
+  SUNROOF: "sunroof",
+  "SUN ROOF": "sunroof",
+};
+
+const guardarMedidasEnCatalogo = async (asesoria, propuesta) => {
+  const marca = mayusculas(asesoria.vehiculo?.marca);
+  const modelo = mayusculas(asesoria.vehiculo?.modelo);
+  const anio = String(asesoria.vehiculo?.anio || "").replace(/\D/g, "").slice(0, 4);
+  if (!marca || !modelo) return;
+
+  const medidas = new Map();
+  propuesta.flatMap((item) => item.medidasPiezas || []).forEach((medida) => {
+    const clave = claveMedidaPorPieza[mayusculas(medida.pieza)];
+    const anchoCm = Number(medida.anchoCm || 0);
+    const largoCm = Number(medida.largoCm || 0);
+    if (clave && anchoCm > 0 && largoCm > 0) {
+      medidas.set(clave, { anchoCm, largoCm, cantidad: Math.max(Number(medida.cantidad || 1), 1) });
+    }
+  });
+  if (!medidas.size) return;
+
+  const cambios = {};
+  medidas.forEach((dimension, clave) => { cambios[`medidas.${clave}`] = dimension; });
+  await MedidaVehiculo.findOneAndUpdate(
+    { marca, modelo, anio },
+    { $set: cambios, $setOnInsert: { marca, modelo, anio } },
+    { upsert: true, new: true, runValidators: true },
+  );
+};
+
+const expandirPartesMedibles = (partes = []) => [...new Set(partes.flatMap((parte) =>
+  mayusculas(parte) === "U" ? ["DELANTERAS", "TRASERAS", "LUNETA", "FIJOS", "CUSTODIAS"] : [mayusculas(parte)]
+))];
+
 const lineasOrden = (asesoria) => [
   ...(asesoria.polarizados || []).map((item, index) => ({
     linea: `POLARIZADO ${index + 1}`,
     material: `${item.material} ${item.porcentaje}`.trim(),
-    partes: item.partes || [],
+    partes: expandirPartesMedibles(item.partes || []),
   })),
   ...(asesoria.ppf || []).map((item, index) => ({
     linea: `PPF ${index + 1}`,
@@ -116,20 +159,35 @@ export const guardarPropuesta = async (id, data, user) => {
   }
 
   const esperadas = lineasOrden(asesoria);
-  const propuesta = (data.propuesta || []).map((item) => ({
-    linea: mayusculas(item.linea),
-    material: mayusculas(item.material),
-    partes: (item.partes || []).map(mayusculas),
-    anchoCm: Number(item.anchoCm || 0),
-    largoCm: Number(item.largoCm || 0),
-    cantidad: Math.max(Number(item.cantidad || 1), 1),
-    metrosPropuestos: Number(item.metrosPropuestos || 0),
-    observacion: mayusculas(item.observacion),
-  }));
+  const propuesta = (data.propuesta || []).map((item) => {
+    const partes = (item.partes || []).map(mayusculas);
+    const medidasPiezas = (item.medidasPiezas || []).map((medida) => ({
+      pieza: mayusculas(medida.pieza),
+      anchoCm: Number(medida.anchoCm || 0),
+      largoCm: Number(medida.largoCm || 0),
+      cantidad: Math.max(Number(medida.cantidad || 1), 1),
+    })).filter((medida) => medida.pieza && partes.includes(medida.pieza));
+    return {
+      linea: mayusculas(item.linea),
+      material: mayusculas(item.material),
+      partes,
+      anchoCm: Number(item.anchoCm || 0),
+      largoCm: Number(item.largoCm || 0),
+      cantidad: Math.max(Number(item.cantidad || 1), 1),
+      medidasPiezas,
+      metrosPropuestos: Number(item.metrosPropuestos || 0),
+      observacion: mayusculas(item.observacion),
+    };
+  });
   const faltantes = esperadas.filter((linea) => !propuesta.some((item) => item.linea === linea.linea));
   if (faltantes.length) throw new Error(`Falta la propuesta de corte para: ${faltantes.map((item) => item.linea).join(", ")}`);
   if (propuesta.some((item) => !Number.isFinite(item.metrosPropuestos) || item.metrosPropuestos <= 0)) {
     throw new Error("Indique los metros que propone cortar para cada material");
+  }
+  if (propuesta.some((item) => item.medidasPiezas.some((medida) =>
+    (medida.anchoCm > 0 && medida.largoCm <= 0) || (medida.largoCm > 0 && medida.anchoCm <= 0)
+  ))) {
+    throw new Error("Complete ancho y largo para cada pieza medida");
   }
 
   const servicios = serviciosOrden(asesoria);
@@ -160,6 +218,9 @@ export const guardarPropuesta = async (id, data, user) => {
   const instaladores = await User.find({ _id: { $in: ids }, rol: "INSTALADOR", suspendido: { $ne: true } }).lean();
   if (instaladores.length !== ids.length) throw new Error("Uno de los instaladores no esta disponible");
   const porId = new Map(instaladores.map((item) => [String(item._id), item]));
+  const garantiaInstalador = asesoria.garantia?.esGarantia && (
+    asesoria.garantia?.tipo === "GARANTIA_INSTALADOR" || asesoria.garantia?.responsable === "INSTALADOR"
+  );
 
   asesoria.coordinacion.propuesta = propuesta;
   asesoria.coordinacion.asignaciones = entradasAsignacion.map((item) => ({
@@ -167,7 +228,9 @@ export const guardarPropuesta = async (id, data, user) => {
     descripcion: mayusculas(item.descripcion),
     instaladorId: item.instaladorId,
     instaladorNombre: mayusculas(porId.get(String(item.instaladorId))?.nombre),
-    valorInstalacion: Math.max(Number(item.valorInstalacion || 0), 0),
+    valorInstalacion: garantiaInstalador && !texto(item.valorInstalacion)
+      ? 0
+      : Math.max(Number(item.valorInstalacion || 0), 0),
     estado: "ESPERANDO_MATERIAL",
   }));
   asesoria.coordinacion.coordinadorId = user._id;
@@ -176,6 +239,9 @@ export const guardarPropuesta = async (id, data, user) => {
   asesoria.coordinacion.fechaPropuesta = new Date();
   asesoria.flujo.etapa = "PENDIENTE_APROBACION_CORTE";
   await asesoria.save();
+  await guardarMedidasEnCatalogo(asesoria, propuesta).catch((error) => {
+    console.error("No fue posible actualizar el catalogo de medidas del vehiculo", error);
+  });
   await crearAlertaPropuestaCorte(asesoria);
   await cerrarAlertaFlujo(`servicio-asesor:${asesoria._id}`);
   return asesoria;

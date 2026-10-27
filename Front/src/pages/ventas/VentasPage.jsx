@@ -431,6 +431,11 @@ function VentasPage() {
 
   const cargarCorteEnVenta = (grupo) => {
     if (grupo.asesoriaId) {
+      if (String(form.asesoriaId || "") === String(grupo.asesoriaId)) {
+        setVistaVentas("nueva");
+        window.setTimeout(() => document.getElementById("cobro-orden")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+        return;
+      }
       asesoriaCargadaRef.current = "";
       navigate(`/ventas?asesoria=${encodeURIComponent(grupo.asesoriaId)}`);
       return;
@@ -1437,7 +1442,7 @@ function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onEn
     }
   };
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section id="cobro-orden" className="scroll-mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 bg-slate-50 p-5">
         <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><BadgeDollarSign size={22} /></div><div><h2 className="text-lg font-black text-slate-900">Verificar y recibir pago</h2><p className="text-sm text-slate-500">La cotización fue creada por el asesor. Ventas solamente confirma el cobro.</p></div></div>
       </div>
@@ -1474,8 +1479,8 @@ function VentasTabs({
   const tabs = [
     {
       id: "cortes",
-      label: "Cortes por costear",
-      detail: `${pendientes} pendientes`,
+      label: "Órdenes por cobrar",
+      detail: `${pendientes} pendiente${pendientes === 1 ? "" : "s"}`,
     },
     {
       id: "nueva",
@@ -1589,10 +1594,10 @@ function VerificacionCortesAgrupada({
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-800">
-              Verificacion de cortes
+              Órdenes y cortes pendientes
             </h2>
             <p className="text-sm text-slate-500">
-              Una fila comercial por carro/material, con los cortes detallados debajo.
+              Cargue la orden completa para verificar sus servicios y recibir el pago.
             </p>
           </div>
         </div>
@@ -1785,7 +1790,7 @@ function VerificacionCortesAgrupada({
                               onClick={() => onSelectCorte(grupo)}
                               className="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold"
                             >
-                              Cargar
+                              {grupo.asesoriaId ? "Abrir cobro" : "Cargar corte"}
                             </button>
                           )}
                         </td>
@@ -2087,7 +2092,9 @@ function labelTipoCorte(tipoCorte) {
     DELANTERAS: "Delanteras",
     TRASERAS: "Traseras",
     FIJOS: "Fijos",
+    CUSTODIAS: "Custodias",
     SUNROOF: "Sunroof",
+    U: "U (sin panorámico ni Sunroof)",
     COMPLETO: "Completo",
     PIEZAS_PPF: "Piezas PPF",
     OTROS: "Otros",

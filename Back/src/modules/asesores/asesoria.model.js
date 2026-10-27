@@ -143,6 +143,15 @@ const asesoriaSchema = new mongoose.Schema(
           anchoCm: { type: Number, default: 0, min: 0 },
           largoCm: { type: Number, default: 0, min: 0 },
           cantidad: { type: Number, default: 1, min: 1 },
+          medidasPiezas: {
+            type: [{
+              pieza: { type: String, required: true, trim: true, uppercase: true },
+              anchoCm: { type: Number, default: 0, min: 0 },
+              largoCm: { type: Number, default: 0, min: 0 },
+              cantidad: { type: Number, default: 1, min: 1 },
+            }],
+            default: [],
+          },
           metrosPropuestos: { type: Number, required: true, min: 0.01 },
           observacion: { type: String, default: "", trim: true, uppercase: true },
         }],

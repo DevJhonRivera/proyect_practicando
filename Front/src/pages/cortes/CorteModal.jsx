@@ -146,8 +146,10 @@ function CorteModal({
           <option value="LUNETA">Luneta</option>
           <option value="DELANTERAS">Delanteras</option>
           <option value="TRASERAS">Traseras</option>
-          <option value="FIJOS">Fijos / Custodias</option>
+          <option value="FIJOS">Fijos</option>
+          <option value="CUSTODIAS">Custodias</option>
           <option value="SUNROOF">Sunroof</option>
+          <option value="U">U (todo menos panorámico y Sunroof)</option>
           <option value="COMPLETO">Completo</option>
         </select>
 

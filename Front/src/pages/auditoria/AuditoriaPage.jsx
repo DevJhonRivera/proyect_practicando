@@ -55,8 +55,10 @@ const filtrosEstado = [
 
 const filtrosTrabajo = [
   ["TODOS", "Todos"],
+  ["SERVICIOS", "Servicios cobrados"],
   ["GARANTIAS", "Garantias"],
   ["GARANTIA_INSTALADOR", "Garantia instalador"],
+  ["GARANTIA_EMPRESA", "Garantia empresa"],
   ["GARANTIA_PROVEEDOR", "Garantia proveedor"],
 ];
 
@@ -67,7 +69,9 @@ function AuditoriaPage() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState("TODOS");
   const [materialFiltro, setMaterialFiltro] = useState("TODOS");
+  const [instaladorFiltro, setInstaladorFiltro] = useState("TODOS");
   const [tipoTrabajo, setTipoTrabajo] = useState("TODOS");
+  const [vistaAuditoria, setVistaAuditoria] = useState("RESUMEN");
   const [fechaDesde, setFechaDesde] = useState(
     () => currentMonthRange().from
   );
@@ -81,11 +85,19 @@ function AuditoriaPage() {
 
     const cargar = async () => {
       try {
-        const [cortesRes, ventasRes] =
-          await Promise.all([getCortes(), getVentas()]);
+        setLoading(true);
+        const cortesRes = await getCortes({
+          desde: fechaDesde || undefined,
+          hasta: fechaHasta || undefined,
+        });
+        const cortesCargados = cortesRes.data || [];
+        const asesoriaIds = valoresUnicos(
+          cortesCargados.map((corte) => obtenerId(corte.asesoriaId))
+        );
+        const ventasRes = await getVentas({ asesoriaIds: asesoriaIds.join(",") });
 
         if (active) {
-          setCortes(cortesRes.data || []);
+          setCortes(cortesCargados);
           setVentas(ventasRes.data || []);
         }
       } catch (error) {
@@ -106,7 +118,7 @@ function AuditoriaPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [fechaDesde, fechaHasta]);
 
   const ventasPorId = useMemo(() => {
     const map = new Map();
@@ -136,6 +148,11 @@ function AuditoriaPage() {
     ];
   }, [filas]);
 
+  const instaladoresFiltro = useMemo(() => [
+    "TODOS",
+    ...valoresUnicos(filas.map((fila) => fila.instalador)).sort(),
+  ], [filas]);
+
   const filasFiltradas = useMemo(() => {
     const texto = search.toLowerCase();
 
@@ -149,6 +166,9 @@ function AuditoriaPage() {
       const coincideMaterial =
         materialFiltro === "TODOS" ||
         fila.material === materialFiltro;
+      const coincideInstalador =
+        instaladorFiltro === "TODOS" ||
+        fila.instalador === instaladorFiltro;
       const textoFila = [
         fila.placa,
         fila.fechaTexto,
@@ -168,6 +188,7 @@ function AuditoriaPage() {
         coincidePeriodo &&
         coincideTipoTrabajo &&
         coincideMaterial &&
+        coincideInstalador &&
         textoFila.includes(texto)
       );
     });
@@ -177,6 +198,7 @@ function AuditoriaPage() {
     fechaHasta,
     filtro,
     materialFiltro,
+    instaladorFiltro,
     search,
     tipoTrabajo,
   ]);
@@ -188,6 +210,7 @@ function AuditoriaPage() {
     fechaHasta,
     filtro,
     materialFiltro,
+    instaladorFiltro,
     search,
     tipoTrabajo,
   ]);
@@ -247,15 +270,18 @@ function AuditoriaPage() {
     fechaDesde,
     fechaHasta,
     materialFiltro !== "TODOS" ? materialFiltro : "",
+    instaladorFiltro !== "TODOS" ? instaladorFiltro : "",
     filtro !== "TODOS" ? filtro : "",
     tipoTrabajo !== "TODOS" ? tipoTrabajo : "",
     search,
   ].filter(Boolean).length;
 
   const limpiarFiltros = () => {
-    setFechaDesde("");
-    setFechaHasta("");
+    const periodoActual = currentMonthRange();
+    setFechaDesde(periodoActual.from);
+    setFechaHasta(periodoActual.to);
     setMaterialFiltro("TODOS");
+    setInstaladorFiltro("TODOS");
     setFiltro("TODOS");
     setTipoTrabajo("TODOS");
     setSearch("");
@@ -371,7 +397,20 @@ function AuditoriaPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          <button type="button" onClick={() => setVistaAuditoria("RESUMEN")} className={`rounded-lg px-4 py-3 text-left transition ${vistaAuditoria === "RESUMEN" ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}>
+            <span className="block text-sm font-black">Resumen ejecutivo</span>
+            <span className={`block text-xs ${vistaAuditoria === "RESUMEN" ? "text-slate-300" : "text-slate-400"}`}>Indicadores y materiales más consumidos</span>
+          </button>
+          <button type="button" onClick={() => setVistaAuditoria("DETALLE")} className={`rounded-lg px-4 py-3 text-left transition ${vistaAuditoria === "DETALLE" ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}>
+            <span className="block text-sm font-black">Detalle de operaciones</span>
+            <span className={`block text-xs ${vistaAuditoria === "DETALLE" ? "text-slate-300" : "text-slate-400"}`}>{gruposTabla.length} grupo{gruposTabla.length === 1 ? "" : "s"} para revisar</span>
+          </button>
+        </div>
+      </div>
+
+      {vistaAuditoria === "RESUMEN" && <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Resumen
           icon={ClipboardList}
           label="Cortes auditados"
@@ -402,7 +441,7 @@ function AuditoriaPage() {
           value={resumen.pendientes}
           color="text-red-700"
         />
-      </div>
+      </div>}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <PanelFiltrosAuditoria
@@ -412,20 +451,27 @@ function AuditoriaPage() {
           filtrosActivos={filtrosActivos}
           materialFiltro={materialFiltro}
           materialesFiltro={materialesFiltro}
+          instaladorFiltro={instaladorFiltro}
+          instaladoresFiltro={instaladoresFiltro}
           search={search}
           tipoTrabajo={tipoTrabajo}
-          onFechaDesde={setFechaDesde}
-          onFechaHasta={setFechaHasta}
+          onFechaDesde={(value) => setFechaDesde(value || currentMonthRange().from)}
+          onFechaHasta={(value) => setFechaHasta(value || currentMonthRange().to)}
           onFiltro={setFiltro}
           onLimpiar={limpiarFiltros}
           onMaterialFiltro={setMaterialFiltro}
+          onInstaladorFiltro={setInstaladorFiltro}
           onSearch={setSearch}
           onTipoTrabajo={setTipoTrabajo}
         />
 
-        <ResumenMateriales materiales={resumenMateriales} />
+        {vistaAuditoria === "RESUMEN" && <ResumenMateriales materiales={resumenMateriales} fechaDesde={fechaDesde} fechaHasta={fechaHasta} />}
 
-        <div className="divide-y divide-slate-200 bg-slate-50/60">
+        {vistaAuditoria === "DETALLE" && <div className="border-b border-slate-200 bg-slate-50 px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-black text-slate-800">Operaciones auditadas</h3><p className="text-xs text-slate-500">Información agrupada por vehículo y fecha; cada corte conserva su costo individual.</p></div><span className="rounded-md bg-white px-2.5 py-1 text-xs font-bold text-slate-600 shadow-sm">{filasFiltradas.length} corte{filasFiltradas.length === 1 ? "" : "s"}</span></div>
+        </div>}
+
+        {vistaAuditoria === "DETALLE" && <div className="divide-y divide-slate-200 bg-slate-50/60">
           {gruposTabla.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               No hay informacion para este filtro.
@@ -551,9 +597,9 @@ function AuditoriaPage() {
               </article>
             ))
           )}
-        </div>
+        </div>}
 
-        {gruposTabla.length > 0 && (
+        {vistaAuditoria === "DETALLE" && gruposTabla.length > 0 && (
           <div className="p-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white text-sm">
             <p className="text-slate-500">
               Mostrando {gruposPaginados.length} de {gruposTabla.length} grupos
@@ -595,7 +641,7 @@ function AuditoriaPage() {
 
 function Resumen({ icon: Icon, label, value, color }) {
   return (
-    <div className="metric-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="metric-card min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50">
           <Icon className={color} size={22} />
@@ -604,7 +650,7 @@ function Resumen({ icon: Icon, label, value, color }) {
           {label}
         </p>
       </div>
-      <p className={`metric-value mt-3 font-bold ${color}`}>
+      <p className={`metric-value mt-2 truncate font-bold ${color}`} title={String(value)}>
         {value}
       </p>
     </div>
@@ -635,6 +681,8 @@ function PanelFiltrosAuditoria({
   filtrosActivos,
   materialFiltro,
   materialesFiltro,
+  instaladorFiltro,
+  instaladoresFiltro,
   search,
   tipoTrabajo,
   onFechaDesde,
@@ -642,6 +690,7 @@ function PanelFiltrosAuditoria({
   onFiltro,
   onLimpiar,
   onMaterialFiltro,
+  onInstaladorFiltro,
   onSearch,
   onTipoTrabajo,
 }) {
@@ -668,12 +717,12 @@ function PanelFiltrosAuditoria({
           className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold text-slate-500 hover:bg-white hover:text-slate-900"
         >
           <RotateCcw size={16} />
-          Limpiar filtros
+          Restablecer mes actual
         </button>
       </div>
 
       <div className="space-y-3 p-3">
-        <div className="grid gap-3 xl:grid-cols-[minmax(280px,1fr)_160px_160px_minmax(200px,300px)] xl:items-end">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_150px_150px_minmax(180px,260px)_minmax(180px,240px)] xl:items-end">
           <BuscadorAuditoria
             value={search}
             onChange={onSearch}
@@ -693,6 +742,13 @@ function PanelFiltrosAuditoria({
             value={materialFiltro}
             options={materialesFiltro}
             onChange={onMaterialFiltro}
+          />
+          <FiltroSelect
+            label="Instalador"
+            value={instaladorFiltro}
+            options={instaladoresFiltro}
+            allLabel="Todos los instaladores"
+            onChange={onInstaladorFiltro}
           />
         </div>
 
@@ -763,6 +819,10 @@ function MaterialSelect({ value, options, onChange }) {
       </select>
     </label>
   );
+}
+
+function FiltroSelect({ label, value, options, allLabel, onChange }) {
+  return <label className="block"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">{options.map((option) => <option key={option} value={option}>{option === "TODOS" ? allLabel : option}</option>)}</select></label>;
 }
 
 function FiltroSegmentado({
@@ -840,7 +900,7 @@ function EstadoBadge({ estado, children }) {
   );
 }
 
-function ResumenMateriales({ materiales }) {
+function ResumenMateriales({ materiales, fechaDesde, fechaHasta }) {
   if (!materiales.length) {
     return null;
   }
@@ -850,10 +910,10 @@ function ResumenMateriales({ materiales }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-bold text-slate-800">
-            Resumen por material
+            Top de materiales consumidos
           </h3>
           <p className="text-xs text-slate-500">
-            Valores filtrados
+            Ranking calculado con los filtros actuales{fechaDesde || fechaHasta ? ` · ${fechaDesde || "Inicio"} a ${fechaHasta || "Hoy"}` : " · Todo el historial"}
           </p>
         </div>
       </div>
@@ -862,6 +922,7 @@ function ResumenMateriales({ materiales }) {
         <table className="w-full min-w-[760px] text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
+              <th className="p-3 text-center">Top</th>
               <th className="p-3 text-left">Material</th>
               <th className="p-3 text-right">Cortes</th>
               <th className="p-3 text-right">Consumido</th>
@@ -871,11 +932,12 @@ function ResumenMateriales({ materiales }) {
             </tr>
           </thead>
           <tbody>
-            {materiales.map((material) => (
+            {materiales.map((material, index) => (
               <tr
                 key={material.material}
                 className="border-t border-slate-200 bg-white hover:bg-slate-50"
               >
+                <td className="p-3 text-center font-black text-blue-700">#{index + 1}</td>
                 <td className="p-3 font-semibold text-slate-700">
                   {material.material}
                 </td>
@@ -916,6 +978,10 @@ function filtrarTipoTrabajo(fila, tipoTrabajo) {
 
   if (tipoTrabajo === "GARANTIAS") {
     return String(fila.tipoServicio || "").includes("GARANTIA");
+  }
+
+  if (tipoTrabajo === "SERVICIOS") {
+    return !String(fila.tipoServicio || "").includes("GARANTIA");
   }
 
   return fila.tipoServicio === tipoTrabajo;

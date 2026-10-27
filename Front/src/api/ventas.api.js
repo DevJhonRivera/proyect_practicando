@@ -3,8 +3,8 @@ import api from "./axios";
 export const createVenta = (data) =>
   api.post("/ventas", data);
 
-export const getVentas = () =>
-  api.get("/ventas");
+export const getVentas = (params = {}) =>
+  api.get("/ventas", { params });
 
 export const updateVenta = (id, data) =>
   api.put(`/ventas/${id}`, data);

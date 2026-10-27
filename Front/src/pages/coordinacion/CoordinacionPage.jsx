@@ -69,8 +69,12 @@ const etapasActivas = new Set([
   "EN_PROCESO", "MATERIAL_LISTO", "EN_INSTALACION",
 ]);
 
+const expandirPartesMedibles = (partes = []) => [...new Set(partes.flatMap((parte) =>
+  String(parte || "").toUpperCase() === "U" ? ["DELANTERAS", "TRASERAS", "LUNETA", "FIJOS", "CUSTODIAS"] : [parte]
+))];
+
 const lineasOrden = (orden) => [
-  ...(orden.polarizados || []).map((item, index) => ({ linea: `POLARIZADO ${index + 1}`, material: `${item.material} ${item.porcentaje}`, partes: item.partes || [] })),
+  ...(orden.polarizados || []).map((item, index) => ({ linea: `POLARIZADO ${index + 1}`, material: `${item.material} ${item.porcentaje}`, partes: expandirPartesMedibles(item.partes || []) })),
   ...(orden.ppf || []).map((item, index) => ({ linea: `PPF ${index + 1}`, material: `PPF ${item.referencia}`, partes: item.piezas?.length ? item.piezas : [item.aplicacion].filter(Boolean) })),
 ];
 
@@ -131,6 +135,7 @@ function CoordinacionPage() {
   const [ordenes, setOrdenes] = useState([]);
   const [instaladores, setInstaladores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [enviandoVentasId, setEnviandoVentasId] = useState("");
   const [seleccionada, setSeleccionada] = useState(null);
   const [reportandoRecorte, setReportandoRecorte] = useState(null);
   const [filtrosInstalador, setFiltrosInstalador] = useState(() => ({ ...quincenaActual(), instalador: "TODOS", material: "TODOS", estado: "TODOS", buscar: "" }));
@@ -290,12 +295,17 @@ function CoordinacionPage() {
   };
 
   const enviarVentas = async (orden) => {
+    if (enviandoVentasId) return;
     try {
+      setEnviandoVentasId(String(orden._id));
       await sendTrabajoToSales(orden._id);
+      if (asesoriaObjetivo === String(orden._id)) setSearchParams({}, { replace: true });
       await cargar();
-      Swal.fire({ icon: "success", title: "Servicio enviado a Ventas" });
+      Swal.fire({ icon: "success", title: "Servicio enviado a Ventas", text: "La orden quedó disponible para registrar el pago.", timer: 1800, showConfirmButton: false });
     } catch (error) {
       Swal.fire({ icon: "warning", title: "El servicio todavía no está listo", text: error.response?.data?.message });
+    } finally {
+      setEnviandoVentasId("");
     }
   };
 
@@ -369,7 +379,7 @@ function CoordinacionPage() {
 
       {visiblesOrdenadas.length === 0 ? <div className="rounded-2xl border bg-white p-10 text-center text-slate-500">No hay trabajos pendientes para este perfil.</div> : (
         <div className="grid gap-4 xl:grid-cols-2">
-          {visiblesOrdenadas.map((orden) => <OrdenCard key={orden._id} orden={orden} destacada={String(orden._id) === asesoriaObjetivo} usuario={usuario} onPrepare={() => setSeleccionada(orden)} onReview={revisar} onWork={cambiarTrabajo} onSales={enviarVentas} onReport={() => setReportandoRecorte(orden)} />)}
+          {visiblesOrdenadas.map((orden) => <OrdenCard key={orden._id} orden={orden} destacada={String(orden._id) === asesoriaObjetivo} usuario={usuario} enviandoVentas={String(orden._id) === enviandoVentasId} onPrepare={() => setSeleccionada(orden)} onReview={revisar} onWork={cambiarTrabajo} onSales={enviarVentas} onReport={() => setReportandoRecorte(orden)} />)}
         </div>
       )}
 
@@ -382,10 +392,15 @@ function CoordinacionPage() {
 function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
   const servicios = serviciosOrden(orden);
   const lineas = lineasOrden(orden);
+  const garantiaInstalador = orden.garantia?.esGarantia && (orden.garantia?.tipo === "GARANTIA_INSTALADOR" || orden.garantia?.responsable === "INSTALADOR");
   const [fichaMedidas, setFichaMedidas] = useState(null);
   const [propuesta, setPropuesta] = useState(() => lineas.map((linea) => {
     const actual = orden.coordinacion?.propuesta?.find((item) => item.linea === linea.linea);
-    return { ...linea, metrosPropuestos: actual?.metrosPropuestos || "", observacion: actual?.observacion || "" };
+    const medidasPiezas = (linea.partes || []).map((pieza) => {
+      const medida = actual?.medidasPiezas?.find((item) => item.pieza === pieza);
+      return { pieza, anchoCm: medida?.anchoCm || "", largoCm: medida?.largoCm || "", cantidad: medida?.cantidad || 1 };
+    });
+    return { ...linea, medidasPiezas, metrosPropuestos: actual?.metrosPropuestos || "", observacion: actual?.observacion || "" };
   }));
   const [asignaciones, setAsignaciones] = useState(() => servicios.flatMap((servicio) => {
     const existentes = (orden.coordinacion?.asignaciones || []).filter((item) => item.servicio === servicio.servicio);
@@ -405,7 +420,22 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
       const modelo = String(orden.vehiculo?.modelo || "").toUpperCase();
       const anio = String(orden.vehiculo?.anio || "");
       const coincidencias = lista.filter((item) => item.marca === marca && item.modelo === modelo);
-      setFichaMedidas(coincidencias.find((item) => item.anio === anio) || coincidencias.find((item) => !item.anio) || coincidencias[0] || null);
+      const ficha = coincidencias.find((item) => item.anio === anio) || coincidencias.find((item) => !item.anio) || coincidencias[0] || null;
+      setFichaMedidas(ficha);
+      if (!ficha) return;
+      const clavePorPieza = {
+        DELANTERAS: "delanteras", TRASERAS: "traseras", PANORAMICO: "panoramico", "PANORÁMICO": "panoramico",
+        LUNETA: "luneta", FIJOS: "fijos", CUSTODIAS: "custodias", SUNROOF: "sunroof", "SUN ROOF": "sunroof",
+      };
+      setPropuesta((actual) => actual.map((linea) => ({
+        ...linea,
+        medidasPiezas: linea.medidasPiezas.map((medida) => {
+          const guardada = ficha.medidas?.[clavePorPieza[String(medida.pieza || "").toUpperCase()]];
+          if (!guardada || Number(guardada.anchoCm) <= 0 || Number(guardada.largoCm) <= 0) return medida;
+          const yaTieneMedida = Number(medida.anchoCm) > 0 || Number(medida.largoCm) > 0;
+          return yaTieneMedida ? medida : { ...medida, anchoCm: guardada.anchoCm, largoCm: guardada.largoCm, cantidad: guardada.cantidad || 1 };
+        }),
+      })));
     }).catch(() => setFichaMedidas(null));
   }, [orden]);
   const guardar = async () => {
@@ -434,6 +464,10 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
     }
   };
   const actualizarAsignacion = (index, cambios) => setAsignaciones((actual) => actual.map((fila, i) => i === index ? { ...fila, ...cambios } : fila));
+  const actualizarMedidaPieza = (lineaIndex, piezaIndex, campo, valor) => setPropuesta((actual) => actual.map((linea, i) => i === lineaIndex ? {
+    ...linea,
+    medidasPiezas: linea.medidasPiezas.map((medida, j) => j === piezaIndex ? { ...medida, [campo]: valor } : medida),
+  } : linea));
   const dividirServicio = (servicio) => setAsignaciones((actual) => {
     const indices = actual.map((item, index) => item.servicio === servicio.servicio ? index : -1).filter((index) => index >= 0);
     const posicion = indices.length ? indices.at(-1) + 1 : actual.length;
@@ -452,15 +486,32 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
     <div className="mx-auto my-6 max-w-4xl rounded-2xl bg-white shadow-2xl">
       <div className="flex items-center justify-between border-b p-5"><div><h2 className="text-lg font-black">Propuesta {orden.codigo}</h2><p className="text-sm text-slate-500">{orden.vehiculo?.placa} · propuesta de corte, responsables y precios</p></div><button onClick={onClose} className="rounded-lg border px-3 py-2">Cerrar</button></div>
       <div className="space-y-5 p-5">
-        <section><h3 className="mb-3 font-bold">Propuesta de corte</h3>{fichaMedidas ? <div className="mb-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800"><strong>Medidas encontradas:</strong> {resumenFichaMedidas(fichaMedidas)}</div> : <div className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">No hay una ficha para este vehículo. Regístrela en Medidas de vehículos; aquí solo debe indicar los metros propuestos.</div>}{propuesta.map((item, index) => <div key={item.linea} className="mb-2 grid items-end gap-3 rounded-xl border p-3 md:grid-cols-[1fr_180px]"><div><p className="font-bold">{item.material}</p><p className="text-xs text-slate-500">{item.partes.join(", ") || item.linea}</p></div><Input label="Metros propuestos" step="0.01" value={item.metrosPropuestos} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, metrosPropuestos: value } : fila))} /></div>)}</section>
         <section>
-          <div className="mb-3"><h3 className="font-bold">Instaladores y precios</h3><p className="text-xs text-slate-500">Puede asignar toda la instalación a una persona o dividir cada servicio entre varios instaladores.</p></div>
+          <h3 className="mb-3 font-bold">Propuesta de corte</h3>
+          {fichaMedidas ? <div className="mb-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800"><strong>Medidas encontradas:</strong> {resumenFichaMedidas(fichaMedidas)}</div> : <div className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">No hay una ficha para este vehículo. El coordinador puede ingresar las medidas tomadas para cada pieza.</div>}
+          {propuesta.map((item, index) => <div key={item.linea} className="mb-3 overflow-hidden rounded-xl border border-slate-200">
+            <div className="grid items-end gap-3 bg-slate-50 p-3 md:grid-cols-[1fr_180px]">
+              <div><p className="font-bold text-slate-900">{item.material}</p><p className="text-xs text-slate-500">{item.partes.join(", ") || item.linea}</p></div>
+              <Input label="Metros propuestos" step="0.01" value={item.metrosPropuestos} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, metrosPropuestos: value } : fila))} />
+            </div>
+            {item.medidasPiezas.length > 0 && <div className="divide-y divide-slate-100">
+              {item.medidasPiezas.map((medida, piezaIndex) => <div key={medida.pieza} className="grid items-end gap-2 p-3 sm:grid-cols-[minmax(150px,1fr)_120px_120px_100px]">
+                <div><p className="text-xs font-black uppercase text-slate-700">{medida.pieza}</p><p className="text-[10px] text-slate-400">Medida tomada por Coordinación</p></div>
+                <Input label="Ancho (cm)" step="0.01" value={medida.anchoCm} onChange={(value) => actualizarMedidaPieza(index, piezaIndex, "anchoCm", value)} />
+                <Input label="Largo (cm)" step="0.01" value={medida.largoCm} onChange={(value) => actualizarMedidaPieza(index, piezaIndex, "largoCm", value)} />
+                <Input label="Cantidad" value={medida.cantidad} onChange={(value) => actualizarMedidaPieza(index, piezaIndex, "cantidad", value)} />
+              </div>)}
+            </div>}
+          </div>)}
+        </section>
+        <section>
+          <div className="mb-3"><h3 className="font-bold">Instaladores y precios</h3><p className="text-xs text-slate-500">Puede asignar toda la instalación a una persona o dividir cada servicio entre varios instaladores.</p>{garantiaInstalador && <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">Garantía por instalador: el precio de instalación es opcional y puede dejarse vacío.</p>}</div>
           <div className="space-y-4">{servicios.map((servicio) => <div key={servicio.servicio} className="overflow-hidden rounded-lg border border-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-slate-50 px-3 py-2"><div><p className="text-sm font-black text-slate-800">{servicio.descripcion}</p><p className="text-[10px] font-bold uppercase text-slate-400">{servicio.servicio}</p></div><button type="button" onClick={() => dividirServicio(servicio)} className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-white px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50"><Plus size={14}/>Dividir entre otro instalador</button></div>
             <div className="divide-y divide-slate-100">{asignaciones.map((item, index) => item.servicio === servicio.servicio ? <div key={`${item.servicio}-${index}`} className="grid items-end gap-3 p-3 md:grid-cols-[minmax(0,1fr)_220px_170px_auto]">
               <SelectorPartes partes={servicio.partes || []} value={item.descripcion} onChange={(value) => actualizarAsignacion(index, { descripcion: value })} />
               <label className="text-xs font-bold text-slate-500">Instalador<select value={item.instaladorId} onChange={(event) => actualizarAsignacion(index, { instaladorId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border bg-white px-3 text-sm font-normal"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></label>
-              <Input label="Precio instalación" value={item.valorInstalacion} onChange={(value) => actualizarAsignacion(index, { valorInstalacion: value })}/>
+              <Input label={garantiaInstalador ? "Precio instalación (opcional)" : "Precio instalación"} value={item.valorInstalacion} onChange={(value) => actualizarAsignacion(index, { valorInstalacion: value })}/>
               <button type="button" onClick={() => quitarAsignacion(index, item.servicio)} title="Quitar esta asignación" className="mb-0.5 flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"><Trash2 size={16}/></button>
             </div> : null)}</div>
           </div>)}</div>
@@ -496,7 +547,7 @@ function SelectorPartes({ partes, value, onChange }) {
   </fieldset>;
 }
 
-function OrdenCard({ orden, destacada, usuario, onPrepare, onReview, onWork, onSales, onReport }) {
+function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onReview, onWork, onSales, onReport }) {
   const etapa = orden.flujo?.etapa || "PENDIENTE_COORDINACION";
   const asignaciones = orden.coordinacion?.asignaciones || [];
   const propias = usuario?.rol === "INSTALADOR" ? asignaciones.filter((item) => String(item.instaladorId) === String(usuario._id)) : asignaciones;
@@ -519,7 +570,7 @@ function OrdenCard({ orden, destacada, usuario, onPrepare, onReview, onWork, onS
       {orden.coordinacion?.propuesta?.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Propuesta de corte</p>{orden.coordinacion.propuesta.map((item) => <div key={item.linea} className="border-t py-2 text-sm text-slate-700"><p><strong>{item.linea}</strong> · {item.metrosPropuestos} m · {item.anchoCm || 0} × {item.largoCm || 0} cm · {item.cantidad} pieza(s)</p>{item.observacion && <p className="mt-1 text-xs text-slate-500">{item.observacion}</p>}</div>)}</div>}
       {propias.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Instalaciones</p>{propias.map((item) => <div key={item._id} className="mb-2 rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-bold text-slate-800">{item.descripcion || item.servicio}</p><p className="text-xs text-slate-500">{item.instaladorNombre} · {item.estado.replaceAll("_", " ")}</p><p className="mt-1 text-sm font-black text-emerald-700">Instalación: {cop.format(item.valorInstalacion || 0)}</p>{item.fechaFinalizacion && <p className="text-xs text-slate-400">Terminada: {new Date(item.fechaFinalizacion).toLocaleString("es-CO")}</p>}</div>{usuario?.rol === "INSTALADOR" && item.estado === "PENDIENTE" && <button onClick={() => onWork(orden, item, "EN_PROCESO")} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Iniciar</button>}{usuario?.rol === "INSTALADOR" && item.estado === "EN_PROCESO" && <button onClick={() => onWork(orden, item, "COMPLETADA")} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Completar</button>}</div></div>)}</div>}
       {puedeGestionarEnvio && !instalacionesCompletas && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><p className="font-bold">Aún no se puede enviar a Ventas</p><p className="mt-1 text-xs">Falta completar: {instalacionesPendientes.map((item) => `${item.descripcion || item.servicio} - ${item.instaladorNombre || "sin instalador"}`).join(" · ") || "no hay instalaciones asignadas"}.</p></div>}
-      <div className="flex flex-wrap gap-2 pt-1">{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && <button onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white">Finalizar y enviar a Ventas</button>}</div>
+      <div className="flex flex-wrap gap-2 pt-1">{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && <button disabled={enviandoVentas} onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">{enviandoVentas ? "Enviando a Ventas..." : "Finalizar y enviar a Ventas"}</button>}</div>
     </div>
   </article>;
 }
@@ -527,6 +578,7 @@ function OrdenCard({ orden, destacada, usuario, onPrepare, onReview, onWork, onS
 function PropuestaModal({ orden, instaladores, onClose, onSaved }) {
   const lineas = lineasOrden(orden);
   const servicios = serviciosOrden(orden);
+  const garantiaInstalador = orden.garantia?.esGarantia && (orden.garantia?.tipo === "GARANTIA_INSTALADOR" || orden.garantia?.responsable === "INSTALADOR");
   const [propuesta, setPropuesta] = useState(() => lineas.map((linea) => {
     const actual = orden.coordinacion?.propuesta?.find((item) => item.linea === linea.linea);
     return { ...linea, anchoCm: actual?.anchoCm || "", largoCm: actual?.largoCm || "", cantidad: actual?.cantidad || 1, metrosPropuestos: actual?.metrosPropuestos || "", observacion: actual?.observacion || "" };
@@ -543,7 +595,7 @@ function PropuestaModal({ orden, instaladores, onClose, onSaved }) {
     }
   };
 
-  return <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4"><div className="mx-auto my-6 max-w-4xl rounded-2xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b p-5"><div><h2 className="text-lg font-black">Propuesta {orden.codigo}</h2><p className="text-sm text-slate-500">{orden.vehiculo?.placa} · registre medidas y responsables</p></div><button onClick={onClose} className="rounded-lg border px-3 py-2">Cerrar</button></div><div className="space-y-6 p-5"><section><h3 className="mb-3 flex items-center gap-2 font-bold"><Ruler size={18} /> Medidas y cortes</h3>{propuesta.map((item, index) => <div key={item.linea} className="mb-3 rounded-xl border p-4"><p className="mb-3 font-bold">{item.linea} · {item.material} · {item.partes.join(", ")}</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Input label="Ancho cm" value={item.anchoCm} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, anchoCm: value } : fila))} /><Input label="Largo cm" value={item.largoCm} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, largoCm: value } : fila))} /><Input label="Cantidad piezas" value={item.cantidad} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, cantidad: value } : fila))} /><Input label="Metros a cortar" value={item.metrosPropuestos} step="0.01" onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, metrosPropuestos: value } : fila))} /></div><textarea value={item.observacion} onChange={(event) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, observacion: event.target.value.toUpperCase() } : fila))} rows="2" placeholder="Detalle por pieza. Ej: DELANTERAS 90×57 (2), TRASERAS 80×45 (2)" className="mt-3 w-full rounded-xl border p-3 text-sm" /></div>)}</section><section><h3 className="mb-3 flex items-center gap-2 font-bold"><UserRoundCheck size={18} /> Asignar instaladores y precio</h3>{asignaciones.map((item, index) => <div key={item.servicio} className="mb-2 grid items-end gap-3 rounded-xl border p-3 md:grid-cols-[1fr_230px_180px]"><div><p className="font-bold">{item.descripcion}</p><p className="text-xs text-slate-500">{item.servicio}</p></div><label className="text-xs font-bold text-slate-500">Instalador<select value={item.instaladorId} onChange={(event) => setAsignaciones((actual) => actual.map((fila, i) => i === index ? { ...fila, instaladorId: event.target.value } : fila))} className="mt-1 w-full rounded-xl border bg-white p-3 text-sm font-normal text-slate-700"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></label><Input label="Precio instalación" value={item.valorInstalacion} onChange={(value) => setAsignaciones((actual) => actual.map((fila, i) => i === index ? { ...fila, valorInstalacion: value } : fila))} /></div>)}</section><button onClick={guardar} className="w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white">Enviar propuesta a Inventario</button></div></div></div>;
+  return <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4"><div className="mx-auto my-6 max-w-4xl rounded-2xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b p-5"><div><h2 className="text-lg font-black">Propuesta {orden.codigo}</h2><p className="text-sm text-slate-500">{orden.vehiculo?.placa} · registre medidas y responsables</p></div><button onClick={onClose} className="rounded-lg border px-3 py-2">Cerrar</button></div><div className="space-y-6 p-5"><section><h3 className="mb-3 flex items-center gap-2 font-bold"><Ruler size={18} /> Medidas y cortes</h3>{propuesta.map((item, index) => <div key={item.linea} className="mb-3 rounded-xl border p-4"><p className="mb-3 font-bold">{item.linea} · {item.material} · {item.partes.join(", ")}</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Input label="Ancho cm" value={item.anchoCm} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, anchoCm: value } : fila))} /><Input label="Largo cm" value={item.largoCm} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, largoCm: value } : fila))} /><Input label="Cantidad piezas" value={item.cantidad} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, cantidad: value } : fila))} /><Input label="Metros a cortar" value={item.metrosPropuestos} step="0.01" onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, metrosPropuestos: value } : fila))} /></div><textarea value={item.observacion} onChange={(event) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, observacion: event.target.value.toUpperCase() } : fila))} rows="2" placeholder="Detalle por pieza. Ej: DELANTERAS 90×57 (2), TRASERAS 80×45 (2)" className="mt-3 w-full rounded-xl border p-3 text-sm" /></div>)}</section><section><h3 className="mb-3 flex items-center gap-2 font-bold"><UserRoundCheck size={18} /> Asignar instaladores y precio</h3>{garantiaInstalador && <p className="mb-3 rounded-lg bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">El precio de instalación es opcional para esta garantía.</p>}{asignaciones.map((item, index) => <div key={item.servicio} className="mb-2 grid items-end gap-3 rounded-xl border p-3 md:grid-cols-[1fr_230px_180px]"><div><p className="font-bold">{item.descripcion}</p><p className="text-xs text-slate-500">{item.servicio}</p></div><label className="text-xs font-bold text-slate-500">Instalador<select value={item.instaladorId} onChange={(event) => setAsignaciones((actual) => actual.map((fila, i) => i === index ? { ...fila, instaladorId: event.target.value } : fila))} className="mt-1 w-full rounded-xl border bg-white p-3 text-sm font-normal text-slate-700"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></label><Input label={garantiaInstalador ? "Precio instalación (opcional)" : "Precio instalación"} value={item.valorInstalacion} onChange={(value) => setAsignaciones((actual) => actual.map((fila, i) => i === index ? { ...fila, valorInstalacion: value } : fila))} /></div>)}</section><button onClick={guardar} className="w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white">Enviar propuesta a Inventario</button></div></div></div>;
 }
 
 function Input({ label, value, onChange, step = "1" }) {

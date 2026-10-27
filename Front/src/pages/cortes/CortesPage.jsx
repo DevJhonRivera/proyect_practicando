@@ -125,7 +125,7 @@ function CortesPage() {
     });
     const partes = linea.partes || [];
     const parte = partes[0] || "";
-    const tipos = ["PANORAMICO", "LUNETA", "DELANTERAS", "TRASERAS", "FIJOS", "SUNROOF", "COMPLETO"];
+    const tipos = ["PANORAMICO", "LUNETA", "DELANTERAS", "TRASERAS", "FIJOS", "CUSTODIAS", "SUNROOF", "U", "COMPLETO"];
     const tipoCorte = linea.clase === "PPF"
       ? "PIEZAS_PPF"
       : partes.length > 1 ? "OTROS" : tipos.includes(parte) ? parte : parte ? "OTROS" : "COMPLETO";
@@ -133,14 +133,17 @@ function CortesPage() {
       (item) => item.linea === linea.etiqueta
     );
     const piezasPpf = linea.clase === "PPF"
-      ? (partes.length ? partes : [linea.aplicacion || "PPF COMPLETO"]).map((pieza) => ({
-          pieza,
-          ubicacion: linea.aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR",
-          cantidad: partes.length === 1 ? Number(medidaPropuesta?.cantidad || 1) : 1,
-          anchoCm: Number(medidaPropuesta?.anchoCm || 0),
-          largoCm: Number(medidaPropuesta?.largoCm || 0),
-          rotada: false,
-        }))
+      ? (partes.length ? partes : [linea.aplicacion || "PPF COMPLETO"]).map((pieza) => {
+          const medida = medidaPropuesta?.medidasPiezas?.find((item) => item.pieza === pieza);
+          return {
+            pieza,
+            ubicacion: linea.aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR",
+            cantidad: Number(medida?.cantidad || (partes.length === 1 ? medidaPropuesta?.cantidad : 1) || 1),
+            anchoCm: Number(medida?.anchoCm || medidaPropuesta?.anchoCm || 0),
+            largoCm: Number(medida?.largoCm || medidaPropuesta?.largoCm || 0),
+            rotada: false,
+          };
+        })
       : [];
     setForm((actual) => ({
       ...actual,
@@ -460,7 +463,8 @@ function OrdenAsesoriaPanel({ orden, cortes, onLoad, onBatch, registrandoPropues
     <div className="divide-y divide-slate-100">
       {lineas.map((linea) => {
         const registrado = cortes.some((corte) => String(obtenerIdEntidad(corte.asesoriaId)) === String(orden._id) && corte.asesoriaLinea === linea.etiqueta);
-        return <div key={linea.etiqueta} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-500">{(linea.partes || []).join(" + ") || linea.aplicacion} · Propuesta: {orden.coordinacion?.propuesta?.find((item) => item.linea === linea.etiqueta)?.metrosPropuestos || 0} m · Venta: ${Number(linea.valor || 0).toLocaleString("es-CO")}</p></div><button type="button" disabled={registrado || garantiaBloqueada || propuestaPendiente} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : garantiaBloqueada || propuestaPendiente ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}>{registrado ? "Corte registrado" : propuestaPendiente ? "Revise la propuesta" : garantiaBloqueada ? "Esperando aprobación" : "Cargar corte agrupado"}</button></div>;
+        const propuesta = orden.coordinacion?.propuesta?.find((item) => item.linea === linea.etiqueta);
+        return <div key={linea.etiqueta} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-bold text-slate-900">{linea.clase}: {linea.material || linea.referencia} {linea.porcentaje || ""}</p><p className="mt-1 text-xs text-slate-500">{(linea.partes || []).join(" + ") || linea.aplicacion} · Propuesta: {propuesta?.metrosPropuestos || 0} m · Venta: ${Number(linea.valor || 0).toLocaleString("es-CO")}</p>{propuesta?.medidasPiezas?.some((item) => Number(item.anchoCm) > 0 && Number(item.largoCm) > 0) && <p className="mt-1 text-xs font-semibold text-blue-700">Medidas: {propuesta.medidasPiezas.filter((item) => Number(item.anchoCm) > 0 && Number(item.largoCm) > 0).map((item) => `${item.pieza} ${item.anchoCm} × ${item.largoCm} cm${Number(item.cantidad || 1) > 1 ? ` (x${item.cantidad})` : ""}`).join(" · ")}</p>}</div><button type="button" disabled={registrado || garantiaBloqueada || propuestaPendiente} onClick={() => onLoad(linea)} className={`rounded-lg px-4 py-2 text-sm font-bold ${registrado ? "cursor-not-allowed bg-emerald-100 text-emerald-700" : garantiaBloqueada || propuestaPendiente ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"}`}>{registrado ? "Corte registrado" : propuestaPendiente ? "Revise la propuesta" : garantiaBloqueada ? "Esperando aprobación" : "Cargar corte agrupado"}</button></div>;
       })}
       {!lineas.length && <p className="p-4 text-sm text-slate-500">Esta orden solo contiene servicios que no requieren corte.</p>}
     </div>

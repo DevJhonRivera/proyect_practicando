@@ -70,7 +70,7 @@ function StockReservaNotifier() {
 
     const cargarAlertas = async () => {
       try {
-        const res = await getAlertas();
+        const res = await getAlertas({ pendientes: true });
         const data =
           res.data.data || res.data || [];
 

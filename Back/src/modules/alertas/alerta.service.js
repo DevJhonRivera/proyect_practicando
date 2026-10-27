@@ -537,12 +537,23 @@ export const crearAlertaRevisionVenta =
   };
 
 export const obtenerAlertas =
-  async (user) => {
-    return await Alerta.find(
-      filtroAlertasPorRol(user)
-    ).sort({
-      createdAt: -1,
-    });
+  async (user, { pendientes, month } = {}) => {
+    const filtro = { ...filtroAlertasPorRol(user) };
+    if (String(pendientes) === "true") {
+      filtro.atendida = false;
+      filtro.activa = { $ne: false };
+    }
+    if (/^\d{4}-\d{2}$/.test(String(month || ""))) {
+      const [year, monthNumber] = month.split("-").map(Number);
+      filtro.createdAt = {
+        $gte: new Date(year, monthNumber - 1, 1),
+        $lt: new Date(year, monthNumber, 1),
+      };
+    }
+    return await Alerta.find(filtro)
+      .sort({ createdAt: -1 })
+      .limit(String(pendientes) === "true" ? 100 : 500)
+      .lean();
   };
 
 export const atenderAlerta =
