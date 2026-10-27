@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ClipboardCheck, Plus, Ruler, Search, Trash2, UserRoundCheck } from "lucide-react";
+import { ClipboardCheck, Plus, Ruler, Search, Trash2 } from "lucide-react";
 import Swal from "sweetalert2";
 
 import {
@@ -527,6 +527,10 @@ function resumenFichaMedidas(ficha) {
   return Object.entries(ficha.medidas || {}).filter(([, item]) => Number(item?.anchoCm) > 0 && Number(item?.largoCm) > 0).map(([key, item]) => `${labels[key] || key} ${item.anchoCm}×${item.largoCm} cm (${item.cantidad})`).join(" · ") || "Sin dimensiones registradas";
 }
 
+function Input({ label, value, onChange, step = "1" }) {
+  return <label className="text-xs font-bold text-slate-500">{label}<input type="number" min="0" step={step} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border bg-white px-3 text-sm font-normal text-slate-700" /></label>;
+}
+
 function SelectorPartes({ partes, value, onChange }) {
   const seleccionadas = new Set(String(value || "").split(/\s*(?:\||,)\s*/).filter(Boolean));
   const cambiar = (parte) => {
@@ -573,33 +577,6 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
       <div className="flex flex-wrap gap-2 pt-1">{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && <button disabled={enviandoVentas} onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">{enviandoVentas ? "Enviando a Ventas..." : "Finalizar y enviar a Ventas"}</button>}</div>
     </div>
   </article>;
-}
-
-function PropuestaModal({ orden, instaladores, onClose, onSaved }) {
-  const lineas = lineasOrden(orden);
-  const servicios = serviciosOrden(orden);
-  const garantiaInstalador = orden.garantia?.esGarantia && (orden.garantia?.tipo === "GARANTIA_INSTALADOR" || orden.garantia?.responsable === "INSTALADOR");
-  const [propuesta, setPropuesta] = useState(() => lineas.map((linea) => {
-    const actual = orden.coordinacion?.propuesta?.find((item) => item.linea === linea.linea);
-    return { ...linea, anchoCm: actual?.anchoCm || "", largoCm: actual?.largoCm || "", cantidad: actual?.cantidad || 1, metrosPropuestos: actual?.metrosPropuestos || "", observacion: actual?.observacion || "" };
-  }));
-  const [asignaciones, setAsignaciones] = useState(() => servicios.map((servicio) => { const actual = orden.coordinacion?.asignaciones?.find((item) => item.servicio === servicio.servicio); return { ...servicio, instaladorId: actual?.instaladorId || "", valorInstalacion: actual?.valorInstalacion || "" }; }));
-
-  const guardar = async () => {
-    try {
-      await savePropuestaCoordinacion(orden._id, { propuesta, asignaciones });
-      Swal.fire({ icon: "success", title: "Propuesta enviada a Inventario" });
-      onSaved();
-    } catch (error) {
-      Swal.fire({ icon: "error", title: "No fue posible enviar", text: error.response?.data?.message });
-    }
-  };
-
-  return <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4"><div className="mx-auto my-6 max-w-4xl rounded-2xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b p-5"><div><h2 className="text-lg font-black">Propuesta {orden.codigo}</h2><p className="text-sm text-slate-500">{orden.vehiculo?.placa} · registre medidas y responsables</p></div><button onClick={onClose} className="rounded-lg border px-3 py-2">Cerrar</button></div><div className="space-y-6 p-5"><section><h3 className="mb-3 flex items-center gap-2 font-bold"><Ruler size={18} /> Medidas y cortes</h3>{propuesta.map((item, index) => <div key={item.linea} className="mb-3 rounded-xl border p-4"><p className="mb-3 font-bold">{item.linea} · {item.material} · {item.partes.join(", ")}</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Input label="Ancho cm" value={item.anchoCm} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, anchoCm: value } : fila))} /><Input label="Largo cm" value={item.largoCm} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, largoCm: value } : fila))} /><Input label="Cantidad piezas" value={item.cantidad} onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, cantidad: value } : fila))} /><Input label="Metros a cortar" value={item.metrosPropuestos} step="0.01" onChange={(value) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, metrosPropuestos: value } : fila))} /></div><textarea value={item.observacion} onChange={(event) => setPropuesta((actual) => actual.map((fila, i) => i === index ? { ...fila, observacion: event.target.value.toUpperCase() } : fila))} rows="2" placeholder="Detalle por pieza. Ej: DELANTERAS 90×57 (2), TRASERAS 80×45 (2)" className="mt-3 w-full rounded-xl border p-3 text-sm" /></div>)}</section><section><h3 className="mb-3 flex items-center gap-2 font-bold"><UserRoundCheck size={18} /> Asignar instaladores y precio</h3>{garantiaInstalador && <p className="mb-3 rounded-lg bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">El precio de instalación es opcional para esta garantía.</p>}{asignaciones.map((item, index) => <div key={item.servicio} className="mb-2 grid items-end gap-3 rounded-xl border p-3 md:grid-cols-[1fr_230px_180px]"><div><p className="font-bold">{item.descripcion}</p><p className="text-xs text-slate-500">{item.servicio}</p></div><label className="text-xs font-bold text-slate-500">Instalador<select value={item.instaladorId} onChange={(event) => setAsignaciones((actual) => actual.map((fila, i) => i === index ? { ...fila, instaladorId: event.target.value } : fila))} className="mt-1 w-full rounded-xl border bg-white p-3 text-sm font-normal text-slate-700"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></label><Input label={garantiaInstalador ? "Precio instalación (opcional)" : "Precio instalación"} value={item.valorInstalacion} onChange={(value) => setAsignaciones((actual) => actual.map((fila, i) => i === index ? { ...fila, valorInstalacion: value } : fila))} /></div>)}</section><button onClick={guardar} className="w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white">Enviar propuesta a Inventario</button></div></div></div>;
-}
-
-function Input({ label, value, onChange, step = "1" }) {
-  return <label className="text-sm font-semibold text-slate-600">{label}<input type="number" min="0" step={step} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded-xl border p-3" /></label>;
 }
 
 export default CoordinacionPage;
