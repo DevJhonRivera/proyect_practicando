@@ -21,6 +21,7 @@ const responder = (fn) => async (req, res) => {
 };
 const errorChat = (message, status = 400) => Object.assign(new Error(message), { status });
 const campoUsuario = (prefijo, id) => `${prefijo}.${String(id)}`;
+const ordenAbiertaParaChat = { estado: { $ne: "CANCELADA" }, "flujo.etapa": { $nin: ["FINALIZADA", "CANCELADA"] } };
 
 router.use(authMiddleware, (req, res, next) => {
   res.set("Cache-Control", "no-store");
@@ -50,7 +51,7 @@ router.get("/contactos", responder(async ({ user }) => {
 
 router.get("/ordenes", responder(async ({ user, query }) => {
   const otro = await destinatarioParaInicio(user, query.destinatario);
-  const filtros = [alcanceOrdenChat(user), alcanceOrdenChat(otro)];
+  const filtros = [ordenAbiertaParaChat, alcanceOrdenChat(user), alcanceOrdenChat(otro)];
   if (query.id) {
     if (!idValido(query.id)) throw errorChat("Orden no válida");
     filtros.push({ _id: query.id });
@@ -64,7 +65,7 @@ router.get("/ordenes", responder(async ({ user, query }) => {
 router.post("/conversaciones", responder(async ({ user, body = {} }) => {
   const otro = await destinatarioParaInicio(user, body.destinatario);
   const ordenId = body.orden || null;
-  if (ordenId && (!idValido(ordenId) || !await Asesoria.exists({ $and: [{ _id: ordenId }, alcanceOrdenChat(user), alcanceOrdenChat(otro)] }))) {
+  if (ordenId && (!idValido(ordenId) || !await Asesoria.exists({ $and: [{ _id: ordenId }, ordenAbiertaParaChat, alcanceOrdenChat(user), alcanceOrdenChat(otro)] }))) {
     throw errorChat("La orden no está disponible para los dos participantes", 403);
   }
   const clave = claveConversacion(user._id, otro._id, ordenId?.toLowerCase());

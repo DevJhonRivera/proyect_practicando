@@ -1,7 +1,7 @@
 import ControlCalidad from "./ControlCalidad";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { ClipboardCheck, Plus, Ruler, Search, Trash2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Camera, ClipboardCheck, Plus, Ruler, Search, Trash2 } from "lucide-react";
 import Swal from "sweetalert2";
 
 import {
@@ -230,7 +230,7 @@ function CoordinacionPage() {
     if (loading || !asesoriaObjetivo) return;
     const orden = ordenesBase.find((item) => String(item._id) === asesoriaObjetivo);
     if (!orden) {
-      Swal.fire({ icon: "info", title: "Trabajo no disponible", text: "La orden ya terminó, fue cancelada o no está asignada a este perfil." });
+      Swal.fire({ icon: "info", title: "Orden fuera de la bandeja", text: "La orden del enlace no aparece en la bandeja actual. Puedes consultar su estado en Órdenes de trabajo." });
       setSearchParams({}, { replace: true });
       return;
     }
@@ -413,7 +413,12 @@ function CoordinacionPage() {
         </div>
       )}
 
-      {seleccionada && <AsignacionModal orden={seleccionada} instaladores={instaladores} onClose={() => setSeleccionada(null)} onSaved={async () => { setSeleccionada(null); await cargar(); }} />}
+      {seleccionada && <AsignacionModal orden={seleccionada} instaladores={instaladores} onClose={() => setSeleccionada(null)} onSaved={(guardada) => {
+        setOrdenes((actuales) => actuales.map((orden) => orden._id === guardada._id
+          ? { ...orden, flujo: guardada.flujo, coordinacion: guardada.coordinacion }
+          : orden));
+        setSeleccionada(null);
+      }} />}
       {reportandoRecorte && <NovedadAsesoriaModal asesoria={reportandoRecorte} usuario={usuario} instaladores={instaladores} onClose={() => setReportandoRecorte(null)} onSaved={async () => { setReportandoRecorte(null); await cargar(); }} />}
     </div>
   );
@@ -486,9 +491,9 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
         });
         if (!confirmacion.isConfirmed) return;
       }
-      await savePropuestaCoordinacion(orden._id, { propuesta, asignaciones });
+      const { data } = await savePropuestaCoordinacion(orden._id, { propuesta, asignaciones });
+      onSaved(data.data);
       Swal.fire({ icon: "success", title: "Responsables asignados" });
-      onSaved();
     } catch (error) {
       Swal.fire({ icon: "error", title: "No fue posible asignar", text: error.response?.data?.message });
     }
@@ -585,6 +590,9 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
   const etapa = orden.flujo?.etapa || "PENDIENTE_COORDINACION";
   const asignaciones = orden.coordinacion?.asignaciones || [];
   const propias = usuario?.rol === "INSTALADOR" ? asignaciones.filter((item) => String(item.instaladorId) === String(usuario._id)) : asignaciones;
+  const puedeReportarFoto = usuario?.rol === "INSTALADOR"
+    && ["MATERIAL_LISTO", "EN_INSTALACION", "REPROCESO"].includes(etapa)
+    && propias.some((item) => ["PENDIENTE", "EN_PROCESO"].includes(item.estado));
   const instalacionesPendientes = asignaciones.filter((item) => item.estado !== "COMPLETADA");
   const instalacionesCompletas = asignaciones.length > 0 && instalacionesPendientes.length === 0;
   const tiposBloqueantes = ["FALTA_MATERIAL", "MATERIAL_DEFECTUOSO", "ROLLO_EQUIVOCADO", "ERROR_REGISTRO", "TRABAJO_PENDIENTE", "REPETICION_CORTE"];
@@ -604,6 +612,9 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
       {accesoriosPendientes.length > 0 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><p className="font-bold">Accesorios pendientes de Inventario</p><p className="mt-1 text-xs">{accesoriosPendientes.map((item) => `${item.nombre} ${item.marca || ""}: faltan ${item.cantidadPendiente}`).join(" · ")}. La orden no puede enviarse a Ventas hasta recibirlos.</p></div>}
       {orden.coordinacion?.propuesta?.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Propuesta de corte</p>{orden.coordinacion.propuesta.map((item) => <div key={item.linea} className="border-t py-2 text-sm text-slate-700"><p><strong>{item.linea}</strong> · {item.metrosPropuestos} m · {item.anchoCm || 0} × {item.largoCm || 0} cm · {item.cantidad} pieza(s)</p>{item.observacion && <p className="mt-1 text-xs text-slate-500">{item.observacion}</p>}</div>)}</div>}
       {propias.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Instalaciones</p>{propias.map((item) => <div key={item._id} className="mb-2 rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-bold text-slate-800">{item.descripcion || item.servicio}</p><p className="text-xs text-slate-500">{item.instaladorNombre} · {item.estado.replaceAll("_", " ")}</p><p className="mt-1 text-sm font-black text-emerald-700">Instalación: {cop.format(item.valorInstalacion || 0)}</p>{item.fechaFinalizacion && <p className="text-xs text-slate-400">Terminada: {new Date(item.fechaFinalizacion).toLocaleString("es-CO")}</p>}</div>{usuario?.rol === "INSTALADOR" && item.estado === "PENDIENTE" && <button type="button" disabled={!!actualizandoTrabajoId} onClick={() => onWork(orden, item, "EN_PROCESO")} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{actualizandoTrabajoId === item._id ? "Iniciando…" : "Iniciar"}</button>}{usuario?.rol === "INSTALADOR" && item.estado === "EN_PROCESO" && <button type="button" disabled={!!actualizandoTrabajoId} onClick={() => onWork(orden, item, "COMPLETADA")} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{actualizandoTrabajoId === item._id ? "Guardando…" : "Completar"}</button>}</div></div>)}</div>}
+      {puedeReportarFoto && <Link to={`/chat?orden=${orden._id}`} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50">
+        <Camera size={16} /> Reportar con foto a Coordinación
+      </Link>}
       {puedeGestionarEnvio && !instalacionesCompletas && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><p className="font-bold">Aún no se puede enviar a Ventas</p><p className="mt-1 text-xs">Falta completar: {instalacionesPendientes.map((item) => `${item.descripcion || item.servicio} - ${item.instaladorNombre || "sin instalador"}`).join(" · ") || "no hay instalaciones asignadas"}.</p></div>}
       <div className="flex flex-wrap gap-2 pt-1">{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && orden.coordinacion?.calidad?.estado === "APROBADA" && <button disabled={enviandoVentas} onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">{enviandoVentas ? "Enviando a Ventas..." : "Finalizar y enviar a Ventas"}</button>}</div>
     </div>

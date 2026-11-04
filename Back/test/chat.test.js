@@ -57,7 +57,12 @@ test("las rutas protegen mensajes y fotos, y verifican el alcance de la orden al
   const buscarFoto = t.mock.method(Mensaje, "findOne", () => assert.fail("Un tercero no puede consultar fotos"));
   let ordenPermitida = false;
   t.mock.method(Asesoria, "exists", async (filtro) => {
-    assert.deepEqual(filtro.$and, [{ _id: ids.orden }, { creadoPor: ids.asesor }, {}]);
+    assert.deepEqual(filtro.$and, [
+      { _id: ids.orden },
+      { estado: { $ne: "CANCELADA" }, "flujo.etapa": { $nin: ["FINALIZADA", "CANCELADA"] } },
+      { creadoPor: ids.asesor },
+      {},
+    ]);
     return ordenPermitida;
   });
   const crear = t.mock.method(Conversacion, "findOneAndUpdate", (_f, datos) => {
