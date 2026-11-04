@@ -1,3 +1,7 @@
+import eventosRoutes from "./modules/tiempoReal/eventos.routes.js";
+import chatRoutes from "./modules/chat/chat.routes.js";
+import privacidadRoutes from "./modules/privacidad/privacidad.routes.js";
+import autorizacionesRoutes from "./modules/asesores/autorizaciones.routes.js";
 import express from "express"
 import mongoose from "mongoose";
 import morgan from "morgan";
@@ -78,6 +82,8 @@ app.get("/api/login", (req, res) => {
 });
 
 app.use("/api/auth",authRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/eventos", eventosRoutes);
 
 app.use("/api/usuarios", userRoutes);
 
@@ -103,6 +109,8 @@ app.use("/api/ventas",ventaRoutes);
 
 app.use("/api/piezas-ppf", piezaPpfRoutes);
 
+app.use("/api/privacidad", privacidadRoutes);
+app.use("/api/autorizaciones", autorizacionesRoutes);
 app.use("/api/asesores", asesorRoutes);
 app.use("/api/coordinacion", coordinacionRoutes);
 app.use("/api/medidas-vehiculos", medidaVehiculoRoutes);

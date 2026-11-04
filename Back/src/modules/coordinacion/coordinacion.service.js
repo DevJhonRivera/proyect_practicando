@@ -1,3 +1,6 @@
+import { validarFirmasTrabajo } from "../asesores/autorizaciones.utils.js";
+import { ultimaRevision, validarRevisionCalidad } from "./calidad.utils.js";
+import { avisarVehiculoListo } from "./notificacionCalidad.service.js";
 import mongoose from "mongoose";
 import { validarSinNovedadesBloqueantes } from "../asesores/asesoriaWorkflow.utils.js";
 
@@ -14,6 +17,7 @@ import {
   crearAlertaServicioAsesor,
   crearAlertaServicioListoPago,
   crearAlertaInstalacionCompleta,
+  crearAlertaSolicitudNovedad,
 } from "../alertas/alerta.service.js";
 
 const texto = (value) => String(value || "").trim();
@@ -98,6 +102,7 @@ const obtenerOrden = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Orden no valida");
   const asesoria = await Asesoria.findById(id);
   if (!asesoria) throw new Error("Orden no encontrada");
+  validarFirmasTrabajo(asesoria);
   return asesoria;
 };
 
@@ -119,7 +124,7 @@ export const listarOrdenesCoordinacion = async (user) => {
     query["flujo.etapa"] = { $nin: ["FINALIZADA", "CANCELADA"] };
   }
   const ordenes = await Asesoria.find(query)
-    .select("codigo cliente vehiculo polarizados ppf serviciosAdicionales garantia comercial coordinacion flujo novedades asesorNombre createdAt")
+    .select("codigo cliente vehiculo polarizados ppf serviciosAdicionales garantia comercial coordinacion flujo novedades asesorNombre createdAt accesorios.nombre accesorios.marca accesorios.cantidadPendiente")
     .sort({ createdAt: -1 })
     .limit(500)
     .lean();
@@ -249,6 +254,8 @@ export const guardarPropuesta = async (id, data, user) => {
   }
 
   asesoria.coordinacion.propuesta = propuesta;
+  asesoria.coordinacion.calidad.requerida = true;
+  asesoria.coordinacion.calidad.estado = "SIN_REVISAR";
   asesoria.coordinacion.asignaciones = entradasAsignacion.map((item) => ({
     servicio: mayusculas(item.servicio),
     descripcion: mayusculas(item.descripcion),
@@ -292,9 +299,29 @@ export const revisarPropuesta = async (id, data, user) => {
   return asesoria;
 };
 
-export const marcarMaterialListo = async (id) => {
+export const marcarMaterialListo = async (id, user) => {
   const asesoria = await obtenerOrden(id);
   validarSinNovedadesBloqueantes(asesoria);
+  if (asesoria.flujo.etapa === "REPROCESO") {
+    if (!["COORDINADOR", "ADMIN", "SUPERUSUARIO"].includes(user?.rol)) throw new Error("Coordinacion debe confirmar la recepcion del material de reproceso");
+    const revision = ultimaRevision(asesoria);
+    const novedad = asesoria.novedades.id(revision?.novedadId);
+    if (revision?.decision !== "RECORTE" || !novedad || novedad.estado !== "RESUELTA" || revision.materialRecibidoEn) throw new Error("El recorte debe aprobarse y completarse antes de confirmar su recepcion");
+    const cortesNuevos = await Corte.find({ asesoriaId: asesoria._id, novedadId: novedad._id }).select("asesoriaLineaOrigen").lean();
+    if (!novedad.serviciosAfectados.length || novedad.serviciosAfectados.some((l) => !cortesNuevos.some((c) => c.asesoriaLineaOrigen === l))) throw new Error("Faltan cortes nuevos de la reposicion");
+    revision.materialRecibidoEn = new Date();
+    revision.materialRecibidoPor = user.nombre || user.rol;
+    for (const ref of revision.asignaciones) {
+      const asignacion = asesoria.coordinacion.asignaciones.id(ref.asignacionId);
+      if (!asignacion || asignacion.estado !== "ESPERANDO_MATERIAL") throw new Error("La instalacion no esta esperando el nuevo material");
+      asignacion.estado = "PENDIENTE";
+    }
+    asesoria.auditoria.push({ accion: "RECEPCION_MATERIAL_REPROCESO", descripcion: `Recibido material del recorte ${novedad._id}`, usuarioId: user._id, usuarioNombre: user.nombre || user.rol, fecha: new Date() });
+    await asesoria.save();
+    await crearAlertasInstaladores({ ...asesoria.toObject(), coordinacion: { asignaciones: asesoria.coordinacion.asignaciones.filter((a) => a.estado === "PENDIENTE") } });
+    await cerrarAlertaFlujo(`repeticion-lista:${asesoria._id}:${novedad._id}`);
+    return asesoria;
+  }
   if (!["PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(asesoria.flujo.etapa)) throw new Error("La orden no esta disponible para finalizar cortes");
   const cortes = await Corte.find({ asesoriaId: asesoria._id }).select("asesoriaLinea").lean();
   const faltantes = lineasOrden(asesoria).filter((linea) => !cortes.some((corte) => corte.asesoriaLinea === linea.linea));
@@ -313,7 +340,7 @@ export const marcarMaterialListo = async (id) => {
 export const actualizarAsignacion = async (id, asignacionId, data, user) => {
   const asesoria = await obtenerOrden(id);
   validarSinNovedadesBloqueantes(asesoria);
-  if (!["MATERIAL_LISTO", "EN_INSTALACION"].includes(asesoria.flujo.etapa)) {
+  if (!["MATERIAL_LISTO", "EN_INSTALACION", "REPROCESO"].includes(asesoria.flujo.etapa)) {
     throw new Error("El material todavia no esta listo para iniciar la instalacion");
   }
   const asignacion = asesoria.coordinacion?.asignaciones?.id(asignacionId);
@@ -335,7 +362,9 @@ export const actualizarAsignacion = async (id, asignacionId, data, user) => {
     fecha: new Date(),
   });
   const todasCompletas = asesoria.coordinacion.asignaciones.every((item) => item.estado === "COMPLETADA");
-  asesoria.flujo.etapa = "EN_INSTALACION";
+  asesoria.coordinacion.calidad.requerida = true;
+  asesoria.coordinacion.calidad.estado = todasCompletas ? "PENDIENTE" : asesoria.flujo.etapa === "REPROCESO" ? "REPROCESO" : "SIN_REVISAR";
+  asesoria.flujo.etapa = todasCompletas ? "PENDIENTE_CALIDAD" : asesoria.flujo.etapa === "REPROCESO" ? "REPROCESO" : "EN_INSTALACION";
   await asesoria.save();
   await cerrarAlertaFlujo(`asignacion:${asesoria._id}:${asignacion._id}`);
   if (todasCompletas) await crearAlertaInstalacionCompleta(asesoria);
@@ -344,13 +373,14 @@ export const actualizarAsignacion = async (id, asignacionId, data, user) => {
 
 export const enviarTrabajoAVentas = async (id) => {
   const asesoria = await obtenerOrden(id);
+  if (asesoria.coordinacion.calidad?.estado !== "APROBADA") throw new Error("El coordinador debe aprobar calidad antes de finalizar");
   validarSinNovedadesBloqueantes(asesoria);
   const accesoriosPendientes = (asesoria.accesorios || []).filter((item) => Number(item.cantidadPendiente || 0) > 0);
   if (accesoriosPendientes.length) {
     const detalle = accesoriosPendientes.map((item) => `${item.nombre}: faltan ${item.cantidadPendiente}`).join(", ");
     throw new Error(`No se puede enviar a Ventas. Faltan accesorios por recibir: ${detalle}`);
   }
-  if (!["MATERIAL_LISTO", "EN_INSTALACION"].includes(asesoria.flujo.etapa)) throw new Error("El trabajo no esta listo para finalizar");
+  if (!["PENDIENTE_CALIDAD", "EN_INSTALACION", "MATERIAL_LISTO"].includes(asesoria.flujo.etapa)) throw new Error("El trabajo no esta listo para finalizar");
   if (!asesoria.coordinacion.asignaciones.length) throw new Error("La orden no tiene instalaciones asignadas");
   const pendientes = asesoria.coordinacion.asignaciones.filter((item) => item.estado !== "COMPLETADA");
   if (pendientes.length) {
@@ -364,14 +394,62 @@ export const enviarTrabajoAVentas = async (id) => {
       (total, corte) => total + Number(corte.costoMaterialCop || 0), 0
     );
   }
-  asesoria.flujo.etapa = garantiaSinCobro ? "FINALIZADA" : "PENDIENTE_PAGO";
+  const cerrarGarantia = garantiaSinCobro && !asesoria.autorizaciones?.requeridas;
+  asesoria.flujo.etapa = cerrarGarantia ? "FINALIZADA" : "PENDIENTE_PAGO";
   asesoria.flujo.fechaEnvioVentas = garantiaSinCobro ? null : new Date();
-  asesoria.flujo.fechaFinalizacion = garantiaSinCobro ? new Date() : null;
-  if (garantiaSinCobro) asesoria.garantia.estado = "FINALIZADA";
+  asesoria.flujo.fechaFinalizacion = cerrarGarantia ? new Date() : null;
+  if (cerrarGarantia) asesoria.garantia.estado = "FINALIZADA";
   if (garantiaSinCobro) asesoria.pago.estado = "NO_APLICA";
   await asesoria.save();
   if (!garantiaSinCobro) await crearAlertaServicioListoPago(asesoria);
   await cerrarAlertaFlujo(`material-listo:${asesoria._id}`);
   await cerrarAlertaFlujo(`instalacion-completa:${asesoria._id}`);
   return asesoria;
+};
+
+export const revisarCalidad = async (id, data, user) => {
+  if (!["COORDINADOR", "ADMIN", "SUPERUSUARIO"].includes(user.rol)) throw new Error("Solo coordinacion puede revisar calidad");
+  const asesoria = await obtenerOrden(id);
+  validarSinNovedadesBloqueantes(asesoria);
+  const calidad = asesoria.coordinacion.calidad;
+  if (calidad.estado === "APROBADA") {
+    if (data.decision !== "APROBAR") throw new Error("La revision de calidad ya fue aprobada");
+    if (!["PENDIENTE_PAGO", "FINALIZADA"].includes(asesoria.flujo.etapa)) await enviarTrabajoAVentas(id);
+    return { orden: await Asesoria.findById(id), aviso: await avisarVehiculoListo(id) };
+  }
+  const seleccionadas = validarRevisionCalidad(asesoria, data);
+  if ((asesoria.accesorios || []).some((a) => Number(a.cantidadPendiente || 0) > 0)) throw new Error("Faltan accesorios por recibir antes de cerrar calidad");
+  const fecha = new Date();
+  const revision = { decision: data.decision, observacion: data.observacion.trim(), fecha, usuarioId: user._id, usuarioNombre: user.nombre || user.rol,
+    asignaciones: (data.decision === "APROBAR" ? asesoria.coordinacion.asignaciones : seleccionadas).map((a) => ({ asignacionId: a._id, servicio: a.servicio, descripcion: a.descripcion, instaladorId: a.instaladorId, instaladorNombre: a.instaladorNombre, fechaInicio: a.fechaInicio, fechaFinalizacion: a.fechaFinalizacion })) };
+  if (data.decision === "RECORTE") {
+    const responsable = seleccionadas[0];
+    const novedadId = new mongoose.Types.ObjectId();
+    revision.novedadId = novedadId;
+    asesoria.novedades.push({ _id: novedadId, tipo: "REPETICION_CORTE", descripcion: `Calidad: ${revision.observacion}`, responsableCosto: "INSTALADOR", afectaMaterial: true,
+      afectaPrecio: false, valorImpacto: 0, serviciosAfectados: data.lineasRecorte, instaladorId: responsable.instaladorId, instaladorNombre: responsable.instaladorNombre,
+      estado: "PENDIENTE", usuarioId: user._id, usuarioNombre: revision.usuarioNombre, usuarioRol: user.rol, fecha });
+    asesoria.situacionActual = "NOVEDAD_ABIERTA";
+  }
+  calidad.requerida = true;
+  calidad.estado = data.decision === "APROBAR" ? "APROBADA" : "REPROCESO";
+  calidad.revisiones.push(revision);
+  if (data.decision !== "APROBAR") {
+    for (const a of seleccionadas) { a.estado = data.decision === "RECORTE" ? "ESPERANDO_MATERIAL" : "PENDIENTE"; a.fechaInicio = null; a.fechaFinalizacion = null; a.observacion = revision.observacion; }
+    asesoria.flujo.etapa = "REPROCESO";
+  } else {
+    asesoria.flujo.etapa = "PENDIENTE_CALIDAD";
+    calidad.aviso = { estado: "PENDIENTE" };
+  }
+  asesoria.auditoria.push({ accion: `CALIDAD_${data.decision}`, descripcion: revision.observacion, usuarioId: user._id, usuarioNombre: revision.usuarioNombre, fecha });
+  await asesoria.save();
+  const alertas = [cerrarAlertaFlujo(`instalacion-completa:${asesoria._id}`)];
+  if (data.decision === "RECORTE") alertas.push(crearAlertaSolicitudNovedad(asesoria, asesoria.novedades.id(revision.novedadId)));
+  if (data.decision === "CORREGIR") alertas.push(crearAlertasInstaladores({ ...asesoria.toObject(), coordinacion: { asignaciones: seleccionadas } }));
+  for (const resultado of await Promise.allSettled(alertas)) if (resultado.status === "rejected") console.error("Aviso de calidad pendiente:", resultado.reason.message);
+  if (data.decision === "APROBAR") {
+    const orden = await enviarTrabajoAVentas(id);
+    return { orden, aviso: await avisarVehiculoListo(id) };
+  }
+  return { orden: asesoria };
 };

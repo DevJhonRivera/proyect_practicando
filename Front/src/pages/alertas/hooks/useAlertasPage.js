@@ -1,3 +1,4 @@
+import { observarActualizaciones } from "../../../utils/tiempoReal";
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import { currentMonthValue } from "../../../hooks/useMonthFilter";
@@ -49,20 +50,8 @@ export function useAlertasPage() {
       }
     };
 
-    cargarInicial();
-    const intervalId = window.setInterval(async () => {
-      try {
-        const res = await getAlertas({ month });
-        if (active) setAlertas(res.data.data || res.data || []);
-      } catch {
-        // Conserva la información visible si una actualización temporal falla.
-      }
-    }, 30000);
-
-    return () => {
-      active = false;
-      window.clearInterval(intervalId);
-    };
+    const dejarDeObservar = observarActualizaciones(["realtime:alertas"], cargarInicial, 30000);
+    return () => { active = false; dejarDeObservar(); };
   }, [month]);
 
   const tipos = useMemo(

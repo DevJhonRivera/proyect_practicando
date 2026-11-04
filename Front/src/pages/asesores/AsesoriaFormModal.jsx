@@ -37,6 +37,7 @@ const piezasParaAplicacion = (catalogo, aplicacion) => {
 const inicial = {
   cliente: { cedula: "", nombre: "", telefono: "", correo: "" },
   vehiculo: { placa: "", marca: "", modelo: "", anio: "", color: "" },
+  seguroVehiculo: { estado: "SIN_CONFIRMAR", aseguradora: "", numeroPoliza: "", vigenciaHasta: "" },
   recepcion: {
     tieneRayones: false,
     detalleRayones: "",
@@ -125,6 +126,7 @@ const prepararFormulario = (asesoria) => {
   return {
     cliente: { ...inicial.cliente, ...asesoria.cliente },
     vehiculo: { ...inicial.vehiculo, ...asesoria.vehiculo },
+    seguroVehiculo: { ...inicial.seguroVehiculo, ...asesoria.seguroVehiculo },
     recepcion: { ...inicial.recepcion, ...asesoria.recepcion },
     polarizados: (asesoria.polarizados || []).map((item) => {
       const porcentaje = String(item.porcentaje || "");
@@ -522,6 +524,8 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   };
 
   const guardar = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.cliente.correo.trim())) return Swal.fire({ icon: "warning", title: "Registre un correo valido del cliente" });
+
     const placa = form.vehiculo.placa.trim();
     if (soloDigitos(form.cliente.cedula).length < 5) {
       return Swal.fire({ icon: "warning", title: "Ingrese una cédula válida" });
@@ -595,10 +599,11 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
       const response = asesoria
         ? await updateAsesoria(asesoria._id, payload)
         : await createBorradorAsesoria(payload);
+      const solicitudFirma = response.data?.data?.solicitudFirma;
       await Swal.fire({
-        icon: "success",
+        icon: solicitudFirma?.enviado === false ? "warning" : "success",
         title: asesoria ? "Servicio actualizado" : "Recepción guardada",
-        text: `Código ${response.data?.data?.codigo || asesoria?.codigo || "creado"}`,
+        text: `Código ${response.data?.data?.codigo || asesoria?.codigo || "creado"}${solicitudFirma ? `. ${solicitudFirma.mensaje}` : ""}`,
       });
       onSaved?.();
       onClose();
@@ -616,7 +621,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   return (
     <AppModal
       title={asesoria ? `Editar servicio ${asesoria.codigo}` : "Nueva recepción del vehículo"}
-      subtitle={asesoria ? "Corrección administrativa de todos los datos registrados" : "Identifica al cliente y deja constancia del estado del carro"}
+      subtitle={asesoria ? "Actualiza los datos del servicio; los cambios requieren una nueva aprobación cuando corresponda" : "Identifica al cliente y deja constancia del estado del carro"}
       icon={ClipboardCheck}
       maxWidth="max-w-4xl"
       onClose={onClose}
@@ -695,7 +700,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
             <Field label="Teléfono">
               <input value={form.cliente.telefono} inputMode="tel" placeholder="Ej: 3001234567" onChange={(e) => cambiar("cliente", "telefono", e.target.value)} className="w-full rounded-xl border p-3" />
             </Field>
-            <Field label="Correo (opcional)">
+            <Field label="Correo obligatorio">
               <input type="email" value={form.cliente.correo} placeholder="Ej: cliente@correo.com" onChange={(e) => cambiar("cliente", "correo", e.target.value.toLowerCase())} className="w-full rounded-xl border p-3" />
             </Field>
           </div>
@@ -721,6 +726,17 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           </div>
         </FormSection>
 
+        <FormSection title="Seguro todo riesgo del vehiculo">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="El cliente declara que tiene seguro todo riesgo">
+              <select value={form.seguroVehiculo.estado} onChange={(e) => cambiar("seguroVehiculo", "estado", e.target.value)} className="w-full rounded-xl border bg-white p-3">
+                <option value="SIN_CONFIRMAR">Sin confirmar</option><option value="SI">Si</option><option value="NO">No</option>
+              </select>
+            </Field>
+
+          </div>
+          <p className="mt-2 text-xs text-slate-500">La declaracion sobre seguro y las condiciones de incidentes se incluyen en el diagnostico que firma el cliente.</p>
+        </FormSection>
         <FormSection title="Estado y pertenencias">
           <div className="grid gap-4 md:grid-cols-2">
             <Inspection

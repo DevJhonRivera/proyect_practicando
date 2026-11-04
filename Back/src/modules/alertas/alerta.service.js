@@ -95,18 +95,19 @@ const filtroAlertasPorRol = (user) => {
     return {};
   }
 
-  return {
-    tipo: {
-      $in: tiposPermitidos
-    },
-    ...(user?.rol === "INSTALADOR" ? { destinatarioId: user._id } : {}),
-  };
+  return { $or: [
+    { tipo: { $in: tiposPermitidos }, ...(user?.rol === "INSTALADOR" ? { destinatarioId: user._id } : {}) },
+    { tipo: { $in: ["RESPUESTA_CLIENTE", "VEHICULO_LISTO_ASESOR", "FIRMA_CLIENTE"] }, destinatarioId: user?._id },
+  ] };
 };
 
 export const accionPredeterminada = (alerta) => {
   const referencia = alerta.referenciaId ? String(alerta.referenciaId) : "";
   const conOrden = (ruta) => referencia ? `${ruta}?asesoria=${referencia}` : ruta;
   const rutas = {
+    RESPUESTA_CLIENTE: conOrden("/asesores"),
+    VEHICULO_LISTO_ASESOR: conOrden("/asesores"),
+    FIRMA_CLIENTE: conOrden("/asesores"),
     [TIPO_RECEPCION_NUEVA]: "/recepciones",
     [TIPO_STOCK_RESERVA_UN_ROLLO]: "/reserva",
     [TIPO_STOCK_RESERVA_DOS_ROLLOS]: "/reserva",
@@ -420,7 +421,7 @@ export const crearAlertaInstalacionCompleta = async (asesoria) =>
     { clave: `instalacion-completa:${asesoria._id}` },
     {
       tipo: TIPO_INSTALACION_COMPLETA,
-      mensaje: `Todos los trabajos de ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}) fueron completados. Puede enviarlo a Ventas.`,
+      mensaje: `Todos los trabajos de ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}) fueron completados. Debe revisar calidad antes de finalizar.`,
       referenciaId: asesoria._id,
       accionUrl: `/coordinacion?asesoria=${asesoria._id}`,
       atendida: false,

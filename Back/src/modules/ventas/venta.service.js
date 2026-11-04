@@ -1,3 +1,4 @@
+import { validarFirmaEntrega } from "../asesores/autorizaciones.utils.js";
 import mongoose from "mongoose";
 import { mongoSoportaTransacciones } from "../../config/db.js";
 import Corte from "../cortes/corte.model.js";
@@ -524,6 +525,7 @@ export const crearVenta = async (data, user) => {
     }
     asesoria = await Asesoria.findById(data.asesoriaId).lean();
     if (!asesoria) throw new Error("La orden de servicio no existe");
+    validarFirmaEntrega(asesoria);
     if (asesoria.flujo?.etapa !== "PENDIENTE_PAGO") {
       throw new Error("La orden no esta disponible para registrar el pago");
     }
@@ -801,6 +803,11 @@ export const registrarMovimientoPago = async (id, data, user) => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Venta no valida");
   const venta = await Venta.findById(id);
   if (!venta) throw new Error("Venta no encontrada");
+  if (venta.asesoriaId) {
+    const orden = await Asesoria.findById(venta.asesoriaId);
+    if (!orden) throw new Error("Servicio no encontrado");
+    validarFirmaEntrega(orden);
+  }
   if (venta.estado === "ANULADA") throw new Error("No se pueden registrar movimientos en una venta anulada");
 
   const tipo = normalizarMayusculas(data.tipo || "PAGO");

@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import { validarFirmasTrabajo, validarFirmaEntrega } from "./autorizaciones.utils.js";
+import { capturarEstado, registrarCambios } from "./trazabilidad.utils.js";
 
 const asesoriaSchema = new mongoose.Schema(
   {
@@ -13,6 +15,7 @@ const asesoriaSchema = new mongoose.Schema(
       telefono: { type: String, default: "", trim: true },
       correo: { type: String, default: "", trim: true, lowercase: true },
     },
+    correoActualizadoEnCaja: { type: String, default: "" },
     vehiculo: {
       placa: {
         type: String,
@@ -27,7 +30,51 @@ const asesoriaSchema = new mongoose.Schema(
       anio: { type: String, default: "", trim: true },
       color: { type: String, default: "", trim: true, uppercase: true },
     },
+    seguroVehiculo: {
+      estado: { type: String, enum: ["SIN_CONFIRMAR", "SI", "NO"], default: "SIN_CONFIRMAR" },
+      aseguradora: { type: String, default: "", trim: true },
+      numeroPoliza: { type: String, default: "", trim: true },
+      vigenciaHasta: { type: String, default: "" },
+    },
+    autorizaciones: {
+      requeridas: { type: Boolean, default: false },
+      bloqueoCliente: { type: Boolean, default: false },
+      documentos: { type: [{
+        tipo: { type: String, enum: ["COTIZACION", "DIAGNOSTICO", "ENTREGA"], required: true },
+        contenido: { type: String, required: true },
+        huella: { type: String, required: true },
+        huellaDatos: { type: String, required: true },
+        tokenHash: { type: String, required: true, select: false },
+        expira: { type: Date, required: true },
+        creadoEn: { type: Date, required: true },
+        estado: { type: String, enum: ["PENDIENTE", "FIRMADO", "INVALIDADO", "RECHAZADO", "CORRECCION_SOLICITADA"], default: "PENDIENTE" },
+        envio: { type: String, enum: ["PENDIENTE", "ENVIADO", "ERROR"], default: "PENDIENTE" },
+        enviadoEn: Date,
+        proveedorId: String,
+        respuestaCliente: { accion: String, motivo: String, nombre: String, cedula: String, fecha: Date, ip: String, agente: String },
+        gestionRespuesta: { accion: String, nota: String, usuarioId: mongoose.Schema.Types.ObjectId, usuarioNombre: String, fecha: Date },
+        firma: {
+          nombre: String, cedula: String, fecha: Date,
+          trazo: { type: [[Number]], default: undefined },
+          ip: String, agente: String,
+          aceptaciones: { documento: Boolean, datos: Boolean, condiciones: Boolean, firmaElectronica: Boolean },
+          autorizacionPreviaId: String,
+        },
+      }], default: [] },
+    },
+    trazabilidad: {
+      type: [{
+        proceso: { type: String, required: true },
+        anterior: { type: String, default: "" },
+        estado: { type: String, required: true },
+        fecha: { type: Date, required: true },
+        usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+        usuarioNombre: { type: String, default: "" },
+      }],
+      default: [],
+    },
     recepcion: {
+      fotos: { type: [{ fotoId: { type: String, required: true }, sha256: { type: String, required: true }, nombre: { type: String, default: "" } }], default: [] },
       tieneRayones: { type: Boolean, default: false },
       detalleRayones: { type: String, default: "", trim: true },
       dejaObjetos: { type: Boolean, default: false },
@@ -138,6 +185,21 @@ const asesoriaSchema = new mongoose.Schema(
       metodoPagoFinal: { type: String, default: "" },
     },
     coordinacion: {
+      calidad: {
+        requerida: { type: Boolean, default: false },
+        estado: { type: String, enum: ["SIN_REVISAR", "PENDIENTE", "REPROCESO", "APROBADA"], default: "SIN_REVISAR" },
+        revisiones: { type: [{
+          decision: { type: String, enum: ["APROBAR", "CORREGIR", "RECORTE"], required: true },
+          observacion: String, fecha: Date, usuarioId: mongoose.Schema.Types.ObjectId, usuarioNombre: String,
+          asignaciones: [{ asignacionId: mongoose.Schema.Types.ObjectId, servicio: String, descripcion: String, instaladorId: mongoose.Schema.Types.ObjectId, instaladorNombre: String, fechaInicio: Date, fechaFinalizacion: Date }],
+          novedadId: mongoose.Schema.Types.ObjectId,
+          materialRecibidoEn: Date, materialRecibidoPor: String,
+        }], default: [] },
+        aviso: {
+          estado: { type: String, enum: ["PENDIENTE", "ENVIANDO", "ENVIADO", "ERROR"], default: "PENDIENTE" },
+          intentoEn: Date, enviadoEn: Date, proveedorId: String, error: String,
+        },
+      },
       propuesta: {
         type: [{
           linea: { type: String, required: true, trim: true, uppercase: true },
@@ -194,7 +256,7 @@ const asesoriaSchema = new mongoose.Schema(
     flujo: {
       etapa: {
         type: String,
-        enum: ["PENDIENTE_GARANTIA", "PENDIENTE_COORDINACION", "PENDIENTE_APROBACION_CORTE", "PENDIENTE_INVENTARIO", "EN_PROCESO", "MATERIAL_LISTO", "EN_INSTALACION", "PENDIENTE_PAGO", "FINALIZADA", "CANCELADA"],
+        enum: ["PENDIENTE_FIRMA_COTIZACION", "PENDIENTE_FIRMA_DIAGNOSTICO", "PENDIENTE_GARANTIA", "PENDIENTE_COORDINACION", "PENDIENTE_APROBACION_CORTE", "PENDIENTE_INVENTARIO", "EN_PROCESO", "MATERIAL_LISTO", "EN_INSTALACION", "PENDIENTE_CALIDAD", "REPROCESO", "PENDIENTE_PAGO", "FINALIZADA", "CANCELADA"],
         default: "PENDIENTE_INVENTARIO",
       },
       fechaEnvioInventario: { type: Date, default: Date.now },
@@ -296,9 +358,64 @@ const asesoriaSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { timestamps: true }
+  { timestamps: true, optimisticConcurrency: true }
 );
 
+asesoriaSchema.post("init", function (doc) {
+  doc.$locals.estadoAnterior = capturarEstado(doc);
+});
+const validarAvanceFirmado = (orden) => {
+  if (orden.coordinacion?.calidad?.requerida && ["PENDIENTE_PAGO", "FINALIZADA"].includes(orden.flujo?.etapa) && orden.coordinacion.calidad.estado !== "APROBADA") throw new Error("El coordinador debe aprobar calidad antes de entrega o caja");
+  if (!orden.autorizaciones?.requeridas) return;
+  if (["PENDIENTE_COORDINACION", "PENDIENTE_APROBACION_CORTE", "PENDIENTE_INVENTARIO", "EN_PROCESO", "MATERIAL_LISTO", "EN_INSTALACION", "PENDIENTE_CALIDAD", "REPROCESO", "PENDIENTE_PAGO", "FINALIZADA"].includes(orden.flujo?.etapa)) validarFirmasTrabajo(orden);
+  if (orden.flujo?.etapa === "FINALIZADA") validarFirmaEntrega(orden);
+};
+asesoriaSchema.pre("save", function () {
+  validarAvanceFirmado(this);
+  registrarCambios(this, this.$locals.estadoAnterior || {}, new Date());
+});
+asesoriaSchema.post("save", function (doc) {
+  doc.$locals.estadoAnterior = capturarEstado(doc);
+});
+// Query updates (billing and administrative changes) must record the same history.
+for (const operacion of ["findOneAndUpdate", "updateOne"]) {
+  asesoriaSchema.pre(operacion, async function () {
+    const update = this.getUpdate();
+    if (!update || Array.isArray(update)) return;
+    const cambios = { ...Object.fromEntries(Object.entries(update).filter(([key]) => !key.startsWith("$"))), ...update.$set };
+    if (!Object.keys(cambios).some((key) => /^(flujo|coordinacion|pago|autorizaciones)(\.|$)/.test(key))) return;
+    const orden = await this.model.findOne(this.getFilter());
+    if (!orden) return;
+    const anterior = capturarEstado(orden);
+    for (const [key, value] of Object.entries(cambios)) {
+      let ruta = key;
+      if (key.startsWith("autorizaciones.documentos.$.")) {
+        const filtro = this.getFilter();
+        const documentoId = filtro["autorizaciones.documentos._id"] || filtro["autorizaciones.documentos"]?.$elemMatch?._id;
+        const indice = orden.autorizaciones.documentos.findIndex((d) => String(d._id) === String(documentoId));
+        if (indice < 0) throw new Error("Documento no encontrado para actualizar");
+        ruta = key.replace("autorizaciones.documentos.$.", `autorizaciones.documentos.${indice}.`);
+      }
+      orden.set(ruta, value);
+    }
+    validarAvanceFirmado(orden);
+    update.$inc ||= {};
+    update.$inc.__v = (update.$inc.__v || 0) + 1;
+    const audit = update.$push?.auditoria;
+    if (audit) orden.auditoria.push(...(audit.$each || [audit]));
+    const inicio = orden.trazabilidad.length;
+    registrarCambios(orden, anterior, new Date());
+    const eventos = orden.trazabilidad.slice(inicio).map((item) => item.toObject());
+    if (!eventos.length) { this.setUpdate(update); return; }
+    update.$push ||= {};
+    const previo = update.$push.trazabilidad;
+    update.$push.trazabilidad = { $each: [...(previo?.$each || (previo ? [previo] : [])), ...eventos] };
+    this.setUpdate(update);
+  });
+}
+
+
+asesoriaSchema.index({ "autorizaciones.documentos.tokenHash": 1 });
 asesoriaSchema.index({ "cliente.cedula": 1, createdAt: -1 });
 asesoriaSchema.index({ "vehiculo.placa": 1, createdAt: -1 });
 asesoriaSchema.index({ "flujo.etapa": 1, updatedAt: -1 });

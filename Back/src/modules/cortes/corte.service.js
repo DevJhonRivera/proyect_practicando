@@ -1,3 +1,4 @@
+import { validarFirmasTrabajo } from "../asesores/autorizaciones.utils.js";
 import mongoose from "mongoose";
 import { mongoSoportaTransacciones } from "../../config/db.js";
 import Corte from "./corte.model.js";
@@ -303,6 +304,7 @@ export const registrarCorte =
       }
       asesoria = await Asesoria.findById(data.asesoriaId).lean();
       if (!asesoria) throw new Error("La orden de servicio no existe");
+    validarFirmasTrabajo(asesoria);
       if (data.novedadId) {
         novedadReposicion = (asesoria.novedades || []).find(
           (item) => String(item._id) === String(data.novedadId)
@@ -675,6 +677,7 @@ export const registrarPropuestaCompleta = async (asesoriaId, user) => {
   if (!mongoose.Types.ObjectId.isValid(asesoriaId)) throw new Error("La orden de servicio no es valida");
   const asesoria = await Asesoria.findById(asesoriaId).lean();
   if (!asesoria) throw new Error("La orden de servicio no existe");
+    validarFirmasTrabajo(asesoria);
   validarSinNovedadesBloqueantes(asesoria);
   if (!['PENDIENTE_INVENTARIO', 'EN_PROCESO'].includes(asesoria.flujo?.etapa)) throw new Error("La propuesta debe estar aprobada por Inventario");
   if (asesoria.garantia?.esGarantia && asesoria.garantia.estado !== "APROBADA") throw new Error("La garantia debe estar aprobada antes de consumir material");

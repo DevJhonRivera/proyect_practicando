@@ -32,7 +32,8 @@ import TablePagination from "../../components/ui/TablePagination";
 import { useMonthFilter } from "../../hooks/useMonthFilter";
 import { usePagination } from "../../hooks/usePagination";
 import { etiquetaDetalle } from "../../utils/materiales";
-import { obtenerUsuarioActual } from "../../utils/permisos";
+import { obtenerUsuarioActual, tienePermiso } from "../../utils/permisos";
+import { preguntarEnvioFactura } from "../../utils/envioFacturaVenta";
 import { generarFacturaVenta } from "../../utils/facturaVenta";
 
 const formatoCop = new Intl.NumberFormat("es-CO", {
@@ -621,15 +622,10 @@ function VentasPage() {
         });
       }
 
-      await createVenta({
-        ...form,
-        descuento,
-      });
+      const respuesta = await createVenta({ ...form, descuento });
 
-      Swal.fire({
-        icon: "success",
-        title: "Venta registrada",
-      });
+      if (respuesta.data.estado === "PAGADA") await preguntarEnvioFactura(respuesta.data);
+      else await Swal.fire({ icon: "success", title: "Venta registrada" });
 
       setForm(ventaInicial);
       await cargar();
@@ -677,7 +673,8 @@ function VentasPage() {
           observacion: "ABONO INICIAL",
         });
       }
-      await Swal.fire({ icon: "success", title: valorPago === total ? "Pago registrado" : "Abono registrado", text: valorPago === total ? "La orden quedó finalizada." : `Queda pendiente ${formatoCop.format(total - valorPago)}.` });
+      if (ventaResponse.data.estado === "PAGADA") await preguntarEnvioFactura(ventaResponse.data);
+      else await Swal.fire({ icon: "success", title: "Abono registrado", text: `Queda pendiente ${formatoCop.format(total - valorPago)}.` });
       setForm(ventaInicial);
       setVistaVentas("historial");
       navigate("/ventas", { replace: true });
@@ -721,8 +718,9 @@ function VentasPage() {
     });
     if (!resultado.isConfirmed) return;
     try {
-      await createMovimientoPago(venta._id, resultado.value);
-      await Swal.fire({ icon: "success", title: resultado.value.valor === saldo ? "Pago completado" : "Abono registrado", timer: 1600, showConfirmButton: false });
+      const respuesta = await createMovimientoPago(venta._id, resultado.value);
+      if (respuesta.data.estado === "PAGADA") await preguntarEnvioFactura(respuesta.data);
+      else await Swal.fire({ icon: "success", title: "Abono registrado", timer: 1600, showConfirmButton: false });
       await cargar();
     } catch (error) {
       Swal.fire({ icon: "error", title: "No fue posible registrar el pago", text: error.response?.data?.message || "Intente nuevamente." });
@@ -1430,6 +1428,10 @@ function VentasPage() {
                   key={venta._id}
                   venta={venta}
                   onMarkPaid={registrarPago}
+                  onEnviarComprobante={tienePermiso(usuario, "ventas", "write") ? async (item) => {
+                    await preguntarEnvioFactura(item);
+                    await cargar();
+                  } : null}
                   onRefund={registrarDevolucion}
                   onReject={registrarPagoRechazado}
                   onEdit={editarVenta}
@@ -1890,7 +1892,7 @@ function ItemsVenta({ items, onDelete }) {
   );
 }
 
-function VentaCard({ venta, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
+function VentaCard({ venta, onEnviarComprobante, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
   const valorPagado = Number(venta.valorPagado || (venta.estado === "PAGADA" && !venta.pagos?.length ? venta.total : 0));
   const valorDevuelto = Number(venta.valorDevuelto || 0);
   const netoRecibido = Math.max(valorPagado - valorDevuelto, 0);
@@ -1913,6 +1915,12 @@ function VentaCard({ venta, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
         </div>
         <div className="flex items-start gap-2">
           <EstadoBadge estado={venta.estado} />
+          {venta.estado === "PAGADA" && onEnviarComprobante && (
+            <button type="button" onClick={() => onEnviarComprobante(venta)}
+              className="rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50">
+              Enviar comprobante
+            </button>
+          )}
           {venta.estado !== "ANULADA" && <button
             type="button"
             onClick={() => {

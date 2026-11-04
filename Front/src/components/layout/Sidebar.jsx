@@ -1,5 +1,7 @@
+import { observarActualizaciones } from "../../utils/tiempoReal";
 import {
   Activity,
+  MessageCircle,
   BadgeDollarSign,
   BookOpen,
   Bell,
@@ -23,8 +25,10 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import api from "../../api/axios";
+import { puedeAbrirChat } from "../../utils/permisosChat";
 import logo from "../../assets/polarizadosya.png";
 import {
   obtenerUsuarioActual,
@@ -35,6 +39,29 @@ import { cerrarSesion as cerrarSesionUsuario } from "../../utils/session";
 function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCompact = () => {} }) {
   const navigate = useNavigate();
   const usuario = obtenerUsuarioActual();
+  const chatPermitido = puedeAbrirChat(usuario?.rol);
+  const [chatsSinLeer, setChatsSinLeer] = useState(0);
+
+  useEffect(() => {
+    if (!chatPermitido) return;
+    const control = new AbortController();
+    let consultando = false;
+    const actualizar = async () => {
+      if (consultando || document.hidden) return;
+      consultando = true;
+      try {
+        const config = { signal: control.signal, skipGlobalActivity: true };
+        const { data } = await api.get("/chat/no-leidos", config);
+        if (!control.signal.aborted) setChatsSinLeer(data.cantidad);
+        await Promise.allSettled((data.pendientes || []).map(({ _id, ultimo }) =>
+          api.post(`/chat/conversaciones/${_id}/recibido`, { mensaje: ultimo }, config)));
+      } catch {
+        // Navigation stays available when the chat service is temporarily unreachable.
+      } finally { consultando = false; }
+    };
+    const dejarDeObservar = observarActualizaciones(["realtime:chat", "realtime:chat-leido", "chat:leido"], actualizar, 15000);
+    return () => { control.abort(); dejarDeObservar(); };
+  }, [chatPermitido]);
   const iniciales = String(usuario?.nombre || "U")
     .trim()
     .split(/\s+/)
@@ -63,6 +90,7 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
     {
       section: "Principal",
       items: [
+        { icon: MessageCircle, text: "Chat interno", url: "/chat", esChat: true },
         {
           icon: LayoutDashboard,
           text: "Inicio",
@@ -83,6 +111,17 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
           url: "/usuarios",
           modulo: "usuarios",
           accion: "write",
+          soloAdmin: true,
+        },
+      ],
+    },
+    {
+      section: "Administración",
+      items: [
+        {
+          icon: ClipboardList,
+          text: "Historial de servicios",
+          url: "/historial-servicios",
           soloAdmin: true,
         },
       ],
@@ -225,7 +264,7 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
     .map((group) => ({
       ...group,
       items: group.items.filter((item) =>
-        item.soloAdmin
+        item.esChat ? chatPermitido : item.soloAdmin
           ? ["SUPERUSUARIO", "ADMIN"].includes(usuario?.rol)
           : tienePermiso(usuario, item.modulo, item.accion)
       ),
@@ -410,6 +449,7 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
                   >
                     <Icon size={18} strokeWidth={1.9} className="shrink-0" />
                     <span className={`truncate ${compact ? "lg:hidden" : ""}`}>{item.text}</span>
+                    {item.esChat && chatsSinLeer > 0 && <span className="ml-auto rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white" aria-label={`${chatsSinLeer} conversaciones sin leer`}>{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
                   </NavLink>
                 );
               })}

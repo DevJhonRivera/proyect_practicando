@@ -1,3 +1,4 @@
+import ControlCalidad from "./ControlCalidad";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ClipboardCheck, Plus, Ruler, Search, Trash2 } from "lucide-react";
@@ -66,7 +67,7 @@ const nombresInstaladoresUnificados = (items = []) => {
 
 const etapasActivas = new Set([
   "PENDIENTE_COORDINACION", "PENDIENTE_APROBACION_CORTE", "PENDIENTE_INVENTARIO",
-  "EN_PROCESO", "MATERIAL_LISTO", "EN_INSTALACION",
+  "EN_PROCESO", "MATERIAL_LISTO", "EN_INSTALACION", "PENDIENTE_CALIDAD", "REPROCESO", "PENDIENTE_PAGO",
 ]);
 
 const expandirPartesMedibles = (partes = []) => [...new Set(partes.flatMap((parte) =>
@@ -392,7 +393,7 @@ function CoordinacionPage() {
 
       {visiblesOrdenadas.length === 0 ? <div className="rounded-2xl border bg-white p-10 text-center text-slate-500">No hay trabajos pendientes para este perfil.</div> : (
         <div className="grid gap-4 xl:grid-cols-2">
-          {visiblesOrdenadas.map((orden) => <OrdenCard key={orden._id} orden={orden} destacada={String(orden._id) === asesoriaObjetivo} usuario={usuario} enviandoVentas={String(orden._id) === enviandoVentasId} onPrepare={() => setSeleccionada(orden)} onReview={revisar} onWork={cambiarTrabajo} onSales={enviarVentas} onReport={() => setReportandoRecorte(orden)} />)}
+          {visiblesOrdenadas.map((orden) => <OrdenCard key={orden._id} orden={orden} destacada={String(orden._id) === asesoriaObjetivo} usuario={usuario} enviandoVentas={String(orden._id) === enviandoVentasId} onPrepare={() => setSeleccionada(orden)} onReview={revisar} onWork={cambiarTrabajo} onSales={enviarVentas} onReport={() => setReportandoRecorte(orden)} onChanged={cargar} />)}
         </div>
       )}
 
@@ -564,7 +565,7 @@ function SelectorPartes({ partes, value, onChange }) {
   </fieldset>;
 }
 
-function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onReview, onWork, onSales, onReport }) {
+function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onReview, onWork, onSales, onReport, onChanged }) {
   const etapa = orden.flujo?.etapa || "PENDIENTE_COORDINACION";
   const asignaciones = orden.coordinacion?.asignaciones || [];
   const propias = usuario?.rol === "INSTALADOR" ? asignaciones.filter((item) => String(item.instaladorId) === String(usuario._id)) : asignaciones;
@@ -580,6 +581,7 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
   return <article id={`orden-${orden._id}`} className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${destacada ? "border-blue-500 ring-4 ring-blue-100" : "border-slate-200"}`}>
     <div className="border-b bg-slate-50 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-bold text-blue-700">{orden.codigo}</p><h2 className="text-lg font-black text-slate-900">{orden.vehiculo?.placa} · {orden.vehiculo?.marca} {orden.vehiculo?.modelo}</h2><p className="text-sm text-slate-500">{orden.cliente?.nombre} · Asesor: {orden.asesorNombre}</p></div><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">{etapa.replaceAll("_", " ")}</span></div></div>
     <div className="space-y-3 p-4">
+      <ControlCalidad orden={orden} usuario={usuario} onChanged={onChanged} />
       {orden.coordinacion?.observacionInventario && <p className="rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-800">Inventario: {orden.coordinacion.observacionInventario}</p>}
       {orden.garantia?.esGarantia && <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900"><p className="font-bold">Garantía · {(orden.garantia.responsable || "POR_DEFINIR").replaceAll("_", " ")}</p>{orden.garantia.responsable === "INSTALADOR" && <p className="mt-1 text-xs">Responsable: {orden.garantia.instalador || "Sin seleccionar"} · Descuento exclusivo de material: {cop.format(orden.garantia.costoMaterial || 0)}</p>}</div>}
       {novedadesActivas.length > 0 && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-bold">Orden bloqueada por novedad</p><p className="mt-1 text-xs">{novedadesActivas.map((item) => item.tipo.replaceAll("_", " ")).join(" · ")}. Administración debe marcarla como solucionada.</p></div>}
@@ -587,7 +589,7 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
       {orden.coordinacion?.propuesta?.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Propuesta de corte</p>{orden.coordinacion.propuesta.map((item) => <div key={item.linea} className="border-t py-2 text-sm text-slate-700"><p><strong>{item.linea}</strong> · {item.metrosPropuestos} m · {item.anchoCm || 0} × {item.largoCm || 0} cm · {item.cantidad} pieza(s)</p>{item.observacion && <p className="mt-1 text-xs text-slate-500">{item.observacion}</p>}</div>)}</div>}
       {propias.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Instalaciones</p>{propias.map((item) => <div key={item._id} className="mb-2 rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-bold text-slate-800">{item.descripcion || item.servicio}</p><p className="text-xs text-slate-500">{item.instaladorNombre} · {item.estado.replaceAll("_", " ")}</p><p className="mt-1 text-sm font-black text-emerald-700">Instalación: {cop.format(item.valorInstalacion || 0)}</p>{item.fechaFinalizacion && <p className="text-xs text-slate-400">Terminada: {new Date(item.fechaFinalizacion).toLocaleString("es-CO")}</p>}</div>{usuario?.rol === "INSTALADOR" && item.estado === "PENDIENTE" && <button onClick={() => onWork(orden, item, "EN_PROCESO")} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Iniciar</button>}{usuario?.rol === "INSTALADOR" && item.estado === "EN_PROCESO" && <button onClick={() => onWork(orden, item, "COMPLETADA")} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Completar</button>}</div></div>)}</div>}
       {puedeGestionarEnvio && !instalacionesCompletas && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><p className="font-bold">Aún no se puede enviar a Ventas</p><p className="mt-1 text-xs">Falta completar: {instalacionesPendientes.map((item) => `${item.descripcion || item.servicio} - ${item.instaladorNombre || "sin instalador"}`).join(" · ") || "no hay instalaciones asignadas"}.</p></div>}
-      <div className="flex flex-wrap gap-2 pt-1">{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && <button disabled={enviandoVentas} onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">{enviandoVentas ? "Enviando a Ventas..." : "Finalizar y enviar a Ventas"}</button>}</div>
+      <div className="flex flex-wrap gap-2 pt-1">{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && orden.coordinacion?.calidad?.estado === "APROBADA" && <button disabled={enviandoVentas} onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">{enviandoVentas ? "Enviando a Ventas..." : "Finalizar y enviar a Ventas"}</button>}</div>
     </div>
   </article>;
 }

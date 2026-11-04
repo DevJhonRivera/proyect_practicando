@@ -9,6 +9,7 @@ import {
   searchClientesAsesoria,
   getAsesorias,
   getAsesoriaPorId,
+  getHistorialServicio,
   sendAsesoriaToSales,
   updateAsesoria,
   createNovedadAsesoria,
@@ -20,6 +21,10 @@ import {
 
 const router = Router();
 
+const soloAdministracion = requireRole("ADMIN", "SUPERUSUARIO");
+router.get("/historial-servicios", authMiddleware, soloAdministracion, getAsesorias);
+router.get("/historial-servicios/:id", authMiddleware, soloAdministracion, getHistorialServicio);
+
 router.get(
   "/materiales",
   authMiddleware,
@@ -30,7 +35,7 @@ router.get(
 router.put(
   "/servicios/:id",
   authMiddleware,
-  requireRole("ADMIN", "SUPERUSUARIO"),
+  requirePermission("asesores", "write"),
   updateAsesoria
 );
 

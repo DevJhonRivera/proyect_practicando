@@ -7,21 +7,21 @@ import {
 
 import { authMiddleware }
 from "../../middlewares/auth.middleware.js";
-import { requirePermission } from "../../middlewares/permission.middleware.js";
+import { requireAnyPermission } from "../../middlewares/permission.middleware.js";
 
 const router = Router();
 
 router.get(
   "/",
   authMiddleware,
-  requirePermission("alertas", "read"),
+  requireAnyPermission(["alertas", "read"], ["asesores", "read"]),
   getAlertas
 );
 
 router.patch(
   "/:id/atender",
   authMiddleware,
-  requirePermission("alertas", "write"),
+  requireAnyPermission(["alertas", "write"], ["asesores", "write"]),
   updateAlerta
 );
 

@@ -1,3 +1,5 @@
+import { emitirDocumento } from "./autorizaciones.service.js";
+import { coincideHuellaDocumento, huellaDatos, validarFirmasTrabajo } from "./autorizaciones.utils.js";
 import Rollo from "../rollos/rollo.model.js";
 import Retazo from "../retazos/retazo.model.js";
 import Asesoria from "./asesoria.model.js";
@@ -214,6 +216,7 @@ export const listarAsesorias = async (filtros, user) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .select("-trazabilidad")
       .lean(),
     Asesoria.countDocuments(query),
     esAccesoTotal
@@ -365,7 +368,20 @@ const prepararDatosAsesoria = (data) => {
     throw new Error("Seleccione el instalador responsable de la garantia");
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(texto(data.cliente?.correo))) {
+    throw new Error("Registre un correo valido del cliente para las autorizaciones");
+  }
+  const seguro = data.seguroVehiculo || {};
+  const estadoSeguro = ["SI", "NO", "SIN_CONFIRMAR"].includes(seguro.estado) ? seguro.estado : "SIN_CONFIRMAR";
+
+  if (seguro.vigenciaHasta && !/^\d{4}-\d{2}-\d{2}$/.test(seguro.vigenciaHasta)) throw new Error("Vigencia de poliza no valida");
   return {
+    seguroVehiculo: {
+      estado: estadoSeguro,
+      aseguradora: estadoSeguro === "SI" ? texto(seguro.aseguradora) : "",
+      numeroPoliza: estadoSeguro === "SI" ? texto(seguro.numeroPoliza) : "",
+      vigenciaHasta: estadoSeguro === "SI" ? texto(seguro.vigenciaHasta) : "",
+    },
     cliente: {
       cedula,
       nombre: mayusculas(data.cliente.nombre),
@@ -459,9 +475,10 @@ export const crearBorradorAsesoria = async (data, user) => {
     creadoPor: user._id,
     asesorNombre: mayusculas(user.nombre || "ASESOR"),
     asesorRol: user.rol || "ASESOR",
-    estado: "APROBADA",
+    estado: "COTIZACION",
+    autorizaciones: { requeridas: true, documentos: [] },
     flujo: {
-      etapa: datosAsesoria.garantia.esGarantia ? "PENDIENTE_GARANTIA" : "PENDIENTE_COORDINACION",
+      etapa: "PENDIENTE_FIRMA_COTIZACION",
       fechaEnvioInventario: null,
     },
   }); } catch (error) { await revertirStock(); throw error; }
@@ -470,6 +487,16 @@ export const crearBorradorAsesoria = async (data, user) => {
   }
   try { await sincronizarAlertasAccesorios(asesoria); } catch (error) { console.error("No se pudo crear la alerta de accesorios:", error.message); }
 
+  if (asesoria.autorizaciones?.requeridas) {
+    let solicitudFirma;
+    try {
+      await emitirDocumento(String(asesoria._id), "COTIZACION", user);
+      solicitudFirma = { enviado: true, mensaje: "Cotizacion enviada al correo del cliente para firma" };
+    } catch (error) {
+      solicitudFirma = { enviado: false, mensaje: error.message };
+    }
+    return { ...asesoria.toObject(), solicitudFirma };
+  }
   try {
     if (asesoria.garantia.esGarantia) {
       await crearAlertaSolicitudGarantia(asesoria);
@@ -486,14 +513,19 @@ export const actualizarAsesoria = async (id, data, user) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error("Servicio no valido");
   }
-  if (!["ADMIN", "SUPERUSUARIO"].includes(user.rol)) {
-    throw new Error("Solo un administrador puede editar el servicio");
-  }
-
   const actual = await Asesoria.findById(id);
   if (!actual) throw new Error("Servicio no encontrado");
+  const esAdmin = ["ADMIN", "SUPERUSUARIO"].includes(user.rol);
+  const revision = [...(actual.autorizaciones?.documentos || [])].reverse().find((d) => d.tipo === "COTIZACION");
+  const puedeCorregir = String(actual.creadoPor) === String(user._id)
+    && revision?.gestionRespuesta?.accion === "PREPARAR_REVISION"
+    && ["RECHAZADO", "CORRECCION_SOLICITADA"].includes(revision.estado)
+    && actual.flujo.etapa === "PENDIENTE_FIRMA_COTIZACION" && !actual.autorizaciones.bloqueoCliente;
+  if (!esAdmin && !puedeCorregir) throw new Error("Solo puede editar su cotizacion cuando exista una revision del cliente en preparacion");
+  if (actual.estado === "CANCELADA" || actual.autorizaciones?.bloqueoCliente) throw new Error("Gestione la respuesta del cliente antes de editar");
 
   const datosAsesoria = prepararDatosAsesoria(data);
+  datosAsesoria.recepcion.fotos = (actual.recepcion?.fotos || []).map((foto) => foto.toObject ? foto.toObject() : foto);
   const accesorios = await prepararAccesorios(datosAsesoria.accesoriosEntrada, actual.accesorios || []);
   delete datosAsesoria.accesoriosEntrada;
   if (datosAsesoria.garantia.esGarantia) {
@@ -533,6 +565,10 @@ export const actualizarAsesoria = async (id, data, user) => {
   if (datosAsesoria.garantia.esGarantia && actual.garantia?.esGarantia) {
     datosAsesoria.garantia = {
       ...datosAsesoria.garantia,
+      ...(String(datosAsesoria.garantia.ordenOrigenId || "") === String(actual.garantia.ordenOrigenId || "") ? {
+        codigoOrdenOrigen: actual.garantia.codigoOrdenOrigen,
+        fechaOrdenOrigen: actual.garantia.fechaOrdenOrigen,
+      } : {}),
       estado: actual.garantia.estado || datosAsesoria.garantia.estado,
       responsable: actual.garantia.responsable || datosAsesoria.garantia.responsable,
       observacionRevision: actual.garantia.observacionRevision || "",
@@ -540,6 +576,16 @@ export const actualizarAsesoria = async (id, data, user) => {
       revisadoPorNombre: actual.garantia.revisadoPorNombre || "",
       fechaRevision: actual.garantia.fechaRevision || null,
     };
+  }
+  if (actual.autorizaciones?.requeridas) {
+    const candidato = { ...actual.toObject(), ...datosAsesoria };
+    const cambioCotizacion = huellaDatos(actual, "COTIZACION") !== huellaDatos(candidato, "COTIZACION");
+    const cambioDiagnostico = huellaDatos(actual, "DIAGNOSTICO") !== huellaDatos(candidato, "DIAGNOSTICO");
+    if (cambioCotizacion || cambioDiagnostico) {
+      if (!["PENDIENTE_FIRMA_COTIZACION", "PENDIENTE_FIRMA_DIAGNOSTICO", "PENDIENTE_COORDINACION", "PENDIENTE_GARANTIA"].includes(actual.flujo.etapa)) throw new Error("El trabajo ya avanzo; registre una novedad en lugar de modificar el documento firmado");
+      datosAsesoria["flujo.etapa"] = cambioCotizacion ? "PENDIENTE_FIRMA_COTIZACION" : "PENDIENTE_FIRMA_DIAGNOSTICO";
+      datosAsesoria.estado = "COTIZACION";
+    }
   }
   const revertirStock = await conciliarStockAccesorios(actual.accesorios || [], accesorios, { asesoriaId: actual._id, codigo: actual.codigo, user });
   let actualizada;
@@ -552,16 +598,16 @@ export const actualizarAsesoria = async (id, data, user) => {
           "coordinacion.propuesta": [],
           "coordinacion.asignaciones": [],
           "coordinacion.estadoPropuesta": "PENDIENTE",
-          "flujo.etapa": datosAsesoria.garantia.esGarantia && datosAsesoria.garantia.estado !== "APROBADA"
+          "flujo.etapa": datosAsesoria["flujo.etapa"] || (datosAsesoria.garantia.esGarantia && datosAsesoria.garantia.estado !== "APROBADA"
             ? "PENDIENTE_GARANTIA"
-            : "PENDIENTE_COORDINACION",
+            : "PENDIENTE_COORDINACION"),
           "flujo.fechaEnvioInventario": null,
         } : {}),
       },
       $push: {
         auditoria: {
-          accion: "EDICION_ADMINISTRATIVA",
-          descripcion: "Servicio del asesor corregido por administracion",
+          accion: esAdmin ? "EDICION_ADMINISTRATIVA" : "CORRECCION_COTIZACION",
+          descripcion: esAdmin ? "Servicio del asesor corregido por administracion" : "Cotizacion corregida ante la respuesta del cliente",
           usuarioId: user._id,
           usuarioNombre: mayusculas(user.nombre || user.rol),
           fecha: new Date(),
@@ -948,13 +994,26 @@ export const obtenerAsesoriaPorId = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error("Servicio no valido");
   }
-  const asesoria = await Asesoria.findById(id).lean();
+  const asesoria = await Asesoria.findById(id).select("-trazabilidad").lean();
   if (!asesoria) throw new Error("Servicio no encontrado");
+  if (asesoria.autorizaciones?.documentos) {
+    asesoria.autorizaciones.documentos = asesoria.autorizaciones.documentos.map((d) => ({ ...d, contenidoVigente: coincideHuellaDocumento(asesoria, d) }));
+  }
   return asesoria;
+};
+
+export const obtenerHistorialServicio = async (id) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Servicio no valido");
+  const servicio = await Asesoria.findById(id)
+    .select("codigo vehiculo.placa asesorNombre flujo.etapa seguroVehiculo.estado trazabilidad")
+    .lean();
+  if (!servicio) throw new Error("Servicio no encontrado");
+  return servicio;
 };
 
 export const enviarAsesoriaAVentas = async (id) => {
   const asesoria = await obtenerAsesoriaPorId(id);
+  validarFirmasTrabajo(asesoria);
   validarSinNovedadesBloqueantes(asesoria);
   const accesoriosPendientes = (asesoria.accesorios || []).filter((item) => Number(item.cantidadPendiente || 0) > 0);
   if (accesoriosPendientes.length) {
@@ -996,11 +1055,11 @@ export const enviarAsesoriaAVentas = async (id) => {
   const actualizada = await Asesoria.findByIdAndUpdate(
     id,
     { $set: esGarantiaSinCobro ? {
-      "garantia.estado": "FINALIZADA",
+      "garantia.estado": asesoria.autorizaciones?.requeridas ? "APROBADA" : "FINALIZADA",
       "garantia.costoMaterial": costoMaterialGarantia,
       "pago.estado": "NO_APLICA",
-      "flujo.etapa": "FINALIZADA",
-      "flujo.fechaFinalizacion": new Date(),
+      "flujo.etapa": asesoria.autorizaciones?.requeridas ? "PENDIENTE_PAGO" : "FINALIZADA",
+      "flujo.fechaFinalizacion": asesoria.autorizaciones?.requeridas ? null : new Date(),
     } : {
       "flujo.etapa": "PENDIENTE_PAGO",
       "flujo.fechaEnvioVentas": new Date(),

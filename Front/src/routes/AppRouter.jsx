@@ -1,3 +1,5 @@
+const PoliticaDatosPage = lazy(() => import("../pages/privacidad/PoliticaDatosPage"));
+const FirmaClientePage = lazy(() => import("../pages/asesores/FirmaClientePage"));
 import {
   Routes,
   Route,
@@ -7,6 +9,7 @@ import { lazy, Suspense } from "react";
 
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
+const ChatPage = lazy(() => import("../pages/chat/ChatPage"));
 const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
 const PedidoList = lazy(() => import("../pages/pedidos/PedidoList"));
 const PedidoCreate = lazy(() => import("../pages/pedidos/PedidoCreate"));
@@ -20,6 +23,7 @@ const RetazosPage = lazy(() => import("../pages/retazos/RetazosPage"));
 const FinanzasPage = lazy(() => import("../pages/finanzas/FinanzasPage"));
 const VentasPage = lazy(() => import("../pages/ventas/VentasPage"));
 const AuditoriaPage = lazy(() => import("../pages/auditoria/AuditoriaPage"));
+const HistorialServiciosPage = lazy(() => import("../pages/historialServicios/HistorialServiciosPage"));
 const UsuariosPage = lazy(() => import("../pages/usuarios/UsuariosPage"));
 const AsesoresPage = lazy(() => import("../pages/asesores/AsesoresPage"));
 const CoordinacionPage = lazy(() => import("../pages/coordinacion/CoordinacionPage"));
@@ -53,6 +57,8 @@ function AppRouter() {
   return (
     <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-600">Cargando módulo...</div>}>
     <Routes>
+      <Route path="/firmar" element={<FirmaClientePage />} />
+      <Route path="/politica-de-datos" element={<PoliticaDatosPage />} />
 
       <Route
         path="/login"
@@ -81,6 +87,8 @@ function AppRouter() {
               />
             }
           />
+
+          <Route path="/chat" element={<ChatPage />} />
 
           <Route
             path="/dashboard"
@@ -248,6 +256,11 @@ function AppRouter() {
                 <AuditoriaPage />
               </RutaPermitida>
             }
+          />
+          <Route
+            path="/historial-servicios"
+            element={["ADMIN", "SUPERUSUARIO"].includes(obtenerUsuarioActual()?.rol)
+              ? <HistorialServiciosPage /> : <Navigate to="/dashboard" replace />}
           />
 
         </Route>

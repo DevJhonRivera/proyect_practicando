@@ -21,6 +21,12 @@ export const getAsesorias = (params = {}) =>
 export const getAsesoriaPorId = (id) =>
   api.get(`/asesores/servicios/${id}`);
 
+export const getServiciosParaHistorial = (params) =>
+  api.get("/asesores/historial-servicios", { params });
+
+export const getHistorialServicio = (id) =>
+  api.get(`/asesores/historial-servicios/${id}`);
+
 export const updateAsesoria = (id, data) =>
   api.put(`/asesores/servicios/${id}`, data);
 

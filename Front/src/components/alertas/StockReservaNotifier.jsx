@@ -1,3 +1,4 @@
+import { observarActualizaciones } from "../../utils/tiempoReal";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -13,6 +14,7 @@ import {
   getAlertas
 } from "../../api/alertas";
 import { obtenerUsuarioActual } from "../../utils/permisos";
+import { TIPO_FIRMA_CLIENTE } from "../../pages/alertas/alertas.constants";
 
 const TIPO_STOCK_RESERVA_UN_ROLLO =
   "STOCK_RESERVA_UN_ROLLO";
@@ -67,13 +69,12 @@ function StockReservaNotifier() {
   );
 
   useEffect(() => {
-    if (!["INVENTARIO", "VENTAS", "COORDINADOR", "INSTALADOR", "ADMIN"].includes(usuario?.rol)) {
+    if (!["INVENTARIO", "VENTAS", "COORDINADOR", "INSTALADOR", "ADMIN", "ASESOR", "SUPERUSUARIO"].includes(usuario?.rol)) {
       setAlertas([]);
       return undefined;
     }
 
     let active = true;
-    let intervalId;
 
     const cargarAlertas = async () => {
       try {
@@ -91,7 +92,7 @@ function StockReservaNotifier() {
         const tiposRol = tiposPorRol[usuario?.rol] || [];
         const pendientes = data.filter(
           (alerta) =>
-            tiposRol.includes(alerta.tipo) &&
+            (tiposRol.includes(alerta.tipo) || ["RESPUESTA_CLIENTE", "VEHICULO_LISTO_ASESOR", TIPO_FIRMA_CLIENTE].includes(alerta.tipo)) &&
             !alerta.atendida &&
             !ocultasRef.current.has(alerta._id)
         );
@@ -109,7 +110,7 @@ function StockReservaNotifier() {
             )
         );
 
-        if (nueva) {
+        if (nueva && (!Swal.isVisible() || Swal.getPopup()?.classList.contains("swal2-toast"))) {
           notificadasRef.current.add(nueva._id);
           sessionStorage.setItem(
             "stockReservaAlertasNotificadas",
@@ -121,7 +122,7 @@ function StockReservaNotifier() {
           Swal.fire({
             toast: true,
             position: "top-end",
-            icon: "warning",
+            icon: nueva.tipo === TIPO_FIRMA_CLIENTE ? "success" : "warning",
             title: tituloAlerta(nueva.tipo),
             text: nueva.mensaje,
             showConfirmButton: false,
@@ -136,28 +137,12 @@ function StockReservaNotifier() {
       }
     };
 
-    cargarAlertas();
-    intervalId = window.setInterval(
-      cargarAlertas,
-      5000
-    );
-
-    const actualizarAlRegresar = () => {
-      if (document.visibilityState === "visible") cargarAlertas();
-    };
-    window.addEventListener("focus", cargarAlertas);
-    document.addEventListener("visibilitychange", actualizarAlRegresar);
-
-    return () => {
-      active = false;
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", cargarAlertas);
-      document.removeEventListener("visibilitychange", actualizarAlRegresar);
-    };
+    const dejarDeObservar = observarActualizaciones(["realtime:alertas"], cargarAlertas, 5000);
+    return () => { active = false; dejarDeObservar(); };
   }, [usuario?.rol]);
 
   if (
-    !["INVENTARIO", "VENTAS", "COORDINADOR", "INSTALADOR", "ADMIN"].includes(usuario?.rol) ||
+    !["INVENTARIO", "VENTAS", "COORDINADOR", "INSTALADOR", "ADMIN", "ASESOR", "SUPERUSUARIO"].includes(usuario?.rol) ||
     alertas.length === 0
   ) {
     return null;
@@ -173,6 +158,8 @@ function StockReservaNotifier() {
   const esPago =
     principal.tipo === TIPO_SERVICIO_LISTO_PAGO;
   const esFlujo = [TIPO_COORDINACION_NUEVA, TIPO_MATERIAL_LISTO, TIPO_ASIGNACION_TRABAJO, TIPO_INSTALACION_COMPLETA].includes(principal.tipo);
+  const esFirma = principal.tipo === TIPO_FIRMA_CLIENTE;
+  const informativa = esRecepcion || esServicio || esPago || esFlujo || esFirma;
 
   const quitarPrincipal = async () => {
     try {
@@ -221,7 +208,7 @@ function StockReservaNotifier() {
   return (
     <div className="fixed right-5 bottom-5 z-50 w-[min(360px,calc(100vw-2.5rem))]">
       <div className="rounded-2xl border border-red-200 bg-white shadow-2xl overflow-hidden">
-        <div className={`${esRecepcion || esServicio || esPago || esFlujo ? "bg-blue-600" : "bg-red-600"} text-white px-4 py-3 flex items-center justify-between gap-3`}>
+        <div className={`${informativa ? "bg-blue-600" : "bg-red-600"} text-white px-4 py-3 flex items-center justify-between gap-3`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="bg-white/20 rounded-xl p-2">
               <Bell size={18} />
@@ -231,8 +218,8 @@ function StockReservaNotifier() {
               <p className="font-bold">
                 {tituloAlerta(principal.tipo)}
               </p>
-              <p className={`${esRecepcion || esServicio || esPago || esFlujo ? "text-blue-100" : "text-red-100"} text-xs`}>
-                {esPago
+              <p className={`${informativa ? "text-blue-100" : "text-red-100"} text-xs`}>
+                {esFirma ? "Documento firmado por el cliente" : esPago
                   ? "Continúe la orden en Ventas"
                   : esServicio
                   ? "Orden enviada por un asesor"
@@ -257,7 +244,7 @@ function StockReservaNotifier() {
 
         <div className="p-4">
           <div className="flex gap-3">
-            <AlertTriangle className={`${esRecepcion || esServicio || esPago || esFlujo ? "text-blue-600" : "text-red-600"} shrink-0 mt-0.5`} />
+            {esFirma ? <Check className="shrink-0 mt-0.5 text-blue-600" /> : <AlertTriangle className={`${informativa ? "text-blue-600" : "text-red-600"} shrink-0 mt-0.5`} />}
 
             <div className="min-w-0">
               <p className="text-sm text-slate-700">
@@ -288,9 +275,9 @@ function StockReservaNotifier() {
             <button
               type="button"
               onClick={abrirPrincipal}
-              className={`${esRecepcion || esServicio || esPago || esFlujo ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"} inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold text-white transition`}
+              className={`${informativa ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700"} inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold text-white transition`}
             >
-              {esPago ? "Abrir venta" : esServicio ? "Abrir corte" : esFlujo ? "Abrir trabajo" : "Ver alertas"}
+              {esFirma ? "Abrir orden" : esPago ? "Abrir venta" : esServicio ? "Abrir corte" : esFlujo ? "Abrir trabajo" : "Ver alertas"}
             </button>
           </div>
         </div>
@@ -301,6 +288,7 @@ function StockReservaNotifier() {
 
 function tituloAlerta(tipo) {
   const titulos = {
+    [TIPO_FIRMA_CLIENTE]: "Firma del cliente registrada",
     [TIPO_SERVICIO_LISTO_PAGO]: "Servicio listo para pago",
     [TIPO_SERVICIO_ASESOR_NUEVO]: "Nuevo servicio para corte",
     [TIPO_RECEPCION_NUEVA]: "Nueva recepción",

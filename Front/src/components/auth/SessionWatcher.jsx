@@ -12,6 +12,8 @@ function SessionWatcher() {
   useEffect(() => {
     let timeoutId;
     let intervalId;
+    // A customer signing a document does not need an employee session.
+    const cerrarSesionActual = () => cerrarSesion({ redirect: !["/firmar", "/politica-de-datos"].includes(window.location.pathname) });
 
     const limpiarTimers = () => {
       window.clearTimeout(timeoutId);
@@ -35,7 +37,7 @@ function SessionWatcher() {
         !expirationMs ||
         Date.now() >= expirationMs
       ) {
-        cerrarSesion();
+        cerrarSesionActual();
         return;
       }
 
@@ -43,7 +45,7 @@ function SessionWatcher() {
         expirationMs - Date.now();
 
       timeoutId = window.setTimeout(
-        () => cerrarSesion(),
+        () => cerrarSesionActual(),
         Math.min(msRestantes, MAX_TIMEOUT_MS)
       );
 
@@ -57,7 +59,7 @@ function SessionWatcher() {
           tokenActual &&
           (!expActual || Date.now() >= expActual)
         ) {
-          cerrarSesion();
+          cerrarSesionActual();
         }
       }, 30000);
     };

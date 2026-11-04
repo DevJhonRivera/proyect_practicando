@@ -550,7 +550,8 @@ function LoginPage() {
           </div>
 
           <p className="mt-5 text-center text-[11px] text-slate-300">
-            Proyecto por Jhon R
+            <a href="/politica-de-datos" className="text-slate-500 underline underline-offset-4">Política de tratamiento de datos</a>
+            <span className="mt-2 block">Proyecto por Jhon R</span>
           </p>
 
         </form>

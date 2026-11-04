@@ -1,3 +1,4 @@
+import { iniciarEventos } from "../utils/tiempoReal";
 import { useCallback, useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Menu } from "lucide-react";
@@ -21,7 +22,7 @@ function MainLayout() {
     usuario,
     "alertas",
     "read"
-  );
+  ) || tienePermiso(usuario, "asesores", "read");
 
   useEffect(() => {
     let active = true;
@@ -50,6 +51,8 @@ function MainLayout() {
       active = false;
     };
   }, []);
+
+  useEffect(() => iniciarEventos(), []);
 
   const alternarMenuCompacto = () => {
     setMenuCompacto((actual) => {

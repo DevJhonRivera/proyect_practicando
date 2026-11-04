@@ -5,6 +5,7 @@ import {
   listarAsesorias,
   obtenerCatalogoDisponible,
   obtenerAsesoriaPorId,
+  obtenerHistorialServicio,
   enviarAsesoriaAVentas,
   actualizarAsesoria,
   registrarNovedadAsesoria,
@@ -82,6 +83,14 @@ export const sendAsesoriaToSales = async (req, res) => {
 export const getAsesoriaPorId = async (req, res) => {
   try {
     res.json({ success: true, data: await obtenerAsesoriaPorId(req.params.id) });
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const getHistorialServicio = async (req, res) => {
+  try {
+    res.json({ success: true, data: await obtenerHistorialServicio(req.params.id) });
   } catch (error) {
     res.status(404).json({ message: error.message });
   }

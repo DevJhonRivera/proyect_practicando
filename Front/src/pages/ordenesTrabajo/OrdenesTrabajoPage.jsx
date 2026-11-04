@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, CalendarDays, Check, Circle, Clock3, RefreshCw, Search, SlidersHorizontal, Users, X } from "lucide-react";
+import { puedeAbrirChat } from "../../utils/permisosChat";
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import { getOrdenesTrabajo } from "../../api/ordenesTrabajo.api";
@@ -7,9 +8,10 @@ import { obtenerUsuarioActual } from "../../utils/permisos";
 
 const ETAPAS = ["Recepción", "Coordinación", "Inventario", "Instalación", "Ventas", "Pagado"];
 const avancePorEtapa = {
+  PENDIENTE_FIRMA_COTIZACION: 0, PENDIENTE_FIRMA_DIAGNOSTICO: 0,
   PENDIENTE_GARANTIA: 1, PENDIENTE_COORDINACION: 1,
   PENDIENTE_APROBACION_CORTE: 2, PENDIENTE_INVENTARIO: 2, EN_PROCESO: 2,
-  MATERIAL_LISTO: 3, EN_INSTALACION: 3,
+  MATERIAL_LISTO: 3, EN_INSTALACION: 3, PENDIENTE_CALIDAD: 3, REPROCESO: 3,
   PENDIENTE_PAGO: 4, FINALIZADA: 5,
 };
 const etapaLegible = (value) => String(value || "PENDIENTE").replaceAll("_", " ");
@@ -34,7 +36,7 @@ const destinoOrden = (orden, rol) => {
   if (rol === "VENTAS") return `/ventas?asesoria=${id}`;
   if ((orden.accesorios || []).some((item) => Number(item.cantidadPendiente || 0) > 0) && rol === "INVENTARIO") return "/accesorios";
   if (["PENDIENTE_APROBACION_CORTE", "PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(etapa)) return `/cortes?asesoria=${id}`;
-  if (["MATERIAL_LISTO", "EN_INSTALACION", "PENDIENTE_COORDINACION"].includes(etapa)) return `/coordinacion?asesoria=${id}`;
+  if (["MATERIAL_LISTO", "EN_INSTALACION", "PENDIENTE_CALIDAD", "REPROCESO", "PENDIENTE_COORDINACION"].includes(etapa)) return `/coordinacion?asesoria=${id}`;
   if (etapa === "PENDIENTE_PAGO") return `/ventas?asesoria=${id}`;
   return `/asesores?asesoria=${id}`;
 };
@@ -44,7 +46,7 @@ const accionOrden = (orden, rol) => {
   if (rol === "INSTALADOR") return "Abrir mi trabajo";
   if (rol === "VENTAS") return orden.flujo?.etapa === "FINALIZADA" ? "Ver orden" : "Registrar pago";
   if ((orden.accesorios || []).some((item) => Number(item.cantidadPendiente || 0) > 0) && rol === "INVENTARIO") return "Revisar accesorios";
-  const labels = { PENDIENTE_GARANTIA: "Revisar garantía", PENDIENTE_COORDINACION: "Preparar orden", PENDIENTE_APROBACION_CORTE: "Revisar propuesta", PENDIENTE_INVENTARIO: "Registrar cortes", EN_PROCESO: "Continuar cortes", MATERIAL_LISTO: "Gestionar instalación", EN_INSTALACION: "Ver instalaciones", PENDIENTE_PAGO: "Registrar pago", FINALIZADA: "Ver orden finalizada", CANCELADA: "Ver cancelación" };
+  const labels = { PENDIENTE_CALIDAD: "Revisar calidad", REPROCESO: "Gestionar reproceso", PENDIENTE_FIRMA_COTIZACION: "Gestionar firma de cotizacion", PENDIENTE_FIRMA_DIAGNOSTICO: "Gestionar firma de diagnostico", PENDIENTE_GARANTIA: "Revisar garantía", PENDIENTE_COORDINACION: "Preparar orden", PENDIENTE_APROBACION_CORTE: "Revisar propuesta", PENDIENTE_INVENTARIO: "Registrar cortes", EN_PROCESO: "Continuar cortes", MATERIAL_LISTO: "Gestionar instalación", EN_INSTALACION: "Ver instalaciones", PENDIENTE_PAGO: "Registrar pago", FINALIZADA: "Ver orden finalizada", CANCELADA: "Ver cancelación" };
   return labels[orden.flujo?.etapa] || "Abrir orden";
 };
 
@@ -55,6 +57,7 @@ const turnoOrden = (orden, usuario) => {
   if ((orden.accesorios || []).some((item) => Number(item.cantidadPendiente || 0) > 0)) {
     return { habilitado: rol === "INVENTARIO", responsable: "Inventario" };
   }
+  if (["PENDIENTE_FIRMA_COTIZACION", "PENDIENTE_FIRMA_DIAGNOSTICO"].includes(etapa)) return { habilitado: rol === "ASESOR", responsable: "Cliente y asesor" };
   if (etapa === "PENDIENTE_GARANTIA") return { habilitado: false, responsable: "Administración" };
   if (etapa === "PENDIENTE_COORDINACION") return { habilitado: rol === "COORDINADOR", responsable: "Coordinación" };
   if (["PENDIENTE_APROBACION_CORTE", "PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(etapa)) return { habilitado: rol === "INVENTARIO", responsable: "Inventario" };
@@ -174,7 +177,7 @@ function OrdenCard({ orden, usuario }) {
       <div><p className="text-xs font-bold uppercase text-slate-500">Servicios</p><p className="mt-1 line-clamp-2 text-sm text-slate-700">{servicios.join(" · ") || "Sin detalle"}</p></div>
       <div className="grid gap-3 sm:grid-cols-2"><div><p className="flex items-center gap-1 text-xs font-bold uppercase text-slate-500"><Users size={13}/>Instaladores</p>{asignaciones.length ? <div className="mt-1 space-y-1">{asignaciones.map((item) => <p key={item._id} className="text-xs text-slate-700"><strong>{item.instaladorNombre}</strong> · {item.descripcion || item.servicio} · {etapaLegible(item.estado)}</p>)}</div> : <p className="mt-1 text-xs text-slate-400">Aún sin asignar</p>}</div><div><p className="text-xs font-bold uppercase text-slate-500">Valor acordado</p><p className="mt-1 text-lg font-black text-slate-900">{cop.format(orden.comercial?.totalAcordado || 0)}</p><p className="text-xs text-slate-500">Pago: {etapaLegible(orden.pago?.estado)}</p></div></div>
       {bloqueos.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><p className="flex items-center gap-2 font-bold"><AlertTriangle size={16}/>Esta orden necesita atención</p>{bloqueos.map((item) => <p key={item} className="mt-1 text-xs">{item}</p>)}</div>}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3"><div><p className="text-xs text-slate-400">Actualizada {new Date(orden.updatedAt).toLocaleString("es-CO")}</p><p className={`mt-1 text-xs font-bold ${turno.habilitado ? "text-emerald-700" : "text-slate-500"}`}>{turno.habilitado ? "Es tu turno" : `Turno de: ${turno.responsable}`}</p></div>{turno.habilitado ? <Link to={destinoOrden(orden, usuario?.rol)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800">{accionOrden(orden, usuario?.rol)}<ArrowRight size={15}/></Link> : <span className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">Esperando turno<Clock3 size={15}/></span>}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3"><div><p className="text-xs text-slate-400">Actualizada {new Date(orden.updatedAt).toLocaleString("es-CO")}</p><p className={`mt-1 text-xs font-bold ${turno.habilitado ? "text-emerald-700" : "text-slate-500"}`}>{turno.habilitado ? "Es tu turno" : `Turno de: ${turno.responsable}`}</p></div>{puedeAbrirChat(usuario?.rol) && <Link to={`/chat?orden=${orden._id}`} className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50">Chat de la orden</Link>}{turno.habilitado ? <Link to={destinoOrden(orden, usuario?.rol)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800">{accionOrden(orden, usuario?.rol)}<ArrowRight size={15}/></Link> : <span className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">Esperando turno<Clock3 size={15}/></span>}</div>
     </div>
   </article>;
 }

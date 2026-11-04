@@ -1,3 +1,4 @@
+import FirmasServicio from "./FirmasServicio";
 import { useEffect, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, Download, Eye, Filter, Pencil, ReceiptText, Search, TriangleAlert, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -429,6 +430,7 @@ function Detalle({ asesoria, puedeRevisar, onReview, onResolve, onReviewGarantia
   return (
     <AppModal title={asesoria.codigo} subtitle={`${asesoria.vehiculo?.placa} · ${asesoria.cliente?.nombre}`} icon={ReceiptText} maxWidth="max-w-2xl" onClose={onClose}>
       <FlujoVisual etapa={asesoria.flujo?.etapa} />
+      <FirmasServicio asesoria={asesoria} />
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Info label="Asesor" value={asesoria.asesorNombre} />
         <Info label="Estado" value={asesoria.estado} />
@@ -486,6 +488,7 @@ function AccionFlujo({ item, rol, onNavigate }) {
 }
 
 function FlujoVisual({ etapa = "PENDIENTE_INVENTARIO" }) {
+  if (etapa.startsWith("PENDIENTE_FIRMA_")) return <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Esperando firma del cliente: {etapa.endsWith("COTIZACION") ? "cotizacion" : "diagnostico"}. El trabajo esta bloqueado.</div>;
   const esGarantia = etapa === "PENDIENTE_GARANTIA";
   const etapas = esGarantia ? ETAPAS : ETAPAS.slice(1);
   const indice = etapas.indexOf(etapa);

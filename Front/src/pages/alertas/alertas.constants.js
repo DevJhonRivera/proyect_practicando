@@ -21,8 +21,10 @@ export const TIPO_ACCESORIO_PENDIENTE = "ACCESORIO_PENDIENTE";
 export const TIPO_ROLLO_BAJO = "ROLLO_BAJO";
 export const TIPO_SOLICITUD_NOVEDAD = "SOLICITUD_NOVEDAD";
 export const TIPO_SOLICITUD_GARANTIA = "SOLICITUD_GARANTIA";
+export const TIPO_FIRMA_CLIENTE = "FIRMA_CLIENTE";
 
 export function nivelAlerta(tipo) {
+  if (tipo === TIPO_FIRMA_CLIENTE) return "INFORMATIVO";
   const upper = tipo?.toUpperCase() || "";
 
   if (
