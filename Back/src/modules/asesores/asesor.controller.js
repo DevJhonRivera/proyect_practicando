@@ -82,7 +82,7 @@ export const sendAsesoriaToSales = async (req, res) => {
 
 export const getAsesoriaPorId = async (req, res) => {
   try {
-    res.json({ success: true, data: await obtenerAsesoriaPorId(req.params.id) });
+    res.json({ success: true, data: await obtenerAsesoriaPorId(req.params.id, req.user) });
   } catch (error) {
     res.status(404).json({ message: error.message });
   }

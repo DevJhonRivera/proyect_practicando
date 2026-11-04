@@ -417,6 +417,11 @@ function DetalleValores({
                 <td className="p-4 font-bold text-blue-900">
                   <output aria-label="Subtotal de rollos" className="whitespace-nowrap">
                     {formatoNumero.format(subtotalRollos)} {moneda}
+                    {moneda === "USD" && numeroEntrada(trm) > 0 && (
+                      <span className="block text-xs font-normal text-slate-600">
+                        Equivalente en COP: {formatoCop.format(subtotalRollos * numeroEntrada(trm))}
+                      </span>
+                    )}
                   </output>
                 </td>
               </tr>

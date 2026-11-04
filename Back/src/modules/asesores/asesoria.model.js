@@ -56,6 +56,8 @@ const asesoriaSchema = new mongoose.Schema(
         firma: {
           nombre: String, cedula: String, fecha: Date,
           trazo: { type: [[Number]], default: undefined },
+          observacionEntrega: String,
+          evidenciaEntrega: { type: String, select: false },
           ip: String, agente: String,
           aceptaciones: { documento: Boolean, datos: Boolean, condiciones: Boolean, firmaElectronica: Boolean },
           autorizacionPreviaId: String,

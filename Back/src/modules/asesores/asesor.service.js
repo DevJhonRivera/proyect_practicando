@@ -990,14 +990,22 @@ export const revisarGarantiaAsesoria = async (id, data, user) => {
   return asesoria;
 };
 
-export const obtenerAsesoriaPorId = async (id) => {
+export const obtenerAsesoriaPorId = async (id, user) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error("Servicio no valido");
   }
-  const asesoria = await Asesoria.findById(id).select("-trazabilidad").lean();
+  const asesoria = await Asesoria.findById(id).select("-trazabilidad +autorizaciones.documentos.firma.evidenciaEntrega").lean();
   if (!asesoria) throw new Error("Servicio no encontrado");
+  const puedeVerEvidencia = ["ADMIN", "SUPERUSUARIO", "COORDINADOR"].includes(user?.rol)
+    || (user?._id && String(asesoria.creadoPor) === String(user._id));
   if (asesoria.autorizaciones?.documentos) {
-    asesoria.autorizaciones.documentos = asesoria.autorizaciones.documentos.map((d) => ({ ...d, contenidoVigente: coincideHuellaDocumento(asesoria, d) }));
+    asesoria.autorizaciones.documentos = asesoria.autorizaciones.documentos.map((d) => {
+      if (d.firma && !puedeVerEvidencia) {
+        delete d.firma.evidenciaEntrega;
+        delete d.firma.observacionEntrega;
+      }
+      return { ...d, contenidoVigente: coincideHuellaDocumento(asesoria, d) };
+    });
   }
   return asesoria;
 };

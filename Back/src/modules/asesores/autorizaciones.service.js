@@ -81,7 +81,7 @@ export const emitirDocumento = async (id, tipo, user) => {
 
 const buscarPorToken = async (token) => {
   if (typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) throw new Error("Enlace no valido o vencido");
-  const orden = await Asesoria.findOne({ "autorizaciones.documentos.tokenHash": hash(token) }).select("+autorizaciones.documentos.tokenHash");
+  const orden = await Asesoria.findOne({ "autorizaciones.documentos.tokenHash": hash(token) }).select("+autorizaciones.documentos.tokenHash +autorizaciones.documentos.firma.evidenciaEntrega");
   const documento = orden?.autorizaciones.documentos.find((d) => d.tokenHash === hash(token));
   if (!documento || documento.estado === "INVALIDADO" || documento.expira <= new Date()) throw new Error("Enlace no valido o vencido. Solicite uno nuevo al asesor");
   if (documento.estado === "PENDIENTE") {
@@ -97,7 +97,10 @@ const vistaPublica = async (documento, ordenId) => ({
   fotos: await cargarFotos(ordenId, JSON.parse(documento.contenido).datos?.recepcion?.fotos || []), id: documento._id, tipo: documento.tipo, contenido: JSON.parse(documento.contenido), huella: documento.huella,
   expira: documento.expira, estado: documento.estado,
   respuestaCliente: documento.respuestaCliente?.fecha ? { accion: documento.respuestaCliente.accion, nombre: documento.respuestaCliente.nombre, motivo: documento.respuestaCliente.motivo, fecha: documento.respuestaCliente.fecha } : null,
-  firma: documento.estado === "FIRMADO" ? { nombre: documento.firma.nombre, fecha: documento.firma.fecha, trazo: documento.firma.trazo } : null });
+  firma: documento.estado === "FIRMADO" ? {
+    nombre: documento.firma.nombre, fecha: documento.firma.fecha, trazo: documento.firma.trazo,
+    observacionEntrega: documento.firma.observacionEntrega, evidenciaEntrega: documento.firma.evidenciaEntrega,
+  } : null });
 export const consultarDocumento = async (token) => {
   const { orden, documento } = await buscarPorToken(token);
   return vistaPublica(documento, orden._id);
@@ -118,8 +121,15 @@ export const firmarDocumento = async (token, body, evidencia) => {
     if (!previa || String(previa._id) !== referencia.documentoId || previa.huella !== referencia.huella || !previa.firma?.aceptaciones?.datos) throw new Error("La autorización de la cotización cambió. Solicite un documento actualizado");
   }
   validarFirma(body, orden, documento);
+  const reserva = {};
+  if (documento.tipo === "ENTREGA") {
+    const observacion = body.observacionEntrega ?? "";
+    if (typeof observacion !== "string" || observacion.length > 2000) throw new Error("La observación de entrega admite hasta 2000 caracteres");
+    if (observacion.trim()) reserva.observacionEntrega = observacion.trim();
+    if (body.evidenciaEntrega) reserva.evidenciaEntrega = validarImagen(body.evidenciaEntrega).dataUrl;
+  }
   const fecha = new Date();
-  const firma = { nombre: body.nombre.trim(), cedula: orden.cliente.cedula, fecha, trazo: body.trazo,
+  const firma = { nombre: body.nombre.trim(), cedula: orden.cliente.cedula, fecha, trazo: body.trazo, ...reserva,
     aceptaciones: Object.fromEntries((contenidoFirmado.aceptacionesRequeridas || ["documento", "datos", "condiciones", "firmaElectronica"]).map((key) => [key, body.aceptaciones[key] === true])),
     ...(referencia ? { autorizacionPreviaId: referencia.documentoId } : {}),
     ip: String(evidencia.ip || "").slice(0, 100), agente: String(evidencia.agente || "").slice(0, 500) };
@@ -151,7 +161,7 @@ export const firmarDocumento = async (token, body, evidencia) => {
       await Alerta.findOneAndUpdate({ clave: `firma-cliente:${documento._id}` }, {
         $setOnInsert: {
           tipo: "FIRMA_CLIENTE",
-          mensaje: `${resultado.codigo} · ${resultado.vehiculo.placa}: el cliente firmó ${etiquetas[documento.tipo]}.`,
+          mensaje: `${resultado.codigo} · ${resultado.vehiculo.placa}: el cliente firmó ${etiquetas[documento.tipo]}${reserva.observacionEntrega || reserva.evidenciaEntrega ? " con observaciones o evidencia. Revisa el acta de entrega" : ""}.`,
           referenciaId: resultado._id,
           destinatarioId: resultado.creadoPor,
           accionUrl: `/asesores?asesoria=${resultado._id}`,
@@ -167,7 +177,9 @@ export const firmarDocumento = async (token, body, evidencia) => {
       else await crearAlertaServicioAsesor(resultado);
     } catch (error) { console.error("No se pudo notificar la autorizacion del servicio:", error.message); }
   }
-  return vistaPublica(resultado.autorizaciones.documentos.id(documento._id), resultado._id);
+  const recibo = await vistaPublica(resultado.autorizaciones.documentos.id(documento._id), resultado._id);
+  Object.assign(recibo.firma, reserva);
+  return recibo;
 };
 
 export const guardarDiagnostico = async (id, data, user) => {

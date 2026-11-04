@@ -4,9 +4,37 @@ import Alerta from "../alertas/alerta.model.js";
 
 const escapar = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const crearCorreoVehiculoListo = (orden) => {
-  const texto = `Hola, ${orden.cliente.nombre}.\n\nEl vehículo de placa ${orden.vehiculo.placa}, servicio ${orden.codigo}, terminó su revisión de calidad y está listo para coordinar la entrega. Comunícate con tu asesor para acordar la recogida y completar los documentos y pagos que correspondan.\n\nPolarizados Ya`;
-  return { subject: `Polarizados Ya | Tu vehículo está listo | ${orden.vehiculo.placa}`,
-    text: texto, html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#334155"><h2 style="background:#0f172a;color:white;padding:24px">POLARIZADOS YA</h2><h1 style="color:#0f172a">Tu vehículo está listo</h1><p>Hola, ${escapar(orden.cliente.nombre)}.</p><p>El vehículo <strong>${escapar(orden.vehiculo.placa)}</strong>, servicio ${escapar(orden.codigo)}, terminó su revisión de calidad.</p><p>Comunícate con tu asesor para coordinar la entrega y completar los documentos y pagos que correspondan.</p><p style="padding:16px;background:#eff6ff">Gracias por confiar en Polarizados Ya.</p></div>` };
+  const { codigo, cliente: { nombre }, vehiculo: { placa } } = orden;
+  const entrega = "Comunícate con tu asesor para acordar la recogida y completar los documentos o pagos que correspondan.";
+  const despedida = "Gracias por confiar en nosotros. ¡Que disfrutes cada kilómetro!";
+  const servicios = "También puedes preguntarle a tu asesor por nuestras opciones de polarizado y película de protección de pintura (PPF).";
+  return {
+    subject: `Polarizados Ya | Tu vehículo está listo | ${placa}`,
+    text: `Hola, ${nombre}.\n\nTu vehículo pasó el control de calidad y está listo para coordinar la entrega.\nPlaca: ${placa}\nServicio: ${codigo}\n\n${entrega}\n\n${despedida}\n${servicios}\n\nPolarizados Ya`,
+    html: `
+      <div lang="es" style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:Arial,sans-serif;color:#334155">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px">
+          <tr><td style="padding:28px;background:#0f172a;color:#ffffff;border-radius:15px 15px 0 0">
+            <p style="margin:0 0 12px;color:#bfdbfe;font-size:13px;font-weight:bold;letter-spacing:2px">POLARIZADOS YA</p>
+            <h1 style="margin:0;font-size:30px;line-height:1.2">Tu vehículo está listo</h1>
+          </td></tr>
+          <tr><td style="padding:28px;font-size:16px;line-height:1.6">
+            <p style="margin:0 0 12px">Hola, <strong>${escapar(nombre)}</strong>.</p>
+            <p style="margin:0 0 20px">Tu vehículo pasó el control de calidad y está listo para coordinar la entrega.</p>
+            <div style="padding:14px 18px;background:#eff6ff;border-left:4px solid #2563eb">
+              <strong>Placa</strong> · ${escapar(placa)}<br>
+              <strong>Servicio</strong> · ${escapar(codigo)}
+            </div>
+            <h2 style="margin:24px 0 4px;color:#0f172a;font-size:18px">Coordina tu recogida</h2>
+            <p style="margin:0">${entrega}</p>
+          </td></tr>
+          <tr><td style="padding:20px 28px;background:#f8fafc;border-radius:0 0 15px 15px">
+            <p style="margin:0 0 6px;color:#0f172a;font-weight:bold">${despedida}</p>
+            <p style="margin:0;font-size:14px;line-height:1.5">${servicios}</p>
+          </td></tr>
+        </table>
+      </div>`,
+  };
 };
 
 export const avisarVehiculoListo = async (id) => {

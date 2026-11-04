@@ -137,6 +137,7 @@ function CoordinacionPage() {
   const [instaladores, setInstaladores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enviandoVentasId, setEnviandoVentasId] = useState("");
+  const [actualizandoTrabajoId, setActualizandoTrabajoId] = useState("");
   const [seleccionada, setSeleccionada] = useState(null);
   const [reportandoRecorte, setReportandoRecorte] = useState(null);
   const [filtrosInstalador, setFiltrosInstalador] = useState(() => ({ ...quincenaActual(), instalador: "TODOS", material: "TODOS", estado: "TODOS", buscar: "" }));
@@ -299,12 +300,27 @@ function CoordinacionPage() {
   };
 
   const cambiarTrabajo = async (orden, asignacion, estado) => {
+    if (actualizandoTrabajoId) return;
+    setActualizandoTrabajoId(asignacion._id);
     try {
-      await updateAsignacionCoordinacion(orden._id, asignacion._id, { estado });
-      await cargar();
-      Swal.fire({ icon: "success", title: estado === "COMPLETADA" ? "Trabajo completado" : "Trabajo iniciado", timer: 1300, showConfirmButton: false });
+      const { data: { data: actualizada } } = await updateAsignacionCoordinacion(orden._id, asignacion._id, { estado });
+      const cambios = new Map(actualizada.coordinacion.asignaciones.map((item) => [item._id, item]));
+      setOrdenes((actuales) => actuales.map((item) => item._id !== orden._id ? item : {
+        ...item,
+        flujo: { ...item.flujo, etapa: actualizada.flujo.etapa },
+        coordinacion: {
+          ...item.coordinacion,
+          calidad: { ...item.coordinacion.calidad, estado: actualizada.coordinacion.calidad.estado },
+          asignaciones: item.coordinacion.asignaciones.map((trabajo) => {
+            const cambio = cambios.get(trabajo._id);
+            return cambio ? { ...trabajo, estado: cambio.estado, fechaInicio: cambio.fechaInicio, fechaFinalizacion: cambio.fechaFinalizacion } : trabajo;
+          }),
+        },
+      }));
     } catch (error) {
       Swal.fire({ icon: "error", title: "No fue posible actualizar", text: error.response?.data?.message });
+    } finally {
+      setActualizandoTrabajoId("");
     }
   };
 
@@ -393,7 +409,7 @@ function CoordinacionPage() {
 
       {visiblesOrdenadas.length === 0 ? <div className="rounded-2xl border bg-white p-10 text-center text-slate-500">No hay trabajos pendientes para este perfil.</div> : (
         <div className="grid gap-4 xl:grid-cols-2">
-          {visiblesOrdenadas.map((orden) => <OrdenCard key={orden._id} orden={orden} destacada={String(orden._id) === asesoriaObjetivo} usuario={usuario} enviandoVentas={String(orden._id) === enviandoVentasId} onPrepare={() => setSeleccionada(orden)} onReview={revisar} onWork={cambiarTrabajo} onSales={enviarVentas} onReport={() => setReportandoRecorte(orden)} onChanged={cargar} />)}
+          {visiblesOrdenadas.map((orden) => <OrdenCard key={orden._id} orden={orden} destacada={String(orden._id) === asesoriaObjetivo} usuario={usuario} enviandoVentas={String(orden._id) === enviandoVentasId} onPrepare={() => setSeleccionada(orden)} onReview={revisar} onWork={cambiarTrabajo} actualizandoTrabajoId={actualizandoTrabajoId} onSales={enviarVentas} onReport={() => setReportandoRecorte(orden)} onChanged={cargar} />)}
         </div>
       )}
 
@@ -565,7 +581,7 @@ function SelectorPartes({ partes, value, onChange }) {
   </fieldset>;
 }
 
-function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onReview, onWork, onSales, onReport, onChanged }) {
+function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onReview, onWork, actualizandoTrabajoId, onSales, onReport, onChanged }) {
   const etapa = orden.flujo?.etapa || "PENDIENTE_COORDINACION";
   const asignaciones = orden.coordinacion?.asignaciones || [];
   const propias = usuario?.rol === "INSTALADOR" ? asignaciones.filter((item) => String(item.instaladorId) === String(usuario._id)) : asignaciones;
@@ -587,7 +603,7 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
       {novedadesActivas.length > 0 && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-bold">Orden bloqueada por novedad</p><p className="mt-1 text-xs">{novedadesActivas.map((item) => item.tipo.replaceAll("_", " ")).join(" · ")}. Administración debe marcarla como solucionada.</p></div>}
       {accesoriosPendientes.length > 0 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><p className="font-bold">Accesorios pendientes de Inventario</p><p className="mt-1 text-xs">{accesoriosPendientes.map((item) => `${item.nombre} ${item.marca || ""}: faltan ${item.cantidadPendiente}`).join(" · ")}. La orden no puede enviarse a Ventas hasta recibirlos.</p></div>}
       {orden.coordinacion?.propuesta?.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Propuesta de corte</p>{orden.coordinacion.propuesta.map((item) => <div key={item.linea} className="border-t py-2 text-sm text-slate-700"><p><strong>{item.linea}</strong> · {item.metrosPropuestos} m · {item.anchoCm || 0} × {item.largoCm || 0} cm · {item.cantidad} pieza(s)</p>{item.observacion && <p className="mt-1 text-xs text-slate-500">{item.observacion}</p>}</div>)}</div>}
-      {propias.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Instalaciones</p>{propias.map((item) => <div key={item._id} className="mb-2 rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-bold text-slate-800">{item.descripcion || item.servicio}</p><p className="text-xs text-slate-500">{item.instaladorNombre} · {item.estado.replaceAll("_", " ")}</p><p className="mt-1 text-sm font-black text-emerald-700">Instalación: {cop.format(item.valorInstalacion || 0)}</p>{item.fechaFinalizacion && <p className="text-xs text-slate-400">Terminada: {new Date(item.fechaFinalizacion).toLocaleString("es-CO")}</p>}</div>{usuario?.rol === "INSTALADOR" && item.estado === "PENDIENTE" && <button onClick={() => onWork(orden, item, "EN_PROCESO")} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Iniciar</button>}{usuario?.rol === "INSTALADOR" && item.estado === "EN_PROCESO" && <button onClick={() => onWork(orden, item, "COMPLETADA")} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Completar</button>}</div></div>)}</div>}
+      {propias.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Instalaciones</p>{propias.map((item) => <div key={item._id} className="mb-2 rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-bold text-slate-800">{item.descripcion || item.servicio}</p><p className="text-xs text-slate-500">{item.instaladorNombre} · {item.estado.replaceAll("_", " ")}</p><p className="mt-1 text-sm font-black text-emerald-700">Instalación: {cop.format(item.valorInstalacion || 0)}</p>{item.fechaFinalizacion && <p className="text-xs text-slate-400">Terminada: {new Date(item.fechaFinalizacion).toLocaleString("es-CO")}</p>}</div>{usuario?.rol === "INSTALADOR" && item.estado === "PENDIENTE" && <button type="button" disabled={!!actualizandoTrabajoId} onClick={() => onWork(orden, item, "EN_PROCESO")} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{actualizandoTrabajoId === item._id ? "Iniciando…" : "Iniciar"}</button>}{usuario?.rol === "INSTALADOR" && item.estado === "EN_PROCESO" && <button type="button" disabled={!!actualizandoTrabajoId} onClick={() => onWork(orden, item, "COMPLETADA")} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{actualizandoTrabajoId === item._id ? "Guardando…" : "Completar"}</button>}</div></div>)}</div>}
       {puedeGestionarEnvio && !instalacionesCompletas && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><p className="font-bold">Aún no se puede enviar a Ventas</p><p className="mt-1 text-xs">Falta completar: {instalacionesPendientes.map((item) => `${item.descripcion || item.servicio} - ${item.instaladorNombre || "sin instalador"}`).join(" · ") || "no hay instalaciones asignadas"}.</p></div>}
       <div className="flex flex-wrap gap-2 pt-1">{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && orden.coordinacion?.calidad?.estado === "APROBADA" && <button disabled={enviandoVentas} onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">{enviandoVentas ? "Enviando a Ventas..." : "Finalizar y enviar a Ventas"}</button>}</div>
     </div>
