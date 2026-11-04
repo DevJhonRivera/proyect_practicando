@@ -51,7 +51,10 @@ test("a concurrent edit or previous signature makes the atomic approval fail", a
   const d = { _id: "doc", tipo: "COTIZACION", contenido, huella: hash(contenido), huellaDatos: huellaDatos(o, "COTIZACION"), tokenHash: hash(token), estado: "PENDIENTE", expira: new Date(Date.now() + 60000) }; o.autorizaciones.documentos.push(d);
   Asesoria.findOne = () => ({ select: async () => o });
   Asesoria.findOneAndUpdate = async (filtro, cambios) => { assert.equal(filtro.updatedAt, o.updatedAt); assert.equal(filtro["autorizaciones.documentos"].$elemMatch.estado, "PENDIENTE"); assert.equal(cambios.$set["flujo.etapa"], "PENDIENTE_FIRMA_DIAGNOSTICO"); return null; };
-  try { await assert.rejects(firmarDocumento(token, { ...cuerpo(), huella: d.huella }, {}), /cambio o el documento ya/); }
+  try {
+    await assert.rejects(firmarDocumento(token, { ...cuerpo(), huella: d.huella }, {}), /Confirme que su nombre/);
+    await assert.rejects(firmarDocumento(token, { huella: d.huella, trazo: cuerpo().trazo, aceptaciones: { ...cuerpo().aceptaciones, identidad: true } }, {}), /cambio o el documento ya/);
+  }
   finally { Asesoria.findOne = find; Asesoria.findOneAndUpdate = update; }
 });
 test("positional document updates create timestamped email events", async () => {
@@ -97,9 +100,10 @@ test("a valid quote signature is retained, notifies its advisor and blocks resen
     return o;
   };
   try {
-    const recibo = await firmarDocumento(token, { ...cuerpo(), huella: d.huella }, { ip: "127.0.0.1", agente: "test" });
+    const recibo = await firmarDocumento(token, { huella: d.huella, trazo: cuerpo().trazo, aceptaciones: { ...cuerpo().aceptaciones, identidad: true } }, { ip: "127.0.0.1", agente: "test" });
     assert.equal(recibo.estado, "FIRMADO"); assert.equal(recibo.huella, hash(contenido));
     assert.equal(recibo.firma.nombre, "Cliente Prueba"); assert.equal(recibo.firma.trazo.length, 15);
+    assert.equal(d.firma.aceptaciones.identidad, true);
     assert.equal(o.flujo.etapa, "PENDIENTE_FIRMA_DIAGNOSTICO");
     assert.equal(recibo.tokenHash, undefined); assert.equal(recibo.firma.ip, undefined);
     assert.equal(alerta.mock.callCount(), 1);

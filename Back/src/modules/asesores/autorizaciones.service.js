@@ -144,8 +144,11 @@ export const firmarDocumento = async (token, body, evidencia) => {
     if (body.evidenciaEntrega) reserva.evidenciaEntrega = validarImagen(body.evidenciaEntrega).dataUrl;
   }
   const fecha = new Date();
-  const firma = { nombre: body.nombre.trim(), cedula: orden.cliente.cedula, fecha, trazo: body.trazo, ...reserva,
-    aceptaciones: Object.fromEntries((contenidoFirmado.aceptacionesRequeridas || ["documento", "datos", "condiciones", "firmaElectronica"]).map((key) => [key, body.aceptaciones[key] === true])),
+  const cotizacion = documento.tipo === "COTIZACION";
+  const aceptaciones = Object.fromEntries((contenidoFirmado.aceptacionesRequeridas || ["documento", "datos", "condiciones", "firmaElectronica"]).map((key) => [key, body.aceptaciones[key] === true]));
+  if (cotizacion) aceptaciones.identidad = true;
+  const firma = { nombre: cotizacion ? contenidoFirmado.datos.cliente.nombre : body.nombre.trim(), cedula: orden.cliente.cedula, fecha, trazo: body.trazo, ...reserva,
+    aceptaciones,
     ...(referencia ? { autorizacionPreviaId: referencia.documentoId } : {}),
     ip: String(evidencia.ip || "").slice(0, 100), agente: String(evidencia.agente || "").slice(0, 500) };
   const cambios = { "autorizaciones.documentos.$.estado": "FIRMADO", "autorizaciones.documentos.$.firma": firma };
@@ -260,7 +263,8 @@ export const responderDocumento = async (token, body, evidencia = {}) => {
   const { orden, documento } = await buscarPorToken(token);
   validarRespuestaCliente(body, orden, documento);
   const fecha = new Date();
-  const respuesta = { accion: body.accion, nombre: body.nombre.trim(), cedula: orden.cliente.cedula,
+  const correccionCotizacion = documento.tipo === "COTIZACION" && body.accion === "SOLICITAR_CORRECCION";
+  const respuesta = { accion: body.accion, nombre: correccionCotizacion ? orden.cliente.nombre : body.nombre.trim(), cedula: orden.cliente.cedula,
     motivo: body.motivo.trim(), fecha, ip: String(evidencia.ip || "").slice(0, 100), agente: String(evidencia.agente || "").slice(0, 500) };
   const estado = body.accion === "RECHAZAR" ? "RECHAZADO" : "CORRECCION_SOLICITADA";
   const resultado = await Asesoria.findOneAndUpdate({ _id: orden._id, updatedAt: orden.updatedAt,

@@ -60,8 +60,12 @@ export const validarFirmaEntrega = (orden) => {
   if (orden.autorizaciones?.requeridas && !firmaVigente(orden, "ENTREGA")) throw new Error("El cliente debe firmar la recepcion del vehiculo antes de caja");
 };
 export const validarFirma = (body, orden, documento = null) => {
-  if (typeof body.nombre !== "string" || body.nombre.trim().length < 3 || body.nombre.length > 150) throw new Error("Indique su nombre completo");
-  if (String(body.cedula || "").replace(/\D/g, "") !== orden.cliente.cedula) throw new Error("El documento no coincide con el titular del servicio");
+  if (documento?.tipo === "COTIZACION") {
+    if (body.aceptaciones?.identidad !== true) throw new Error("Confirme que su nombre y número de cédula son correctos");
+  } else {
+    if (typeof body.nombre !== "string" || body.nombre.trim().length < 3 || body.nombre.length > 150) throw new Error("Indique su nombre completo");
+    if (String(body.cedula || "").replace(/\D/g, "") !== orden.cliente.cedula) throw new Error("El documento no coincide con el titular del servicio");
+  }
   const requeridas = documento ? JSON.parse(documento.contenido).aceptacionesRequeridas : null;
   for (const campo of requeridas || ["documento", "datos", "condiciones", "firmaElectronica"]) {
     if (body.aceptaciones?.[campo] !== true) throw new Error("Debe aceptar expresamente cada autorizacion");

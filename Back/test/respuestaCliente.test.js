@@ -54,7 +54,8 @@ test("responses are stored atomically once, block work and alert the service own
       assert.equal(update.tipo, "RESPUESTA_CLIENTE");
       assert.equal(filter.clave, `respuesta-cliente:${documento._id}`);
     });
-    const vista = await responderDocumento(token, { ...body, accion }, { ip: "127.0.0.1", agente: "TEST" });
+    const entrada = accion === "RECHAZAR" ? body : { motivo: "La cédula registrada está equivocada", huella: body.huella };
+    const vista = await responderDocumento(token, { ...entrada, accion }, { ip: "127.0.0.1", agente: "TEST" });
     assert.equal(vista.estado, accion === "RECHAZAR" ? "RECHAZADO" : "CORRECCION_SOLICITADA");
     assert.equal(documento.contenido, contenidoOriginal);
     assert.ok(documento.respuestaCliente.fecha instanceof Date);

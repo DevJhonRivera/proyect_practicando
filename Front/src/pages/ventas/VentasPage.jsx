@@ -358,6 +358,35 @@ function VentasPage() {
       );
     });
   }, [ventasDelMes, search]);
+  const resumenPagos = useMemo(() => {
+    const importes = new Map();
+    const cuentas = new Map();
+    const sumar = (metodo, valor, entidad) => {
+      if (!valor) return;
+      importes.set(metodo, (importes.get(metodo) || 0) + valor);
+      const cuenta = entidad?.trim().toUpperCase() || (metodo === "EFECTIVO" ? "Efectivo en caja" : "Sin cuenta registrada");
+      cuentas.set(cuenta, (cuentas.get(cuenta) || 0) + valor);
+    };
+    for (const venta of ventasFiltradas) {
+      let pagosRegistrados = 0;
+      let devolucionesRegistradas = 0;
+      for (const movimiento of venta.pagos || []) {
+        const valor = Number(movimiento.valor || 0);
+        const metodo = movimiento.metodoPago || "SIN_DESGLOSE";
+        if (movimiento.tipo === "DEVOLUCION") {
+          devolucionesRegistradas += valor;
+          sumar(metodo, -valor, movimiento.entidadPago);
+        } else if (movimiento.tipo === "PAGO") {
+          pagosRegistrados += valor;
+          sumar(metodo, valor, movimiento.entidadPago);
+        }
+      }
+      const pagado = Number(venta.valorPagado || (!venta.pagos?.length && venta.estado === "PAGADA" ? venta.total : 0));
+      sumar(pagosRegistrados ? "SIN_DESGLOSE" : venta.metodoPago || "SIN_DESGLOSE", Math.max(0, pagado - pagosRegistrados));
+      sumar("SIN_DESGLOSE", -Math.max(0, Number(venta.valorDevuelto || 0) - devolucionesRegistradas));
+    }
+    return { importes, cuentas, total: [...importes.values()].reduce((total, valor) => total + valor, 0) };
+  }, [ventasFiltradas]);
   const paginationVentas = usePagination(ventasFiltradas);
 
   const subtotal = form.items.reduce(
@@ -1415,6 +1444,33 @@ function VentasPage() {
                 onChange={setMesVentas}
               />
             </div>
+          </div>
+
+          <div className="border-b border-slate-200 bg-white p-3">
+            <h3 className="text-sm font-bold text-slate-800">Recaudo por método de pago</h3>
+            <p className="mb-3 text-xs text-slate-500">Pagos y abonos menos devoluciones de las ventas que coinciden con los filtros.</p>
+            <dl className="flex flex-wrap gap-2">
+              <div className="rounded-lg bg-emerald-50 px-4 py-2 text-emerald-800">
+                <dt className="text-xs font-semibold">Total neto</dt>
+                <dd className="font-bold">{formatoCop.format(resumenPagos.total)}</dd>
+              </div>
+              {[...resumenPagos.importes].map(([metodo, valor]) => (
+                <div key={metodo} className="rounded-lg bg-slate-50 px-4 py-2 text-slate-700">
+                  <dt className="text-xs font-semibold">{({ DATAFONO: "Datáfono", CREDITO: "Crédito", TRANSFERENCIA: "Transferencia", EFECTIVO: "Efectivo", OTROS: "Otros", SIN_DESGLOSE: "Sin desglose", POR_DEFINIR: "Sin método definido" })[metodo] || metodo}</dt>
+                  <dd className="font-bold">{formatoCop.format(valor)}</dd>
+                </div>
+              ))}
+            </dl>
+            <h3 className="mb-2 mt-4 text-sm font-bold text-slate-800">Total por cuenta o entidad</h3>
+            {resumenPagos.cuentas.size === 0 && <p className="text-xs text-slate-500">No hay movimientos para estos filtros.</p>}
+            <dl className="flex flex-wrap gap-2">
+              {[...resumenPagos.cuentas].sort(([a], [b]) => a.localeCompare(b, "es-CO")).map(([cuenta, valor]) => (
+                <div key={cuenta} className="rounded-lg bg-blue-50 px-4 py-2 text-slate-700">
+                  <dt className="text-xs font-semibold">{cuenta}</dt>
+                  <dd className="font-bold">{formatoCop.format(valor)}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
           <div className="divide-y max-h-[820px] overflow-y-auto">

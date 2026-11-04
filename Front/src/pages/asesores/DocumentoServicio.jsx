@@ -10,7 +10,7 @@ export function FirmaDibujada({ puntos = [] }) {
   }
   return <svg viewBox="0 0 720 220" className="h-32 w-full rounded border bg-white" aria-label="Firma del cliente">{trazos.map((trazo, i) => <polyline key={i} points={trazo.join(" ")} fill="none" stroke="black" strokeWidth="2" />)}</svg>;
 }
-export default function DocumentoServicio({ documento }) {
+export default function DocumentoServicio({ documento, plegarCondiciones = false }) {
   const contenido = typeof documento.contenido === "string" ? JSON.parse(documento.contenido) : documento.contenido;
   const { datos: d, condiciones: c } = contenido;
   const cotizacion = documento.tipo === "COTIZACION";
@@ -41,7 +41,13 @@ export default function DocumentoServicio({ documento }) {
         {documento.firma.evidenciaEntrega && <img src={documento.firma.evidenciaEntrega} alt="Evidencia adjunta por el cliente" className="max-h-96 max-w-full rounded border object-contain print:break-inside-avoid" />}
       </section>
     )}
-    <CondicionesServicio condiciones={c} />
+    {cotizacion && plegarCondiciones ? <>
+      <details className="rounded-2xl border border-slate-200 bg-slate-50 p-4 print:hidden">
+        <summary className="cursor-pointer font-bold text-blue-800">Ver términos y condiciones del servicio</summary>
+        <div className="mt-4"><CondicionesServicio condiciones={c} /></div>
+      </details>
+      <div className="hidden print:block"><CondicionesServicio condiciones={c} /></div>
+    </> : <CondicionesServicio condiciones={c} />}
     {documento.estado === "FIRMADO" && documento.firma && <section className="break-inside-avoid rounded-2xl border border-emerald-200 bg-emerald-50 p-5"><h2 className="font-bold text-emerald-900">Aceptación registrada</h2><p className="mt-1">{documento.firma.nombre} · {fecha(documento.firma.fecha)}</p><div className="mt-3"><FirmaDibujada puntos={documento.firma.trazo} /></div><p className="mt-2 text-xs text-emerald-800">Firma vinculada a esta versión del documento y a las confirmaciones expresamente seleccionadas.</p></section>}
     <footer className="border-t border-slate-200 pt-4 text-xs leading-6 text-slate-500"><p>{c.responsable}</p><details className="mt-2"><summary className="cursor-pointer font-semibold">Información del comprobante</summary><p className="break-all">Versión {c.version} · Huella del documento: {documento.huella}</p></details></footer>
   </article>;
