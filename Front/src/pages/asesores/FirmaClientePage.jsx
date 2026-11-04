@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import axios from "axios";
+import { ImagePlus } from "lucide-react";
 import api from "../../api/axios";
 import DocumentoServicio from "./DocumentoServicio";
 import { optimizarFoto } from "../../utils/optimizarFoto";
@@ -101,9 +102,14 @@ export default function FirmaClientePage() {
           <label className="block text-sm font-semibold">Comentario (opcional)
             <textarea maxLength={2000} rows={3} value={observacionEntrega} onChange={(e) => setObservacionEntrega(e.target.value)} className="mt-1 block w-full rounded border bg-white p-2" />
           </label>
-          <label className="block text-sm font-semibold">Foto o comprobante en imagen (opcional)
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={adjuntarEvidencia} className="mt-1 block w-full" />
-          </label>
+          <div>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 has-disabled:cursor-wait has-disabled:opacity-60">
+              <ImagePlus size={20} aria-hidden="true" />
+              {evidenciaEntrega ? "Cambiar foto o comprobante" : "Adjuntar foto o comprobante"}
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={adjuntarEvidencia} aria-describedby="formatos-evidencia-entrega" className="sr-only" />
+            </label>
+            <p id="formatos-evidencia-entrega" className="mt-2 text-xs text-slate-600">Opcional. Selecciona una imagen JPG, PNG o WebP.</p>
+          </div>
           {procesandoEvidencia && <p role="status">Preparando imagen…</p>}
           {evidenciaEntrega && <div className="space-y-2">
             <img src={evidenciaEntrega} alt="Vista previa de la evidencia" className="max-h-40 rounded border" />

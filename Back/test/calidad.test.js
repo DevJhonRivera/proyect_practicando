@@ -6,6 +6,7 @@ import Alerta from "../src/modules/alertas/alerta.model.js";
 import { revisarCalidad, actualizarAsignacion, marcarMaterialListo, enviarTrabajoAVentas } from "../src/modules/coordinacion/coordinacion.service.js";
 import { validarRevisionCalidad } from "../src/modules/coordinacion/calidad.utils.js";
 import { crearCorreoVehiculoListo } from "../src/modules/coordinacion/notificacionCalidad.service.js";
+import { hash, huellaDatos } from "../src/modules/asesores/autorizaciones.utils.js";
 
 const coordinador = { _id: "507f1f77bcf86cd799439012", rol: "COORDINADOR", nombre: "Coordinador Prueba" };
 const instalador = { _id: "507f1f77bcf86cd799439013", rol: "INSTALADOR", nombre: "Instalador Prueba" };
@@ -126,13 +127,39 @@ test("the schema blocks direct delivery or billing while quality is pending", as
 
 test("mail failure retains approval and allows retry with the same idempotency key", async (t) => {
   const o = preparar(t);
+  o.autorizaciones.requeridas = true;
+  for (const tipo of ["COTIZACION", "DIAGNOSTICO"]) {
+    o.autorizaciones.documentos.push({ tipo, estado: "FIRMADO", huella: hash(tipo), huellaDatos: huellaDatos(o, tipo),
+      firma: { fecha: new Date(), aceptaciones: { datos: true, condiciones: true, firmaElectronica: true } } });
+  }
+  t.mock.method(Asesoria, "findById", () => ({ then: (resolve) => resolve(o), select: async () => o }));
+  for (const [clave, valor] of Object.entries({
+    JWT_SECRET: "prueba", FRONTEND_PUBLIC_URL: "https://example.com",
+    LEGAL_COMPANY_NAME: "Polarizados Ya", LEGAL_COMPANY_ID: "123456", LEGAL_ADDRESS: "Calle de prueba",
+    LEGAL_PHONE: "1234567", PRIVACY_EMAIL: "datos@example.com", PRIVACY_POLICY_URL: "https://example.com/politica-de-datos",
+  })) {
+    const anterior = process.env[clave];
+    process.env[clave] = valor;
+    t.after(() => { if (anterior === undefined) delete process.env[clave]; else process.env[clave] = anterior; });
+  }
   const before = { key: process.env.BREVO_API_KEY, from: process.env.BREVO_SENDER_EMAIL };
   process.env.BREVO_API_KEY = "test"; process.env.BREVO_SENDER_EMAIL = "test@example.com";
   t.mock.method(Asesoria, "findOneAndUpdate", async (_q, update) => { for (const [k, v] of Object.entries(update.$set)) o.set(k, v); return o; });
-  t.mock.method(Asesoria, "updateOne", async (_q, update) => { for (const [k, v] of Object.entries(update.$set)) o.set(k, v); return {}; });
+  t.mock.method(Asesoria, "updateOne", async (filtro, update) => {
+    const prefijo = "autorizaciones.documentos.$.";
+    for (const [k, v] of Object.entries(update.$set)) {
+      if (k.startsWith(prefijo)) o.autorizaciones.documentos.id(filtro["autorizaciones.documentos._id"]).set(k.slice(prefijo.length), v);
+      else o.set(k, v);
+    }
+    return {};
+  });
   const keys = [];
+  const enlaces = [];
   t.mock.method(globalThis, "fetch", async (_url, options) => {
-    keys.push(JSON.parse(options.body).headers.idempotencyKey);
+    const mensaje = JSON.parse(options.body);
+    keys.push(mensaje.headers.idempotencyKey);
+    enlaces.push(mensaje.textContent.match(/https:\/\/example\.com\/firmar#[a-f0-9]{64}/)?.[0]);
+    assert.match(mensaje.htmlContent, /Ver acta de entrega/);
     return keys.length === 1 ? { ok: false, status: 403 } : { ok: true, json: async () => ({ messageId: "retry-mail" }) };
   });
   try {
@@ -140,7 +167,10 @@ test("mail failure retains approval and allows retry with the same idempotency k
     assert.equal(result.aviso.enviado, false); assert.equal(o.coordinacion.calidad.aviso.estado, "ERROR");
     assert.equal(o.coordinacion.calidad.estado, "APROBADA"); assert.equal(o.flujo.etapa, "PENDIENTE_PAGO");
     await revisarCalidad(String(o._id), { decision: "APROBAR" }, coordinador);
-    assert.equal(o.coordinacion.calidad.aviso.estado, "ENVIADO"); assert.equal(keys[0], keys[1]);
+    assert.equal(o.coordinacion.calidad.aviso.estado, "ENVIADO", o.coordinacion.calidad.aviso.error); assert.equal(keys[0], keys[1]);
+    assert.ok(enlaces[0]);
+    assert.equal(enlaces[0], enlaces[1]);
+    assert.equal(o.autorizaciones.documentos.filter((d) => d.tipo === "ENTREGA").length, 1);
     assert.equal(o.coordinacion.calidad.revisiones.length, 1);
   } finally { for (const [name, value] of [["BREVO_API_KEY", before.key], ["BREVO_SENDER_EMAIL", before.from]]) { if (value === undefined) delete process.env[name]; else process.env[name] = value; } }
 });

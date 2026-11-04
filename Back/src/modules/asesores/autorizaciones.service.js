@@ -14,16 +14,19 @@ const assertId = (id) => { if (!mongoose.Types.ObjectId.isValid(id)) throw new E
 const comprobarAcceso = (orden, user) => {
   if (!["ADMIN", "SUPERUSUARIO", "COORDINADOR"].includes(user.rol) && String(orden.creadoPor) !== String(user._id)) throw new Error("No tiene acceso a este servicio");
 };
-export const enviarCorreoDocumento = async ({ correo, codigo, tipo, token, contenido, fotos = [] }) => {
+export const urlFirmaDocumento = (token) => {
   if (!process.env.FRONTEND_PUBLIC_URL) throw new Error("Configure FRONTEND_PUBLIC_URL para los enlaces de firma");
   const base = new URL(process.env.FRONTEND_PUBLIC_URL);
   if (!['http:', 'https:'].includes(base.protocol) || (process.env.NODE_ENV === "production" && base.protocol !== "https:")) throw new Error("Configure una URL publica HTTPS para las firmas");
   const url = new URL("/firmar", base);
   url.hash = token;
-  return enviarCorreoBrevo({ correo, ...crearCorreoDocumento({ tipo, codigo, url: url.href, contenido, fotos }) });
+  return url.href;
+};
+export const enviarCorreoDocumento = async ({ correo, codigo, tipo, token, contenido, fotos = [] }) => {
+  return enviarCorreoBrevo({ correo, ...crearCorreoDocumento({ tipo, codigo, url: urlFirmaDocumento(token), contenido, fotos }) });
 };
 
-export const emitirDocumento = async (id, tipo, user) => {
+export const emitirDocumento = async (id, tipo, user, { token = nuevoToken(), enviar = enviarCorreoDocumento } = {}) => {
   assertId(id);
   if (!TIPOS_DOCUMENTO.includes(tipo)) throw new Error("Tipo de documento no valido");
   const orden = await Asesoria.findById(id).select("+autorizaciones.documentos.tokenHash");
@@ -37,10 +40,21 @@ export const emitirDocumento = async (id, tipo, user) => {
   if (tipo === "ENTREGA") {
     validarFirmasTrabajo(orden);
     if (orden.flujo.etapa !== "PENDIENTE_PAGO") throw new Error("El trabajo debe estar terminado antes de firmar la entrega");
+    const ultimaEntrega = orden.autorizaciones.documentos.findLast((d) => d.tipo === "ENTREGA");
+    const calidad = orden.coordinacion?.calidad;
+    const avisoEnProceso = orden.autorizaciones.requeridas && calidad?.estado === "APROBADA"
+      && ["PENDIENTE", "ENVIANDO"].includes(calidad.aviso?.estado);
+    if (enviar === enviarCorreoDocumento && (avisoEnProceso
+      || (ultimaEntrega?.estado === "PENDIENTE" && ultimaEntrega.envio === "ENVIADO" && ultimaEntrega.expira > new Date() && coincideHuellaDocumento(orden, ultimaEntrega)))) {
+      throw new Error("El enlace de entrega ya fue enviado o el aviso está en proceso");
+    }
   } else if (!["PENDIENTE_FIRMA_COTIZACION", "PENDIENTE_FIRMA_DIAGNOSTICO", "PENDIENTE_COORDINACION", "PENDIENTE_GARANTIA"].includes(orden.flujo.etapa)) {
     throw new Error("No se pueden reemplazar autorizaciones de un trabajo que ya avanzo. Registre la novedad correspondiente");
   }
-  if (orden.autorizaciones.documentos.length >= 25) throw new Error("Limite de versiones alcanzado. Solicite revision administrativa");
+  const previo = orden.autorizaciones.documentos.findLast((d) => d.tipo === tipo);
+  if (previo?.tokenHash === hash(token) && previo.expira <= new Date()) throw new Error("El enlace anterior venció. Solicite una nueva acta al asesor.");
+  const reutilizar = previo?.estado === "PENDIENTE" && previo.tokenHash === hash(token) && coincideHuellaDocumento(orden, previo);
+  if (!reutilizar && orden.autorizaciones.documentos.length >= 25) throw new Error("Limite de versiones alcanzado. Solicite revision administrativa");
   let condiciones = condicionesDocumento();
   const cotizacion = tipo !== "COTIZACION" ? firmaVigente(orden, "COTIZACION") : null;
   if (tipo === "DIAGNOSTICO") validarFotosUnicas(orden.recepcion?.fotos);
@@ -56,19 +70,20 @@ export const emitirDocumento = async (id, tipo, user) => {
   configurarCorreoBrevo();
   if (!process.env.FRONTEND_PUBLIC_URL) throw new Error("Configure FRONTEND_PUBLIC_URL para los enlaces de firma");
   const fecha = new Date();
-  const contenido = JSON.stringify({ versionFormato: 2, tipo, emitidoEn: fecha.toISOString(), datos: datosDocumento(orden, tipo), condiciones, aceptacionesRequeridas: tipo === "COTIZACION" ? ["documento", "datos", "condiciones", "firmaElectronica"] : ["documento"] });
+  const contenido = reutilizar ? previo.contenido : JSON.stringify({ versionFormato: 2, tipo, emitidoEn: fecha.toISOString(), datos: datosDocumento(orden, tipo), condiciones, aceptacionesRequeridas: tipo === "COTIZACION" ? ["documento", "datos", "condiciones", "firmaElectronica"] : ["documento"] });
   if (Buffer.byteLength(contenido, "utf8") > 128 * 1024) throw new Error("El documento supera el tamano permitido");
-  const token = nuevoToken();
-  const documentoId = new mongoose.Types.ObjectId();
-  for (const anterior of orden.autorizaciones.documentos) if (anterior.tipo === tipo && anterior.estado === "PENDIENTE") anterior.estado = "INVALIDADO";
-  orden.autorizaciones.requeridas = true;
-  orden.autorizaciones.documentos.push({ _id: documentoId, tipo, contenido, huella: hash(contenido), huellaDatos: huellaDatos(orden, tipo), tokenHash: hash(token),
-    creadoEn: fecha, expira: new Date(fecha.getTime() + 7 * 86400000), estado: "PENDIENTE", envio: "PENDIENTE" });
-  if (tipo !== "ENTREGA") orden.flujo.etapa = tipo === "COTIZACION" ? "PENDIENTE_FIRMA_COTIZACION" : "PENDIENTE_FIRMA_DIAGNOSTICO";
-  orden.auditoria.push({ accion: "DOCUMENTO_EMITIDO", descripcion: `${tipo} ${documentoId}`, usuarioId: user._id, usuarioNombre: user.nombre || user.rol, fecha });
-  await orden.save();
+  const documentoId = reutilizar ? previo._id : new mongoose.Types.ObjectId();
+  if (!reutilizar) {
+    for (const anterior of orden.autorizaciones.documentos) if (anterior.tipo === tipo && anterior.estado === "PENDIENTE") anterior.estado = "INVALIDADO";
+    orden.autorizaciones.requeridas = true;
+    orden.autorizaciones.documentos.push({ _id: documentoId, tipo, contenido, huella: hash(contenido), huellaDatos: huellaDatos(orden, tipo), tokenHash: hash(token),
+      creadoEn: fecha, expira: new Date(fecha.getTime() + 7 * 86400000), estado: "PENDIENTE", envio: "PENDIENTE" });
+    if (tipo !== "ENTREGA") orden.flujo.etapa = tipo === "COTIZACION" ? "PENDIENTE_FIRMA_COTIZACION" : "PENDIENTE_FIRMA_DIAGNOSTICO";
+    orden.auditoria.push({ accion: "DOCUMENTO_EMITIDO", descripcion: `${tipo} ${documentoId}`, usuarioId: user._id, usuarioNombre: user.nombre || user.rol, fecha });
+    await orden.save();
+  }
   try {
-    const proveedorId = await enviarCorreoDocumento({ correo: orden.cliente.correo, codigo: orden.codigo, tipo, token, contenido: JSON.parse(contenido), fotos });
+    const proveedorId = await enviar({ correo: orden.cliente.correo, codigo: orden.codigo, tipo, token, contenido: JSON.parse(contenido), fotos });
     await Asesoria.updateOne({ _id: id, "autorizaciones.documentos._id": documentoId }, { $set: {
       "autorizaciones.documentos.$.envio": "ENVIADO", "autorizaciones.documentos.$.enviadoEn": new Date(), "autorizaciones.documentos.$.proveedorId": proveedorId,
     } });

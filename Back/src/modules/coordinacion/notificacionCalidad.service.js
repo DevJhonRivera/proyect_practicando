@@ -1,16 +1,21 @@
 import { enviarCorreoBrevo } from "../../utils/correoBrevo.js";
 import Asesoria from "../asesores/asesoria.model.js";
 import Alerta from "../alertas/alerta.model.js";
+import { createHmac } from "node:crypto";
+import { emitirDocumento, urlFirmaDocumento } from "../asesores/autorizaciones.service.js";
+import { firmaVigente, huellaDatos } from "../asesores/autorizaciones.utils.js";
+import { avisarCambioAlertas } from "../tiempoReal/canales.js";
 
 const escapar = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-export const crearCorreoVehiculoListo = (orden) => {
+export const crearCorreoVehiculoListo = (orden, enlaceActa) => {
   const { codigo, cliente: { nombre }, vehiculo: { placa } } = orden;
   const entrega = "Comunícate con tu asesor para acordar la recogida y completar los documentos o pagos que correspondan.";
   const despedida = "Gracias por confiar en nosotros. ¡Que disfrutes cada kilómetro!";
   const servicios = "También puedes preguntarle a tu asesor por nuestras opciones de polarizado y película de protección de pintura (PPF).";
+  const instruccionFirma = "Firma el acta al recibir y revisar tu vehículo. Si encuentras alguna novedad, puedes dejar un comentario o adjuntar una foto.";
   return {
     subject: `Polarizados Ya | Tu vehículo está listo | ${placa}`,
-    text: `Hola, ${nombre}.\n\nTu vehículo pasó el control de calidad y está listo para coordinar la entrega.\nPlaca: ${placa}\nServicio: ${codigo}\n\n${entrega}\n\n${despedida}\n${servicios}\n\nPolarizados Ya`,
+    text: `Hola, ${nombre}.\n\nTu vehículo pasó el control de calidad y está listo para coordinar la entrega.\nPlaca: ${placa}\nServicio: ${codigo}\n\n${entrega}${enlaceActa ? `\n\nVer acta de entrega: ${enlaceActa}\n${instruccionFirma}` : ""}\n\n${despedida}\n${servicios}\n\nPolarizados Ya`,
     html: `
       <div lang="es" style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:Arial,sans-serif;color:#334155">
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px">
@@ -27,6 +32,8 @@ export const crearCorreoVehiculoListo = (orden) => {
             </div>
             <h2 style="margin:24px 0 4px;color:#0f172a;font-size:18px">Coordina tu recogida</h2>
             <p style="margin:0">${entrega}</p>
+            ${enlaceActa ? `<p style="margin:20px 0 8px"><a href="${escapar(enlaceActa)}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none;font-weight:bold">Ver acta de entrega</a></p>
+            <p style="margin:0;font-size:14px">${instruccionFirma} El enlace es personal y tiene una vigencia de 7 días.</p>` : ""}
           </td></tr>
           <tr><td style="padding:20px 28px;background:#f8fafc;border-radius:0 0 15px 15px">
             <p style="margin:0 0 6px;color:#0f172a;font-weight:bold">${despedida}</p>
@@ -54,10 +61,26 @@ export const avisarVehiculoListo = async (id) => {
   ] }, { $set: { "coordinacion.calidad.aviso.estado": "ENVIANDO", "coordinacion.calidad.aviso.intentoEn": ahora } }, { new: true });
   if (!tomada) return { enviado: false, mensaje: "El aviso ya fue enviado o esta siendo procesado. Actualice el estado." };
   try {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(orden.cliente.correo)) throw new Error("El cliente no tiene un correo valido");
-    const proveedorId = await enviarCorreoBrevo({ correo: orden.cliente.correo,
-      claveEnvio: `vehiculo-listo-${orden._id}-${revision._id}-${orden.cliente.correo}`, ...crearCorreoVehiculoListo(orden) });
+    const correoCliente = tomada.cliente.correo;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoCliente)) throw new Error("El cliente no tiene un correo valido");
+    const claveEnvio = `vehiculo-listo-${tomada._id}-${revision._id}-${correoCliente}`;
+    let proveedorId;
+    if (tomada.autorizaciones?.requeridas && tomada.flujo.etapa === "PENDIENTE_PAGO" && !firmaVigente(tomada, "ENTREGA")) {
+      const huella = huellaDatos(tomada, "ENTREGA");
+      const token = createHmac("sha256", process.env.JWT_SECRET).update(`${claveEnvio}:${huella}`).digest("hex");
+      await emitirDocumento(id, "ENTREGA", { rol: "COORDINADOR", _id: revision.usuarioId, nombre: revision.usuarioNombre }, {
+        token,
+        enviar: async ({ correo, contenido }) => {
+          if (correo !== correoCliente || contenido.datos.cliente.correo !== correoCliente) throw new Error("El correo del cliente cambió. Reintente el aviso.");
+          proveedorId = await enviarCorreoBrevo({ correo, claveEnvio: `${claveEnvio}:${huella}`, ...crearCorreoVehiculoListo(tomada, urlFirmaDocumento(token)) });
+          return proveedorId;
+        },
+      });
+    } else {
+      proveedorId = await enviarCorreoBrevo({ correo: correoCliente, claveEnvio, ...crearCorreoVehiculoListo(tomada) });
+    }
     await Asesoria.updateOne({ _id: id }, { $set: { "coordinacion.calidad.aviso.estado": "ENVIADO", "coordinacion.calidad.aviso.enviadoEn": new Date(), "coordinacion.calidad.aviso.proveedorId": proveedorId, "coordinacion.calidad.aviso.error": "" } });
+    avisarCambioAlertas();
     return { enviado: true };
   } catch (error) {
     const mensaje = error.name === "TimeoutError" ? "El proveedor tardo demasiado. Reintente el aviso." : error.message;

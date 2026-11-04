@@ -3,9 +3,9 @@ import api from "../api/axios";
 
 export async function preguntarEnvioFactura(venta) {
   if (venta?.estado !== "PAGADA") return;
-  const guardar = async (correo, enviar) => {
+  const enviarComprobante = async (correo) => {
     try {
-      const respuesta = await api.post(`/ventas/${venta._id}/comprobante-correo`, { correo, enviar });
+      const respuesta = await api.post(`/ventas/${venta._id}/comprobante-correo`, { correo, enviar: true });
       return respuesta.data;
     } catch (error) {
       Swal.showValidationMessage(error.response?.data?.message || "No se pudo completar la operación. Intente nuevamente.");
@@ -14,28 +14,23 @@ export async function preguntarEnvioFactura(venta) {
   };
   const resultado = await Swal.fire({
     title: "¿Enviar el comprobante al cliente?",
-    text: "Confirme el correo registrado o corríjalo. Puede guardar el correo sin enviar el comprobante.",
+    text: "Confirma o corrige el correo del cliente para enviarle el comprobante en PDF.",
     input: "email",
     inputLabel: "Correo del cliente",
     inputValue: venta.cliente?.correo || venta.asesoriaId?.cliente?.correo || "",
     inputAttributes: { maxlength: "254", autocomplete: "email" },
-    showDenyButton: true,
-    showCancelButton: true,
-    confirmButtonText: "Guardar y enviar PDF",
-    denyButtonText: "Solo guardar correo",
-    cancelButtonText: "Ahora no",
+    showCloseButton: true,
+    closeButtonAriaLabel: "Cerrar sin enviar",
+    confirmButtonText: "Enviar comprobante",
     showLoaderOnConfirm: true,
-    showLoaderOnDeny: true,
     allowOutsideClick: () => !Swal.isLoading(),
     allowEscapeKey: () => !Swal.isLoading(),
-    preConfirm: (correo) => guardar(correo, true),
-    preDeny: (correo) => guardar(correo, false),
-    returnInputValueOnDeny: true,
+    preConfirm: enviarComprobante,
   });
-  if (resultado.isConfirmed || resultado.isDenied) {
+  if (resultado.isConfirmed) {
     await Swal.fire({
       icon: "success",
-      title: resultado.value?.yaEnviado ? "El comprobante ya fue enviado" : resultado.value?.enviado ? "Comprobante enviado" : "Correo guardado",
+      title: resultado.value?.yaEnviado ? "El comprobante ya fue enviado" : "Comprobante enviado",
       text: resultado.value?.correo,
     });
   }

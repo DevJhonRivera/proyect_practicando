@@ -97,6 +97,10 @@ export default function FirmasServicio({ asesoria }) {
         if (firmado) {
           return <span key={tipo} className="rounded bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">{nombre} · Firma registrada</span>;
         }
+        if (tipo === "ENTREGA" && ultimo?.estado === "PENDIENTE" && ultimo.envio === "ENVIADO"
+          && ultimo.contenidoVigente !== false && new Date(ultimo.expira) > new Date()) {
+          return <span key={tipo} className="rounded bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">Acta enviada · Pendiente de firma</span>;
+        }
         if (!puedeEmitir) return null;
         const entregaPendiente = tipo === "ENTREGA" && (actual.flujo?.etapa !== "PENDIENTE_PAGO"
           || (actual.coordinacion?.calidad?.requerida && actual.coordinacion.calidad.estado !== "APROBADA"));
