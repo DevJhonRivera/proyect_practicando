@@ -527,37 +527,56 @@ export const obtenerResumenFinanciero =
     };
   };
 
-export const obtenerReporteFinanciero =
-  async () => {
-    const [[ventas = {}], [costos = {}]] = await Promise.all([
-      Venta.aggregate([
-        { $match: { estado: { $ne: "ANULADA" } } },
-        { $group: { _id: null, total: { $sum: { $ifNull: ["$total", 0] } } } },
-      ]),
-      Corte.aggregate([
-        { $group: { _id: null, total: { $sum: { $ifNull: ["$costoMaterialCop", 0] } } } },
-      ]),
-    ]);
-    const totalVentas = Number(ventas.total || 0);
-    const costoMaterial = Number(costos.total || 0);
-
-    const utilidadBruta =
-      totalVentas - costoMaterial;
-
-    return {
-      rentabilidad: {
-        totalVentas:
-          roundMoney(totalVentas),
-        costoMaterial:
-          roundMoney(costoMaterial),
-        utilidadBruta:
-          roundMoney(utilidadBruta),
-        margenBrutoPorcentaje:
-          roundMoney(
-            totalVentas > 0
-              ? (utilidadBruta / totalVentas) * 100
-              : 0
-          ),
-      },
-    };
+export const obtenerReporteFinanciero = async ({ desde, hasta, material } = {}) => {
+  const fechaColombia = (valor) => {
+    if (typeof valor !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) throw new Error("Fecha de reporte inválida");
+    const fecha = new Date(`${valor}T00:00:00-05:00`);
+    if (!Number.isFinite(fecha.getTime()) || fecha.toISOString().slice(0, 10) !== valor) throw new Error("Fecha de reporte inválida");
+    return fecha;
   };
+  const fecha = {};
+  if (desde) fecha.$gte = fechaColombia(desde);
+  if (hasta) fecha.$lt = new Date(fechaColombia(hasta).getTime() + 86400000);
+  if (fecha.$gte && fecha.$lt && fecha.$gte >= fecha.$lt) throw new Error("El rango de fechas no es válido");
+  if (material && (typeof material !== "string" || material.length > 150)) throw new Error("Material inválido");
+
+  const cortesDelMaterial = material ? [
+    { $lookup: { from: Rollo.collection.name, localField: "rolloId", foreignField: "_id", as: "rollo" } },
+    { $lookup: { from: Retazo.collection.name, localField: "retazoId", foreignField: "_id", as: "retazo" } },
+    { $match: { $or: [{ "rollo.tipoPolarizado": material }, { "retazo.tipoPolarizado": material }] } },
+  ] : [];
+  const [[totales = {}], materialesRollo, materialesRetazo] = await Promise.all([
+    Venta.aggregate([
+      { $match: { estado: { $ne: "ANULADA" }, ...(desde || hasta ? { fecha } : {}) } },
+      { $lookup: {
+        from: Corte.collection.name, localField: "_id", foreignField: "ventaId", as: "costos",
+        pipeline: [
+          ...cortesDelMaterial,
+          { $group: { _id: null, costo: { $sum: "$costoMaterialCop" }, venta: { $sum: "$valorVenta" } } },
+        ],
+      } },
+      { $group: {
+        _id: null,
+        totalVentas: { $sum: material ? { $cond: [
+          { $gt: ["$subtotal", 0] },
+          { $multiply: [{ $ifNull: [{ $first: "$costos.venta" }, 0] }, { $divide: ["$total", "$subtotal"] }] },
+          0,
+        ] } : "$total" },
+        costoMaterial: { $sum: { $first: "$costos.costo" } },
+      } },
+    ]),
+    Rollo.distinct("tipoPolarizado"),
+    Retazo.distinct("tipoPolarizado"),
+  ]);
+  const totalVentas = roundMoney(totales.totalVentas);
+  const costoMaterial = roundMoney(totales.costoMaterial);
+  const utilidadBruta = roundMoney(totalVentas - costoMaterial);
+  return {
+    materiales: [...new Set([...materialesRollo, ...materialesRetazo].filter(Boolean))].sort(),
+    rentabilidad: {
+      totalVentas, costoMaterial, utilidadBruta,
+      margenBrutoPorcentaje: totalVentas > 0 ? roundMoney(utilidadBruta / totalVentas * 100) : 0,
+      costoSobreVentasPorcentaje: totalVentas > 0 ? roundMoney(costoMaterial / totalVentas * 100) : null,
+    },
+  };
+};

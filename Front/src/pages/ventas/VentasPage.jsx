@@ -1923,14 +1923,14 @@ function VentaCard({ venta, onEnviarComprobante, onMarkPaid, onRefund, onReject,
           )}
           {venta.estado !== "ANULADA" && <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               try {
-                generarFacturaVenta(venta);
+                await generarFacturaVenta(venta);
               } catch (error) {
                 Swal.fire({
                   icon: "warning",
                   title: "No se pudo abrir el comprobante",
-                  text: error.message,
+                  text: error.response?.data?.message || error.message,
                 });
               }
             }}

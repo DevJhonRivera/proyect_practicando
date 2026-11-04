@@ -272,6 +272,7 @@ corteSchema.index({
 });
 
 corteSchema.index({ createdAt: -1 });
+corteSchema.index({ ventaId: 1 });
 
 corteSchema.index(
     { asesoriaId: 1, asesoriaLinea: 1 },

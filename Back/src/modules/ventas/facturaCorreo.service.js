@@ -4,6 +4,10 @@ import mongoose from "mongoose";
 import Venta from "./venta.model.js";
 import Asesoria from "../asesores/asesoria.model.js";
 import { generarComprobantePdf } from "./comprobanteVenta.js";
+import { crearHtmlComprobante } from "./comprobantePlantilla.js";
+
+const escapar = (value) => String(value ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 export async function gestionarCorreoFactura(id, { correo: entrada, enviar } = {}, user) {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Venta no válida");
@@ -41,19 +45,34 @@ export async function gestionarCorreoFactura(id, { correo: entrada, enviar } = {
   }
   if (enviar !== true) return { correo, enviado: false };
 
-  const actual = await Venta.findById(id).lean();
+  const actual = await Venta.findById(id).populate("asesoriaId", "cliente vehiculo").lean();
   if (!actual || actual.estado !== "PAGADA" || Number(actual.saldoPendiente || 0) > 0 || actual.cliente.correo !== correo) {
     throw new Error("La venta o el correo cambiaron. Vuelva a confirmar el envío");
   }
-  const pdf = generarComprobantePdf(actual);
-  const clave = createHash("sha256").update(pdf).digest("hex");
+  const comprobante = crearHtmlComprobante(actual);
+  const clave = createHash("sha256").update(comprobante).digest("hex");
   if (actual.auditoria?.some((a) => a.accion === "COMPROBANTE_ENVIADO" && a.descripcion === clave)) {
     return { correo, enviado: true, yaEnviado: true };
   }
   try {
+    const pdf = await generarComprobantePdf(comprobante);
     await enviarCorreoBrevo({ correo, claveEnvio: `comprobante-${id}-${clave}`,
       subject: `Polarizados Ya | Comprobante de venta ${actual.codigoVenta}`,
-      text: `Hola, ${actual.cliente.nombre}.\n\nAdjuntamos el comprobante de tu venta ${actual.codigoVenta}.\n\nGracias por confiar en Polarizados Ya.`,
+      text: `Hola, ${actual.cliente.nombre}.\n\nTu pago quedó registrado. Adjuntamos el comprobante de venta ${actual.codigoVenta} en PDF.\n\nGracias por confiar en Polarizados Ya. ¡Que disfrutes cada kilómetro!`,
+      html: `<div lang="es" style="background:#f1f5f9;padding:24px 12px;font-family:Arial,sans-serif;color:#334155">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px">
+          <tr><td style="padding:28px;background:#0f172a;color:#fff;border-radius:15px 15px 0 0">
+            <p style="margin:0 0 10px;color:#bfdbfe;font-size:13px;font-weight:bold;letter-spacing:2px">POLARIZADOS YA</p>
+            <h1 style="margin:0;font-size:28px">Tu comprobante de venta</h1>
+          </td></tr>
+          <tr><td style="padding:28px;font-size:16px;line-height:1.6">
+            <p style="margin:0 0 12px">Hola, <strong>${escapar(actual.cliente.nombre)}</strong>.</p>
+            <p style="margin:0 0 18px">Tu pago quedó registrado. Encontrarás el comprobante en el PDF adjunto.</p>
+            <div style="padding:14px 18px;background:#eff6ff;border-left:4px solid #2563eb"><strong>Venta</strong> · ${escapar(actual.codigoVenta)}</div>
+          </td></tr>
+          <tr><td style="padding:20px 28px;background:#f8fafc;color:#0f172a;border-radius:0 0 15px 15px">Gracias por confiar en Polarizados Ya. <strong>¡Que disfrutes cada kilómetro!</strong></td></tr>
+        </table>
+      </div>`,
       attachments: [{ filename: `Comprobante-${actual.codigoVenta.replace(/[^a-z0-9-]/gi, "-")}.pdf`, content: pdf.toString("base64") }],
     });
   } catch (error) {

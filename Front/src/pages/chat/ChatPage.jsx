@@ -1,7 +1,7 @@
 import { observarActualizaciones } from "../../utils/tiempoReal";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, CheckCheck, Clock, ImagePlus, MessageCircle, Plus, Send, X } from "lucide-react";
+import { ArrowLeft, Camera, Check, CheckCheck, Clock, ImagePlus, MessageCircle, Plus, Send, X } from "lucide-react";
 import api from "../../api/axios";
 import { obtenerUsuarioActual } from "../../utils/permisos";
 import { puedeAbrirChat } from "../../utils/permisosChat";
@@ -302,6 +302,7 @@ function Conversacion({ chat, usuario, onBack }) {
       {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
       {foto && <div className="flex items-start gap-2"><img src={foto} alt="Vista previa de la foto" className="h-20 rounded object-contain" /><button type="button" disabled={enviando} onClick={() => { setFoto(""); intento.current = ""; }} aria-label="Quitar foto"><X size={18} /></button></div>}
       <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 focus-within:border-indigo-400">
+        <label className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-xl bg-indigo-100 text-indigo-800 hover:bg-indigo-200 focus-within:ring-2 focus-within:ring-indigo-500" title="Tomar foto"><Camera size={19} /><input type="file" aria-label="Tomar foto" accept="image/*" capture="environment" disabled={enviando || procesandoFoto} onChange={adjuntar} className="sr-only" /></label>
         <label className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-xl bg-indigo-100 text-indigo-800 hover:bg-indigo-200 focus-within:ring-2 focus-within:ring-indigo-500" title="Adjuntar fotografía"><ImagePlus size={19} /><input type="file" aria-label="Adjuntar fotografía" accept="image/jpeg,image/png,image/webp" disabled={enviando || procesandoFoto} onChange={adjuntar} className="sr-only" /></label>
         <textarea aria-label="Mensaje" rows={2} maxLength={4000} disabled={enviando} value={texto} onBlur={detenerEscritura} onChange={(e) => cambiarTexto(e.target.value)} placeholder="Escribe un mensaje…" className="max-h-32 min-w-0 flex-1 resize-y rounded-lg bg-transparent p-2 text-sm outline-none" />
         <button type="submit" disabled={enviando || procesandoFoto || (!texto.trim() && !foto)} className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-indigo-700 px-3 text-sm font-bold text-white hover:bg-indigo-800 disabled:opacity-40" aria-label="Enviar mensaje"><Send size={18} /><span className="hidden sm:inline">Enviar</span></button>

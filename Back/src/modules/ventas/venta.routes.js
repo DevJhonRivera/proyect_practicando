@@ -12,8 +12,21 @@ import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import { requirePermission, requireRole } from "../../middlewares/permission.middleware.js";
 
 import { gestionarCorreoFactura } from "./facturaCorreo.service.js";
+import { crearHtmlComprobante } from "./comprobantePlantilla.js";
+import Venta from "./venta.model.js";
+import mongoose from "mongoose";
 
 const router = Router();
+router.get("/:id/comprobante", authMiddleware, requirePermission("ventas", "read"), async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Venta no válida" });
+  try {
+    const venta = await Venta.findById(req.params.id).populate("asesoriaId", "cliente vehiculo").lean();
+    if (!venta || venta.estado === "ANULADA") return res.status(404).json({ message: "Comprobante no disponible" });
+    res.set("Cache-Control", "no-store").json({ html: crearHtmlComprobante(venta) });
+  } catch {
+    res.status(500).json({ message: "No se pudo abrir el comprobante" });
+  }
+});
 router.post("/:id/comprobante-correo", authMiddleware, requirePermission("ventas", "write"), async (req, res) => {
   try { res.json(await gestionarCorreoFactura(req.params.id, req.body, req.user)); }
   catch (error) { res.status(400).json({ message: error.message }); }

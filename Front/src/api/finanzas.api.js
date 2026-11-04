@@ -12,5 +12,5 @@ export const getCosteoPedido = (pedidoId) =>
 export const saveCosteoPedido = (data) =>
   api.post("/finanzas/costeos", data);
 
-export const getReporteFinanciero = () =>
-  api.get("/finanzas/reporte");
+export const getReporteFinanciero = (params, signal) =>
+  api.get("/finanzas/reporte", { params, signal });

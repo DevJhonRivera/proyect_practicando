@@ -70,7 +70,7 @@ export const getReporteFinanciero =
   async (req, res) => {
     try {
       const reporte =
-        await obtenerReporteFinanciero();
+        await obtenerReporteFinanciero(req.query);
 
       res.json(reporte);
     } catch (error) {
