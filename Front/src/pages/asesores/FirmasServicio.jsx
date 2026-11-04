@@ -51,6 +51,8 @@ export default function FirmasServicio({ asesoria }) {
   }, [asesoria._id]);
   const puedeEmitir = tienePermiso(obtenerUsuarioActual(), "asesores", "write");
   const ultimaCotizacion = [...(actual.autorizaciones?.documentos || [])].reverse().find((d) => d.tipo === "COTIZACION");
+  const ultimoDiagnostico = actual.autorizaciones?.documentos?.findLast((d) => d.tipo === "DIAGNOSTICO");
+  const corregirDiagnostico = ultimoDiagnostico?.gestionRespuesta?.accion === "PREPARAR_REVISION";
   const enRevision = !actual.autorizaciones?.bloqueoCliente && actual.estado !== "CANCELADA"
     && actual.flujo?.etapa === "PENDIENTE_FIRMA_COTIZACION" && ultimaCotizacion?.gestionRespuesta?.accion === "PREPARAR_REVISION";
   const refrescar = async () => setActual((await getAsesoriaPorId(asesoria._id)).data.data);
@@ -108,7 +110,14 @@ export default function FirmasServicio({ asesoria }) {
         </div>;
       })}
     </div>
-    {puedeEmitir && !actual.autorizaciones?.bloqueoCliente && actual.estado !== "CANCELADA" && actual.flujo?.etapa === "PENDIENTE_FIRMA_DIAGNOSTICO" && <button onClick={abrirDiagnostico} disabled={ocupado || procesandoFotos} className="mt-3 rounded border border-blue-300 px-3 py-2 text-sm text-blue-800">Registrar / revisar diagnostico</button>}
+    {puedeEmitir && !actual.autorizaciones?.bloqueoCliente && actual.estado !== "CANCELADA" && actual.flujo?.etapa === "PENDIENTE_FIRMA_DIAGNOSTICO" && !diagnostico && (
+      <div className="mt-3">
+        {corregirDiagnostico && <p className="mb-2 text-sm text-slate-600">Corrige las observaciones o retira y reemplaza fotos. Guarda los cambios y envía el diagnóstico corregido para firma.</p>}
+        <button onClick={abrirDiagnostico} disabled={ocupado || procesandoFotos} className="rounded border border-blue-300 px-3 py-2 text-sm text-blue-800">
+          {corregirDiagnostico ? "Corregir diagnóstico y fotos" : "Registrar o revisar diagnóstico"}
+        </button>
+      </div>
+    )}
     {diagnostico && <form onSubmit={guardarDiagnostico} className="mt-3 space-y-3 rounded border bg-slate-50 p-3">
       <h4 className="font-bold">Diagnostico de ingreso</h4>
       <label className="flex gap-2"><input type="checkbox" checked={diagnostico.tieneRayones} onChange={(e) => cambiarDiagnostico("tieneRayones", e.target.checked)} />Se encontraron rayones</label>

@@ -53,6 +53,13 @@ function RutaPermitida({ modulo, accion = "read", children }) {
   return children;
 }
 
+function RutaAdministracion({ children }) {
+  const rol = obtenerUsuarioActual()?.rol;
+  return ["ADMIN", "SUPERUSUARIO"].includes(rol)
+    ? children
+    : <Navigate to="/dashboard" replace />;
+}
+
 function AppRouter() {
   return (
     <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-600">Cargando módulo...</div>}>
@@ -259,8 +266,7 @@ function AppRouter() {
           />
           <Route
             path="/historial-servicios"
-            element={["ADMIN", "SUPERUSUARIO"].includes(obtenerUsuarioActual()?.rol)
-              ? <HistorialServiciosPage /> : <Navigate to="/dashboard" replace />}
+            element={<RutaAdministracion><HistorialServiciosPage /></RutaAdministracion>}
           />
 
         </Route>
