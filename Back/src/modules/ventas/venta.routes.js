@@ -13,10 +13,27 @@ import { requirePermission, requireRole } from "../../middlewares/permission.mid
 
 import { gestionarCorreoFactura } from "./facturaCorreo.service.js";
 import { crearHtmlComprobante } from "./comprobantePlantilla.js";
+import { validarAccesoComprobante } from "./comprobanteAcceso.js";
 import Venta from "./venta.model.js";
 import mongoose from "mongoose";
 
 const router = Router();
+router.get("/:id/comprobante-cliente", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const noDisponible = () => res.status(404).send("El enlace del comprobante no está disponible. Solicita un enlace actualizado a Polarizados Ya.");
+  if (!mongoose.isValidObjectId(req.params.id) || typeof req.query.acceso !== "string" ||
+      !/^[a-f0-9]{64}$/.test(req.query.acceso)) return noDisponible();
+  try {
+    const venta = await Venta.findById(req.params.id).populate("asesoriaId", "cliente vehiculo").lean();
+    if (!validarAccesoComprobante(venta, req.query.acceso)) return noDisponible();
+    res.type("html").send(crearHtmlComprobante(venta).replace(
+      "</body>",
+      '<script>document.getElementById("imprimir-comprobante").addEventListener("click", () => window.print());</script></body>',
+    ));
+  } catch {
+    res.status(500).send("No se pudo abrir el comprobante. Inténtalo nuevamente.");
+  }
+});
 router.get("/:id/comprobante", authMiddleware, requirePermission("ventas", "read"), async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Venta no válida" });
   try {

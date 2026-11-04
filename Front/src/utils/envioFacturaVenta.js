@@ -14,7 +14,7 @@ export async function preguntarEnvioFactura(venta) {
   };
   const resultado = await Swal.fire({
     title: "¿Enviar el comprobante al cliente?",
-    text: "Confirma o corrige el correo del cliente para enviarle el comprobante en PDF.",
+    text: "Confirma o corrige el correo del cliente para enviarle el enlace de su comprobante.",
     input: "email",
     inputLabel: "Correo del cliente",
     inputValue: venta.cliente?.correo || venta.asesoriaId?.cliente?.correo || "",

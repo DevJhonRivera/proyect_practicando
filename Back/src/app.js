@@ -47,7 +47,8 @@ app.use(
   morgan(
     process.env.NODE_ENV === "production"
       ? "combined"
-      : "dev"
+      : "dev",
+    { skip: (req) => /^\/api\/ventas\/[^/]+\/comprobante-cliente\/?$/i.test(req.path) },
   )
 );
 app.use(express.json({ limit: "3mb" }));

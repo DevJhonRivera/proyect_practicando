@@ -1,11 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import childProcess from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
 import Venta from "../src/modules/ventas/venta.model.js";
 import Asesoria from "../src/modules/asesores/asesoria.model.js";
 import { datosDocumento, huellaDatos, coincideHuellaDocumento } from "../src/modules/asesores/autorizaciones.utils.js";
 import { gestionarCorreoFactura } from "../src/modules/ventas/facturaCorreo.service.js";
+import { validarAccesoComprobante } from "../src/modules/ventas/comprobanteAcceso.js";
 
 const id = "507f1f77bcf86cd799439011";
 const usuario = { _id: id, rol: "VENTAS" };
@@ -24,37 +23,34 @@ test("Caja guarda el correo en venta y orden sin enviar si se elige solo guardar
   assert.equal(fetch.mock.callCount(), 0);
 });
 
-test("el comprobante adjunto usa la venta pagada del servidor y evita duplicar el mismo envío", async (t) => {
+test("el enlace del comprobante da acceso solo a la venta pagada y evita duplicar el envío", async (t) => {
   const venta = ventaBase(); venta.auditoria = [];
   const consulta = { lean: async () => venta, populate: () => consulta };
   t.mock.method(Venta, "findById", () => consulta);
   t.mock.method(Venta, "updateOne", async (_q, u) => { venta.auditoria.push(u.$push.auditoria); });
-  const render = t.mock.method(childProcess, "execFile", (_bin, argumentos, _opciones, callback) => {
-    const salida = argumentos.find((arg) => arg.startsWith("--print-to-pdf=")).slice("--print-to-pdf=".length);
-    readFile(new URL(argumentos.at(-1)), "utf8").then(async (html) => {
-      assert.match(html, /COMPROBANTE DE VENTA/);
-      assert.match(html, /V-001/);
-      assert.match(html, /ABC123/);
-      assert.match(html, /120\.000/);
-      assert.match(html, /data:image\/png;base64,/);
-      await writeFile(salida, "%PDF-1.4 prueba");
-    }).then(() => callback(null, ""), callback);
-  });
   const fetch = t.mock.method(globalThis, "fetch", async (_url, opciones) => {
     const contenido = JSON.parse(opciones.body);
     assert.deepEqual(contenido.to, [{ email: venta.cliente.correo }]);
-    const pdf = Buffer.from(contenido.attachment[0].content, "base64").toString("latin1");
-    assert.ok(pdf.startsWith("%PDF-"));
-    assert.match(contenido.htmlContent, /Tu comprobante de venta/);
+    assert.equal(contenido.attachment, undefined);
+    const enlace = new URL(contenido.htmlContent.match(/href="([^"]+)"/)[1]);
+    assert.equal(enlace.origin, "https://backend.example.com");
+    assert.equal(enlace.pathname, `/api/ventas/${id}/comprobante-cliente`);
+    const token = enlace.searchParams.get("acceso");
+    assert.ok(validarAccesoComprobante(venta, token));
+    assert.equal(validarAccesoComprobante({ ...venta, _id: usuario._id.replace(/1$/, "2") }, token), false);
+    assert.equal(validarAccesoComprobante({ ...venta, cliente: { correo: "otro@example.com" } }, token), false);
+    assert.equal(validarAccesoComprobante({ ...venta, estado: "ANULADA" }, token), false);
+    assert.equal(validarAccesoComprobante(venta, "a".repeat(64)), false);
     return { ok: true };
   });
-  const valores = { BREVO_API_KEY: process.env.BREVO_API_KEY, BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL };
-  Object.assign(process.env, { BREVO_API_KEY: "test", BREVO_SENDER_EMAIL: "prueba@example.com" });
+  const entorno = { BREVO_API_KEY: "test", BREVO_SENDER_EMAIL: "prueba@example.com",
+    BACKEND_PUBLIC_URL: "https://backend.example.com", JWT_SECRET: "clave-de-prueba" };
+  const valores = Object.fromEntries(Object.keys(entorno).map((k) => [k, process.env[k]]));
+  Object.assign(process.env, entorno);
   try {
     assert.equal((await gestionarCorreoFactura(id, { correo: venta.cliente.correo, enviar: true }, usuario)).enviado, true);
     assert.equal((await gestionarCorreoFactura(id, { correo: venta.cliente.correo, enviar: true }, usuario)).yaEnviado, true);
     assert.equal(fetch.mock.callCount(), 1);
-    assert.equal(render.mock.callCount(), 1);
     venta.estado = "PARCIAL";
     await assert.rejects(gestionarCorreoFactura(id, { correo: venta.cliente.correo, enviar: true }, usuario), /pagada/);
   } finally {
