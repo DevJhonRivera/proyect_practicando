@@ -9,7 +9,13 @@ export default function TrazabilidadServicio({ asesoria }) {
     const timer = setInterval(() => setAhora(Date.now()), 30000);
     return () => clearInterval(timer);
   }, []);
-  const filas = eventos.map((evento, indice) => {
+  const etapasServicio = eventos.filter((evento) => evento.proceso === "SERVICIO");
+  const turnosPago = etapasServicio.flatMap((evento, indice) => {
+    if (evento.estado !== "PENDIENTE_PAGO") return [];
+    const salida = etapasServicio[indice + 1];
+    return [{ entrada: evento, inicio: new Date(evento.fecha).getTime(), fin: salida ? new Date(salida.fecha).getTime() : ahora, salida }];
+  });
+  const filas = eventos.flatMap((evento, indice) => {
     const siguiente = eventos.slice(indice + 1).find((item) => item.proceso === evento.proceso);
     const cerrado = (evento.proceso === "CALIDAD" && evento.estado === "APROBADA")
       || (evento.proceso === "AVISO_VEHICULO_LISTO" && ["ENVIADO", "ERROR"].includes(evento.estado))
@@ -17,12 +23,32 @@ export default function TrazabilidadServicio({ asesoria }) {
       || (evento.proceso === "SERVICIO" && ["FINALIZADA", "CANCELADA"].includes(evento.estado))
       || (evento.proceso.startsWith("INSTALACION:") && evento.estado === "COMPLETADA")
       || (evento.proceso === "PAGO" && ["PAGADO", "NO_APLICA"].includes(evento.estado))
-      || (evento.proceso === "PROPUESTA_CORTE" && evento.estado === "MATERIAL_LISTO")
+      || (evento.proceso === "PROPUESTA_CORTE" && ["MATERIAL_LISTO", "RECHAZADA"].includes(evento.estado))
       || (evento.proceso.startsWith("FIRMA:") && ["FIRMADO", "INVALIDADO", "RECHAZADO", "CORRECCION_SOLICITADA"].includes(evento.estado))
       || (evento.proceso.startsWith("CORREO:") && ["ENVIADO", "ERROR"].includes(evento.estado));
-    const fin = siguiente ? new Date(siguiente.fecha).getTime() : cerrado ? new Date(evento.fecha).getTime() : ahora;
-    return { ...evento, minutos: Math.max(0, Math.floor((fin - new Date(evento.fecha).getTime()) / 60000)), activo: !siguiente && !cerrado };
-  });
+    const inicio = new Date(evento.fecha).getTime();
+    const cierreInmediato = cerrado && ["PAGO", "PROPUESTA_CORTE"].includes(evento.proceso);
+    const fin = siguiente && !cierreInmediato
+      ? new Date(siguiente.fecha).getTime() : cerrado ? inicio : ahora;
+    const fila = (desde, hasta, activo) => ({
+      ...evento, fecha: new Date(desde), minutos: Math.max(0, Math.floor((hasta - desde) / 60000)), activo,
+    });
+    if (evento.proceso === "PROPUESTA_CORTE" && evento.estado === "PENDIENTE") return [];
+    if (evento.proceso === "PAGO" && !cerrado) {
+      // Older records can contain a pending payment from order creation.
+      return turnosPago.flatMap((turno) => {
+        const desde = Math.max(inicio, turno.inicio);
+        const hasta = Math.min(fin, turno.fin);
+        const activo = !siguiente && !turno.salida;
+        if (desde > hasta || (desde === hasta && !activo)) return [];
+        return [{
+          ...fila(desde, hasta, activo),
+          usuarioNombre: desde > inicio ? turno.entrada.usuarioNombre : evento.usuarioNombre,
+        }];
+      });
+    }
+    return [fila(inicio, fin, !siguiente && !cerrado)];
+  }).sort((a, b) => a.fecha - b.fecha);
   const etapas = filas.filter((item) => item.proceso === "SERVICIO");
   const mayor = etapas.reduce((max, item) => !max || item.minutos > max.minutos ? item : max, null);
   return <section className="mt-5 rounded-xl border border-slate-200 p-4">

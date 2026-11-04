@@ -9,6 +9,7 @@ import { etiquetaDetalle } from "../../../utils/materiales";
 import {
   formatearNumeroEntrada,
   formatoCop,
+  formatoNumero,
   numeroEntrada,
 } from "../finanzas.helpers";
 
@@ -97,6 +98,10 @@ function CosteoPedidoForm({
             ]}
           />
 
+          <p className="text-xs text-slate-600 md:col-span-2 xl:col-span-4">
+            Usa COP si los valores del pedido están en pesos colombianos. Si eliges USD, ingresa los valores en dólares y el sistema los convertirá a pesos con la TRM.
+          </p>
+
           <Input
             label="TRM productos"
             value={form.trm}
@@ -123,7 +128,7 @@ function CosteoPedidoForm({
           )}
 
           <Input
-            label="Flete"
+            label={`Flete (${form.moneda})`}
             value={form.flete}
             hint={
               form.moneda === "USD"
@@ -142,7 +147,7 @@ function CosteoPedidoForm({
           />
 
           <Input
-            label="Otros costos"
+            label={`Otros costos (${form.moneda})`}
             value={form.otrosCostos}
             hint={
               form.moneda === "USD"
@@ -279,6 +284,10 @@ function DetalleValores({
   loadingCosteo,
   onChangeDetalle,
 }) {
+  const subtotalRollos = detalles.reduce(
+    (total, detalle) => total + numeroEntrada(detalle.valorUnitario) * Number(detalle.cantidadRollos || 0),
+    0
+  );
   const excelColumns = [
     {
       header: "Material",
@@ -298,7 +307,7 @@ function DetalleValores({
       value: (detalle) => Number(detalle.cantidadRollos || 0),
     },
     {
-      header: "Valor unitario",
+      header: `Valor unitario (${moneda})`,
       value: (detalle) => numeroEntrada(detalle.valorUnitario),
     },
   ];
@@ -348,7 +357,7 @@ function DetalleValores({
                 <th className="p-4 text-left">Clasificacion</th>
                 <th className="p-4 text-left">Ancho</th>
                 <th className="p-4 text-left">Rollos</th>
-                <th className="p-4 text-left">Valor unitario</th>
+                <th className="p-4 text-left">Valor unitario ({moneda})</th>
               </tr>
             </thead>
             <tbody>
@@ -373,6 +382,7 @@ function DetalleValores({
                     <input
                       type="text"
                       inputMode="decimal"
+                      aria-label={`Valor por rollo de ${detalle.tipoPolarizado} en ${moneda}`}
                       value={detalle.valorUnitario}
                       onChange={(event) =>
                         onChangeDetalle(
@@ -386,7 +396,7 @@ function DetalleValores({
                     />
                     {moneda === "USD" && (
                       <p className="mt-1 text-xs text-slate-400">
-                        En pesos:{" "}
+                        Equivalente en COP:{" "}
                         {formatoCop.format(
                           numeroEntrada(
                             detalle.valorUnitario
@@ -398,6 +408,19 @@ function DetalleValores({
                 </tr>
               ))}
             </tbody>
+            <tfoot className="border-t bg-blue-50 text-slate-800">
+              <tr>
+                <th scope="row" colSpan={4} className="p-4 text-left">
+                  Subtotal de rollos
+                  <span className="block text-xs font-normal text-slate-600">Antes de flete, IVA y otros costos</span>
+                </th>
+                <td className="p-4 font-bold text-blue-900">
+                  <output aria-label="Subtotal de rollos" className="whitespace-nowrap">
+                    {formatoNumero.format(subtotalRollos)} {moneda}
+                  </output>
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
