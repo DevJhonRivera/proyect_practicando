@@ -182,6 +182,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   const [cargandoOrigenes, setCargandoOrigenes] = useState(false);
   const [catalogoAccesorios, setCatalogoAccesorios] = useState([]);
   const [catalogoServicios, setCatalogoServicios] = useState([]);
+  const [errorCatalogoServicios, setErrorCatalogoServicios] = useState(false);
   const ppfAgrupado = useMemo(() => agruparPpfPorMaterial(form.ppf), [form.ppf]);
   const valorServicios = useMemo(
     () => [...form.polarizados, ...ppfAgrupado, ...form.serviciosAdicionales]
@@ -204,7 +205,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   useEffect(() => {
     getServiciosAdicionales()
       .then((response) => setCatalogoServicios(response.data?.data || []))
-      .catch(() => setCatalogoServicios([]));
+      .catch(() => setErrorCatalogoServicios(true));
   }, []);
 
   useEffect(() => {
@@ -856,10 +857,12 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           ))}
 
           <ServiceHeader
-            title="Otros trabajos"
+            title="Servicios del catálogo"
             button="Agregar servicio"
             onAdd={() => agregarItem("serviciosAdicionales", { tipo: "", detalle: "", valor: "", catalogoId: "" })}
           />
+          <p className="text-sm text-slate-600">Detailing, instalaciones, aseguradas y vinilo del catálogo compartido con mano de obra. El valor ingresado corresponde al precio de venta al cliente.</p>
+          {errorCatalogoServicios && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">No se pudo cargar el catálogo de servicios. Cierra y vuelve a abrir el formulario para consultar las opciones.</p>}
           {form.serviciosAdicionales.map((item, index) => (
             <ServiceRow key={`adicional-${index}`} onRemove={() => quitarItem("serviciosAdicionales", index)}>
               <div className="md:col-span-3"><Field label="Servicio del catálogo">
@@ -872,7 +875,13 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
                   className="w-full rounded-xl border bg-white p-3"
                 >
                   <option value="">Seleccione el trabajo...</option>
-                  {catalogoServicios.map((opcion) => <option key={opcion._id} value={opcion._id}>{opcion.categoria} · {opcion.nombre}{opcion.precioSugerido ? ` · $${Number(opcion.precioSugerido).toLocaleString("es-CO")}` : ""}</option>)}
+                  {[...new Set(catalogoServicios.map((opcion) => opcion.categoria))].map((categoria) => (
+                    <optgroup key={categoria} label={categoria}>
+                      {catalogoServicios.filter((opcion) => opcion.categoria === categoria).map((opcion) => (
+                        <option key={opcion._id} value={opcion._id}>{opcion.nombre}{opcion.precioSugerido ? ` · ${Number(opcion.precioSugerido).toLocaleString("es-CO")}` : ""}</option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
               </Field></div>
               {!form.garantia.esGarantia && <div className="md:col-span-3"><Field label="Precio del servicio"><input value={formatearMiles(item.valor)} inputMode="numeric" placeholder="Ej: 80.000" onChange={(e) => editarItem("serviciosAdicionales", index, "valor", soloDigitos(e.target.value))} className="w-full rounded-xl border p-3" /></Field></div>}

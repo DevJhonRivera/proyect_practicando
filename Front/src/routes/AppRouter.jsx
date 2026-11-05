@@ -25,6 +25,7 @@ const VentasPage = lazy(() => import("../pages/ventas/VentasPage"));
 const AuditoriaPage = lazy(() => import("../pages/auditoria/AuditoriaPage"));
 const HistorialServiciosPage = lazy(() => import("../pages/historialServicios/HistorialServiciosPage"));
 const TarifasManoObraPage = lazy(() => import("../pages/coordinacion/TarifasManoObraPage"));
+const PreciosVentaPage = lazy(() => import("../pages/preciosVenta/PreciosVentaPage"));
 const UsuariosPage = lazy(() => import("../pages/usuarios/UsuariosPage"));
 const AsesoresPage = lazy(() => import("../pages/asesores/AsesoresPage"));
 const CoordinacionPage = lazy(() => import("../pages/coordinacion/CoordinacionPage"));
@@ -273,6 +274,9 @@ function AppRouter() {
             path="/porcentajes-mano-obra"
             element={<RutaAdministracion><TarifasManoObraPage /></RutaAdministracion>}
           />
+          <Route path="/precios-venta" element={["ADMIN", "SUPERUSUARIO"].includes(obtenerUsuarioActual()?.rol)
+            ? <RutaAdministracion><PreciosVentaPage /></RutaAdministracion>
+            : <RutaPermitida modulo="asesores"><PreciosVentaPage /></RutaPermitida>} />
 
         </Route>
 

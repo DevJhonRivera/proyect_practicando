@@ -272,7 +272,7 @@ function PedidoDetalleForm({
               ))}
 
               <option value={OPCION_OTRA}>
-                + Otra opcion...
+                {unidadMedida === UNIDAD_MICRAS ? "+ Agregar otro micraje..." : "+ Otra opcion..."}
               </option>
             </select>
           )}

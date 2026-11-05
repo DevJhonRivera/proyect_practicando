@@ -1,0 +1,5795 @@
+[
+  {
+    "codigo": "EXCEL2026-1-11",
+    "hoja": "POLARIZADOS",
+    "grupo": "NANO CARBON",
+    "descripcion": "AUTMOVÍL / CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      429900,
+      412700,
+      399800,
+      387000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "429900",
+      "412700",
+      "399800",
+      "387000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-18",
+    "hoja": "POLARIZADOS",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "AUTOMOVIL ESTÁNDAR",
+    "modalidad": "FIJO",
+    "precios": [
+      null,
+      508000,
+      492000,
+      477000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "529.900 + 30.000",
+      "508000",
+      "492000",
+      "477000"
+    ],
+    "filaExcel": 18,
+    "activo": true,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-19",
+    "hoja": "POLARIZADOS",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "AUTOMOVIL GRANDE / SUV MINI",
+    "modalidad": "FIJO",
+    "precios": [
+      null,
+      576000,
+      558000,
+      540000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "599.900 + 30.000",
+      "576000",
+      "558000",
+      "540000"
+    ],
+    "filaExcel": 19,
+    "activo": true,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-20",
+    "hoja": "POLARIZADOS",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "SUV MEDIANA/ PLATÓN",
+    "modalidad": "FIJO",
+    "precios": [
+      null,
+      643000,
+      623000,
+      603000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "669.900 + 30.000",
+      "643000",
+      "623000",
+      "603000"
+    ],
+    "filaExcel": 20,
+    "activo": true,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-21",
+    "hoja": "POLARIZADOS",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "CAMIONETA / SUV GRANDE",
+    "modalidad": "FIJO",
+    "precios": [
+      null,
+      700000,
+      679000,
+      657000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "729.900 + 30.000",
+      "700000",
+      "679000",
+      "657000"
+    ],
+    "filaExcel": 21,
+    "activo": true,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-26",
+    "hoja": "POLARIZADOS",
+    "grupo": "BLACK CERAMIC / PRO HD BLINDADOS",
+    "descripcion": "AUTOMOVIL ESTÁNDAR",
+    "modalidad": "FIJO",
+    "precios": [
+      null,
+      700700,
+      679000,
+      657000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "729.900 + 30.000",
+      "700700",
+      "679000",
+      "657000"
+    ],
+    "filaExcel": 26,
+    "activo": true,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-27",
+    "hoja": "POLARIZADOS",
+    "grupo": "BLACK CERAMIC / PRO HD BLINDADOS",
+    "descripcion": "AUTOMOVIL GRANDE / SUV MINI",
+    "modalidad": "FIJO",
+    "precios": [
+      null,
+      768000,
+      744000,
+      720000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "799.900 + 30.000",
+      "768000",
+      "744000",
+      "720000"
+    ],
+    "filaExcel": 27,
+    "activo": true,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-28",
+    "hoja": "POLARIZADOS",
+    "grupo": "BLACK CERAMIC / PRO HD BLINDADOS",
+    "descripcion": "SUV MEDIANA / PLATÓN",
+    "modalidad": "FIJO",
+    "precios": [
+      null,
+      835000,
+      809000,
+      783000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "869.900 + 30.000",
+      "835000",
+      "809000",
+      "783000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-29",
+    "hoja": "POLARIZADOS",
+    "grupo": "BLACK CERAMIC / PRO HD BLINDADOS",
+    "descripcion": "CAMIONETA / SUV GRANDE",
+    "modalidad": "FIJO",
+    "precios": [
+      null,
+      912000,
+      884000,
+      855000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "949.900 + 30.000",
+      "912000",
+      "884000",
+      "855000"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-34",
+    "hoja": "POLARIZADOS",
+    "grupo": "CERAMIC I3  / ULTRA OPTIK BLINDADOS",
+    "descripcion": "AUTOMOVIL / SUV MINI",
+    "modalidad": "FIJO",
+    "precios": [
+      1599900,
+      1535000,
+      1488000,
+      1440000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1599900",
+      "1535000",
+      "1488000",
+      "1440000"
+    ],
+    "filaExcel": 34,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-1-35",
+    "hoja": "POLARIZADOS",
+    "grupo": "CERAMIC I3  / ULTRA OPTIK BLINDADOS",
+    "descripcion": "CAMIONETA / SUV GRANDE / PLATÓN",
+    "modalidad": "FIJO",
+    "precios": [
+      1899900,
+      1835000,
+      1788000,
+      1740000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1899900",
+      "1835000",
+      "1788000",
+      "1740000"
+    ],
+    "filaExcel": 35,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-11",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "AMERICANO",
+    "descripcion": "AUTOMOVIL ESTÁNDAR",
+    "modalidad": "FIJO",
+    "precios": [
+      299900,
+      270000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "299900",
+      "270000"
+    ],
+    "filaExcel": 11,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-12",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "AMERICANO",
+    "descripcion": "AUTOMOVIL GRANDE",
+    "modalidad": "FIJO",
+    "precios": [
+      299900,
+      270000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "299900",
+      "270000"
+    ],
+    "filaExcel": 12,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-13",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "AMERICANO",
+    "descripcion": "SUV PEQUEÑA",
+    "modalidad": "FIJO",
+    "precios": [
+      349900,
+      315000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "349900",
+      "315000"
+    ],
+    "filaExcel": 13,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-14",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "AMERICANO",
+    "descripcion": "SUV GRANDE / PLATÓN",
+    "modalidad": "FIJO",
+    "precios": [
+      349900,
+      315000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "349900",
+      "315000"
+    ],
+    "filaExcel": 14,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-15",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "AMERICANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      399900,
+      360000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "399900",
+      "360000"
+    ],
+    "filaExcel": 15,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-21",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "AUTOMOVIL ESTÁNDAR",
+    "modalidad": "FIJO",
+    "precios": [
+      469900,
+      440000,
+      430000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "469900",
+      "440000",
+      "430000"
+    ],
+    "filaExcel": 21,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-22",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "AUTOMOVIL GRANDE",
+    "modalidad": "FIJO",
+    "precios": [
+      549900,
+      520000,
+      500000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "549900",
+      "520000",
+      "500000"
+    ],
+    "filaExcel": 22,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-23",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "SUV PEQUEÑA",
+    "modalidad": "FIJO",
+    "precios": [
+      599900,
+      570000,
+      550000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "599900",
+      "570000",
+      "550000"
+    ],
+    "filaExcel": 23,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-24",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "SUV GRANDE / PLATÓN",
+    "modalidad": "FIJO",
+    "precios": [
+      649900,
+      620000,
+      600000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "649900",
+      "620000",
+      "600000"
+    ],
+    "filaExcel": 24,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-25",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "NANOCERÁMICA",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      699900,
+      660000,
+      640000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "699900",
+      "660000",
+      "640000"
+    ],
+    "filaExcel": 25,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-31",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "PROHD",
+    "descripcion": "AUTOMOVIL ESTÁNDAR",
+    "modalidad": "FIJO",
+    "precios": [
+      669900,
+      640000,
+      630000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "669900",
+      "640000",
+      "630000"
+    ],
+    "filaExcel": 31,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-32",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "PROHD",
+    "descripcion": "AUTOMOVIL GRANDE",
+    "modalidad": "FIJO",
+    "precios": [
+      729900,
+      690000,
+      680000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "729900",
+      "690000",
+      "680000"
+    ],
+    "filaExcel": 32,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-33",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "PROHD",
+    "descripcion": "SUV PEQUEÑA",
+    "modalidad": "FIJO",
+    "precios": [
+      799900,
+      760000,
+      740000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "799900",
+      "760000",
+      "740000"
+    ],
+    "filaExcel": 33,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-34",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "PROHD",
+    "descripcion": "SUV GRANDE / PLATÓN",
+    "modalidad": "FIJO",
+    "precios": [
+      849000,
+      810000,
+      790000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "849000",
+      "810000",
+      "790000"
+    ],
+    "filaExcel": 34,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-2-35",
+    "hoja": "POLARIZADOS (2)",
+    "grupo": "PROHD",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      899000,
+      860000,
+      840000
+    ],
+    "condiciones": [
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)",
+      "PRECIO BASE + 30.000 RM (SI APLICA)"
+    ],
+    "notas": "VEHICULO · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA) · PRECIO BASE + 30.000 RM (SI APLICA)",
+    "originales": [
+      "899000",
+      "860000",
+      "840000"
+    ],
+    "filaExcel": 35,
+    "activo": false,
+    "requiereRevision": true,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-10",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "CERAMIC I3 +",
+    "descripcion": "AUTOMOVÍL / SUV MINI",
+    "modalidad": "FIJO",
+    "precios": [
+      2299900,
+      2220000,
+      2150000,
+      2070000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "2299900",
+      "2220000",
+      "2150000",
+      "2070000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-11",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "CERAMIC I3 +",
+    "descripcion": "CAMIONETA / SUV GRANDE / PLATÓN",
+    "modalidad": "FIJO",
+    "precios": [
+      2499900,
+      2420000,
+      2350000,
+      2270000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "2499900",
+      "2420000",
+      "2350000",
+      "2270000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-17",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "PANORAMICO",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      40,
+      38,
+      36,
+      34
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.4",
+      "0.38",
+      "0.36",
+      "0.34"
+    ],
+    "filaExcel": 17,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-18",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "LUNETA",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      29,
+      27,
+      25,
+      23
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.29",
+      "0.27",
+      "0.25",
+      "0.23"
+    ],
+    "filaExcel": 18,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-19",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "LATERALES CON/SIN CUSTODIA",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      48,
+      46,
+      44,
+      42
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.48",
+      "0.46",
+      "0.44",
+      "0.42"
+    ],
+    "filaExcel": 19,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-20",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "VENTANA DELANTERA UNIDAD",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      16,
+      15,
+      14,
+      13
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.16",
+      "0.15",
+      "0.14",
+      "0.13"
+    ],
+    "filaExcel": 20,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-21",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "VENTANA TRASERA UNIDAD",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      13,
+      12,
+      11,
+      10
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.13",
+      "0.12",
+      "0.11",
+      "0.1"
+    ],
+    "filaExcel": 21,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-22",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "CUSTODIA UNIDAD",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      6,
+      5,
+      4,
+      null
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.06",
+      "0.05",
+      "0.04",
+      "NA"
+    ],
+    "filaExcel": 22,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-23",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "PARABRISAS Y 2 VENTANAS DEL",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      65,
+      63,
+      61,
+      59
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.65",
+      "0.63",
+      "0.61",
+      "0.59"
+    ],
+    "filaExcel": 23,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-24",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "PARABRISAS Y LUNETA",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      63,
+      61,
+      59,
+      57
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.63",
+      "0.61",
+      "0.59",
+      "0.57"
+    ],
+    "filaExcel": 24,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-25",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADOS POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO CON RETIRADA DE MATERIAL POR EL % DESCRITO)",
+    "descripcion": "LA U",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      66,
+      64,
+      62,
+      60
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "0.66",
+      "0.64",
+      "0.62",
+      "0.6"
+    ],
+    "filaExcel": 25,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-31",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · TAMAÑO",
+    "descripcion": "SENCILLO",
+    "modalidad": "FIJO",
+    "precios": [
+      90000,
+      85000,
+      80000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "90000",
+      "85000",
+      "80000"
+    ],
+    "filaExcel": 31,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-32",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · TAMAÑO",
+    "descripcion": "DOBLE",
+    "modalidad": "FIJO",
+    "precios": [
+      150000,
+      140000,
+      130000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "150000",
+      "140000",
+      "130000"
+    ],
+    "filaExcel": 32,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-33",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · TAMAÑO",
+    "descripcion": "PANORÁMICO",
+    "modalidad": "FIJO",
+    "precios": [
+      220000,
+      205000,
+      190000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "220000",
+      "205000",
+      "190000"
+    ],
+    "filaExcel": 33,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-35",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · NANO",
+    "descripcion": "SENCILLO",
+    "modalidad": "FIJO",
+    "precios": [
+      140000,
+      130000,
+      120000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "140000",
+      "130000",
+      "120000"
+    ],
+    "filaExcel": 35,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-36",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · NANO",
+    "descripcion": "DOBLE",
+    "modalidad": "FIJO",
+    "precios": [
+      280000,
+      260000,
+      240000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "280000",
+      "260000",
+      "240000"
+    ],
+    "filaExcel": 36,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-37",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · NANO",
+    "descripcion": "PANORÁMICO",
+    "modalidad": "FIJO",
+    "precios": [
+      350000,
+      335000,
+      320000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "350000",
+      "335000",
+      "320000"
+    ],
+    "filaExcel": 37,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-39",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · ESPEJO PREMIUM 10%",
+    "descripcion": "SENCILLO",
+    "modalidad": "FIJO",
+    "precios": [
+      180000,
+      170000,
+      160000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "180000",
+      "170000",
+      "160000"
+    ],
+    "filaExcel": 39,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-40",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · ESPEJO PREMIUM 10%",
+    "descripcion": "DOBLE",
+    "modalidad": "FIJO",
+    "precios": [
+      350000,
+      340000,
+      330000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "350000",
+      "340000",
+      "330000"
+    ],
+    "filaExcel": 40,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-41",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "POLARIZADO SUNROOF · ESPEJO PREMIUM 10%",
+    "descripcion": "PANORÁMICO",
+    "modalidad": "FIJO",
+    "precios": [
+      450000,
+      440000,
+      430000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO / ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "450000",
+      "440000",
+      "430000"
+    ],
+    "filaExcel": 41,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-46",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "ADICIONAL DE PELICULA 120 MICRAS",
+    "descripcion": "AUTOMOVÍL / SUV MINI",
+    "modalidad": "FIJO",
+    "precios": [
+      350000,
+      330000,
+      315000,
+      300000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "350000",
+      "330000",
+      "315000",
+      "300000"
+    ],
+    "filaExcel": 46,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-3-47",
+    "hoja": "POLARIZADOS 2",
+    "grupo": "ADICIONAL DE PELICULA 120 MICRAS",
+    "descripcion": "CAMIONETA / SUV GRANDE / PLATÓN",
+    "modalidad": "FIJO",
+    "precios": [
+      400000,
+      380000,
+      365000,
+      350000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "400000",
+      "380000",
+      "365000",
+      "350000"
+    ],
+    "filaExcel": 47,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-10",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 1 (120 MICRAS) + NANO",
+    "descripcion": "AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      879900,
+      850000,
+      825000,
+      800000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "879900",
+      "850000",
+      "825000",
+      "800000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-11",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 1 (120 MICRAS) + NANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      999900,
+      970000,
+      930000,
+      900000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "999900",
+      "970000",
+      "930000",
+      "900000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-16",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 2 (300 MICRAS)  + NANO",
+    "descripcion": "AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      1299900,
+      1250000,
+      1220000,
+      1180000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1299900",
+      "1250000",
+      "1220000",
+      "1180000"
+    ],
+    "filaExcel": 16,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-17",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 2 (300 MICRAS)  + NANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      1499900,
+      1450000,
+      1420000,
+      1380000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1499900",
+      "1450000",
+      "1420000",
+      "1380000"
+    ],
+    "filaExcel": 17,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-22",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 3 (500 MICRAS) + NANO",
+    "descripcion": "AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      1999900,
+      1940000,
+      1890000,
+      1800000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1999900",
+      "1940000",
+      "1890000",
+      "1800000"
+    ],
+    "filaExcel": 22,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-23",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 3 (500 MICRAS) + NANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      2299900,
+      2240000,
+      2190000,
+      2100000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "2299900",
+      "2240000",
+      "2190000",
+      "2100000"
+    ],
+    "filaExcel": 23,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-28",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 4 (700 MICRAS) + NANO",
+    "descripcion": "AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      2899900,
+      2850000,
+      2800000,
+      2740000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "2899900",
+      "2850000",
+      "2800000",
+      "2740000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-29",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 4 (700 MICRAS) + NANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      3199900,
+      3150000,
+      3100000,
+      3040000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "3199900",
+      "3150000",
+      "3100000",
+      "3040000"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-34",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 5 (1.500 MICRAS) + NANO",
+    "descripcion": "AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      5999900,
+      5900000,
+      5800000,
+      5700000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "5999900",
+      "5900000",
+      "5800000",
+      "5700000"
+    ],
+    "filaExcel": 34,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-4-35",
+    "hoja": "ANTIATRACO",
+    "grupo": "NIVEL 5 (1.500 MICRAS) + NANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      6499900,
+      6400000,
+      6300000,
+      6200000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "6499900",
+      "6400000",
+      "6300000",
+      "6200000"
+    ],
+    "filaExcel": 35,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-10",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "NIVEL 6 (1.800 MICRAS) + NANO",
+    "descripcion": "AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      6799900,
+      6700000,
+      6600000,
+      6500000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "6799900",
+      "6700000",
+      "6600000",
+      "6500000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-11",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "NIVEL 6 (1.800 MICRAS) + NANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      7299900,
+      7200000,
+      7100000,
+      7000000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "7299900",
+      "7200000",
+      "7100000",
+      "7000000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-16",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "NIVEL 7 (2.200 MICRAS) + NANO",
+    "descripcion": "AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      7799900,
+      7700000,
+      7600000,
+      7500000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "7799900",
+      "7700000",
+      "7600000",
+      "7500000"
+    ],
+    "filaExcel": 16,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-17",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "NIVEL 7 (2.200 MICRAS) + NANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      8299900,
+      8200000,
+      8100000,
+      8000000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "8299900",
+      "8200000",
+      "8100000",
+      "8000000"
+    ],
+    "filaExcel": 17,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-22",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "NIVEL 8 (3.000 MICRAS) + NANO",
+    "descripcion": "AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      9999900,
+      9800000,
+      9650000,
+      9500000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "9999900",
+      "9800000",
+      "9650000",
+      "9500000"
+    ],
+    "filaExcel": 22,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-23",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "NIVEL 8 (3.000 MICRAS) + NANO",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      10499900,
+      10300000,
+      10150000,
+      10000000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "10499900",
+      "10300000",
+      "10150000",
+      "10000000"
+    ],
+    "filaExcel": 23,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-28",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "ANTIATRACO POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO POR EL % DESCRITO)",
+    "descripcion": "VENTANA DELANTERA",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      36,
+      34,
+      32,
+      30
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA",
+    "originales": [
+      "0.36",
+      "0.34",
+      "0.32",
+      "0.3"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-29",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "ANTIATRACO POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO POR EL % DESCRITO)",
+    "descripcion": "VENTANA TRASERA",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      26,
+      24,
+      22,
+      20
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA",
+    "originales": [
+      "0.26",
+      "0.24",
+      "0.22",
+      "0.2"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-30",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "ANTIATRACO POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO POR EL % DESCRITO)",
+    "descripcion": "CUSTODIA GRANDE",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      10,
+      9,
+      8,
+      null
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA",
+    "originales": [
+      "0.1",
+      "0.09",
+      "0.08",
+      "NA"
+    ],
+    "filaExcel": 30,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-31",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "ANTIATRACO POR PIEZA EN % (MULTIPLIQUE EL VALOR FULL SEGÚN EL TIPO DE VEHÍCULO POR EL % DESCRITO)",
+    "descripcion": "CUSTODIA PEQUEÑA",
+    "modalidad": "PORCENTAJE",
+    "precios": [
+      7,
+      6,
+      5,
+      null
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA · SE ENTREGA CON NANO CADA VENTANA",
+    "originales": [
+      "0.07",
+      "0.06",
+      "0.05",
+      "NA"
+    ],
+    "filaExcel": 31,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-37",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "KEVLAR  REFUERZO 4 PUERTAS Y CONTRACHAPA",
+    "descripcion": "AUTOMOVÍL",
+    "modalidad": "FIJO",
+    "precios": [
+      6999900,
+      6800000,
+      6700000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "6999900",
+      "6800000",
+      "6700000"
+    ],
+    "filaExcel": 37,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-38",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "KEVLAR  REFUERZO 4 PUERTAS Y CONTRACHAPA",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      7500000,
+      7300000,
+      7200000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "7500000",
+      "7300000",
+      "7200000"
+    ],
+    "filaExcel": 38,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-42",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS",
+    "descripcion": "BLACK CERAMIC",
+    "modalidad": "FIJO",
+    "precios": [
+      150000,
+      350000
+    ],
+    "condiciones": [
+      "PANORÁMICO",
+      "COMPLETO"
+    ],
+    "notas": "SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SE PERMITE DCTO DEL 5% PAGO EN EFECTIVO O TRANSFERENCIA",
+    "originales": [
+      "150000",
+      "350000"
+    ],
+    "filaExcel": 42,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-43",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS",
+    "descripcion": "I3",
+    "modalidad": "FIJO",
+    "precios": [
+      350000,
+      1000000
+    ],
+    "condiciones": [
+      "PANORÁMICO",
+      "COMPLETO"
+    ],
+    "notas": "SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SE PERMITE DCTO DEL 5% PAGO EN EFECTIVO O TRANSFERENCIA",
+    "originales": [
+      "350000",
+      "1000000"
+    ],
+    "filaExcel": 43,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-5-44",
+    "hoja": "ANTIATRACO  (2)",
+    "grupo": "SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS",
+    "descripcion": "I3 +",
+    "modalidad": "FIJO",
+    "precios": [
+      450000,
+      1500000
+    ],
+    "condiciones": [
+      "PANORÁMICO",
+      "COMPLETO"
+    ],
+    "notas": "SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SUBIDA DE NIVEL POLARIZADO ANTIATRACO A PARTIR DE 300 MICRAS · SE PERMITE DCTO DEL 5% PAGO EN EFECTIVO O TRANSFERENCIA",
+    "originales": [
+      "450000",
+      "1500000"
+    ],
+    "filaExcel": 44,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-9",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "PELÍCULA EN PARABRISAS Y LUNETA",
+    "descripcion": "120 MICRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      550000,
+      520000,
+      500000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "PARA 200 MICRAS CONSULTAR VIABILIDAD · PARA 200 MICRAS CONSULTAR VIABILIDAD · PARA 200 MICRAS CONSULTAR VIABILIDAD · PARA 200 MICRAS CONSULTAR VIABILIDAD",
+    "originales": [
+      "550000",
+      "520000",
+      "500000"
+    ],
+    "filaExcel": 9,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-10",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "PELÍCULA EN PARABRISAS Y LUNETA",
+    "descripcion": "200 MICRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      750000,
+      720000,
+      700000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "PARA 200 MICRAS CONSULTAR VIABILIDAD · PARA 200 MICRAS CONSULTAR VIABILIDAD · PARA 200 MICRAS CONSULTAR VIABILIDAD · PARA 200 MICRAS CONSULTAR VIABILIDAD",
+    "originales": [
+      "750000",
+      "720000",
+      "700000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-16",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "ANTIATRACO SUNROOF SENCILLO",
+    "descripcion": "120 MICRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      170000,
+      160000,
+      150000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "170000",
+      "160000",
+      "150000"
+    ],
+    "filaExcel": 16,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-17",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "ANTIATRACO SUNROOF SENCILLO",
+    "descripcion": "200 MICRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      250000,
+      240000,
+      230000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "250000",
+      "240000",
+      "230000"
+    ],
+    "filaExcel": 17,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-22",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "ANTIATRACO SUNROOF DOBLE",
+    "descripcion": "120 MICRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      340000,
+      320000,
+      300000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "340000",
+      "320000",
+      "300000"
+    ],
+    "filaExcel": 22,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-23",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "ANTIATRACO SUNROOF DOBLE",
+    "descripcion": "200 MICRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      500000,
+      480000,
+      460000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "500000",
+      "480000",
+      "460000"
+    ],
+    "filaExcel": 23,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-28",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "ANTIATRACO SUN ROOF PANORÁMICO",
+    "descripcion": "120 MICRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      500000,
+      480000,
+      460000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "500000",
+      "480000",
+      "460000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-29",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "ANTIATRACO SUN ROOF PANORÁMICO",
+    "descripcion": "200 MICRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      700000,
+      680000,
+      660000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "700000",
+      "680000",
+      "660000"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-34",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "CLEARPLEX",
+    "descripcion": "PANORAMICO",
+    "modalidad": "FIJO",
+    "precios": [
+      1700000,
+      1650000,
+      1600000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "1700000",
+      "1650000",
+      "1600000"
+    ],
+    "filaExcel": 34,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-35",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "CLEARPLEX",
+    "descripcion": "LUNETA",
+    "modalidad": "FIJO",
+    "precios": [
+      990000,
+      950000,
+      900000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "990000",
+      "950000",
+      "900000"
+    ],
+    "filaExcel": 35,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-36",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "CLEARPLEX",
+    "descripcion": "PANORAMICO + LUNETA",
+    "modalidad": "FIJO",
+    "precios": [
+      2500000,
+      2450000,
+      2400000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "2500000",
+      "2450000",
+      "2400000"
+    ],
+    "filaExcel": 36,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-37",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "CLEARPLEX",
+    "descripcion": "CUSTODIA GRANDE",
+    "modalidad": "FIJO",
+    "precios": [
+      250000,
+      230000,
+      200000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "250000",
+      "230000",
+      "200000"
+    ],
+    "filaExcel": 37,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-6-38",
+    "hoja": "ANTIATRACO Y CP",
+    "grupo": "CLEARPLEX",
+    "descripcion": "CUSTODIA ESTÁNDAR",
+    "modalidad": "FIJO",
+    "precios": [
+      170000,
+      160000,
+      150000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "170000",
+      "160000",
+      "150000"
+    ],
+    "filaExcel": 38,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-9",
+    "hoja": "ACCESORIOS",
+    "grupo": "SEGUROS LLANTAS",
+    "descripcion": "LLANTA PLATO DEFENDER",
+    "modalidad": "FIJO",
+    "precios": [
+      680000,
+      660000,
+      650000,
+      635000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000",
+    "originales": [
+      "680000",
+      "660000",
+      "650000",
+      "635000"
+    ],
+    "filaExcel": 9,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-10",
+    "hoja": "ACCESORIOS",
+    "grupo": "SEGUROS LLANTAS",
+    "descripcion": "CADENA SEGURIDAD 9/10 AMARILLA",
+    "modalidad": "FIJO",
+    "precios": [
+      595000,
+      585000,
+      575000,
+      560000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000",
+    "originales": [
+      "595000",
+      "585000",
+      "575000",
+      "560000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-11",
+    "hoja": "ACCESORIOS",
+    "grupo": "SEGUROS LLANTAS",
+    "descripcion": "CADENA SEGURIDAD 7/10 NEGRA",
+    "modalidad": "FIJO",
+    "precios": [
+      380000,
+      370000,
+      360000,
+      345000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000",
+    "originales": [
+      "380000",
+      "370000",
+      "360000",
+      "345000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-12",
+    "hoja": "ACCESORIOS",
+    "grupo": "SEGUROS LLANTAS",
+    "descripcion": "SEGURO TAPA RIN DEFENDER",
+    "modalidad": "FIJO",
+    "precios": [
+      140000,
+      130000,
+      120000,
+      null
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000",
+    "originales": [
+      "140000",
+      "130000",
+      "120000",
+      "NA"
+    ],
+    "filaExcel": 12,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-13",
+    "hoja": "ACCESORIOS",
+    "grupo": "SEGUROS LLANTAS",
+    "descripcion": "PERNOS DE SEGURIDAD FARAD PREMIUM",
+    "modalidad": "FIJO",
+    "precios": [
+      320000,
+      305000,
+      290000,
+      275000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000",
+    "originales": [
+      "320000",
+      "305000",
+      "290000",
+      "275000"
+    ],
+    "filaExcel": 13,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-14",
+    "hoja": "ACCESORIOS",
+    "grupo": "SEGUROS LLANTAS",
+    "descripcion": "PERNOS DE SEGURIDAD FARAD ESTÁNDAR",
+    "modalidad": "FIJO",
+    "precios": [
+      225000,
+      210000,
+      195000,
+      180000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000 · 5 TUERCAS DE PERNO AGREGAR 70.000",
+    "originales": [
+      "225000",
+      "210000",
+      "195000",
+      "180000"
+    ],
+    "filaExcel": 14,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-20",
+    "hoja": "ACCESORIOS",
+    "grupo": "CARPAS (KEKO)",
+    "descripcion": "LONA GRX",
+    "modalidad": "FIJO",
+    "precios": [
+      1890000,
+      1860000,
+      1830000,
+      1800000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1890000",
+      "1860000",
+      "1830000",
+      "1800000"
+    ],
+    "filaExcel": 20,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-21",
+    "hoja": "ACCESORIOS",
+    "grupo": "CARPAS (KEKO)",
+    "descripcion": "LONA GRX PRO BLACK",
+    "modalidad": "FIJO",
+    "precios": [
+      1990000,
+      1960000,
+      1930000,
+      1900000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1990000",
+      "1960000",
+      "1930000",
+      "1900000"
+    ],
+    "filaExcel": 21,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-22",
+    "hoja": "ACCESORIOS",
+    "grupo": "CARPAS (KEKO)",
+    "descripcion": "RETRACTIL MANUAL",
+    "modalidad": "FIJO",
+    "precios": [
+      6950000,
+      6890000,
+      6830000,
+      6780000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "6950000",
+      "6890000",
+      "6830000",
+      "6780000"
+    ],
+    "filaExcel": 22,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-23",
+    "hoja": "ACCESORIOS",
+    "grupo": "CARPAS (KEKO)",
+    "descripcion": "RETRACTIL ELECTRICA",
+    "modalidad": "FIJO",
+    "precios": [
+      9720000,
+      9660000,
+      9600000,
+      9550000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "9720000",
+      "9660000",
+      "9600000",
+      "9550000"
+    ],
+    "filaExcel": 23,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-28",
+    "hoja": "ACCESORIOS",
+    "grupo": "TIROS DE ARRASTRE DEFENDER",
+    "descripcion": "TIRO DE ARRASTRE",
+    "modalidad": "FIJO",
+    "precios": [
+      1400000,
+      1385000,
+      1370000,
+      1350000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1400000",
+      "1385000",
+      "1370000",
+      "1350000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-29",
+    "hoja": "ACCESORIOS",
+    "grupo": "TIROS DE ARRASTRE DEFENDER",
+    "descripcion": "LENGUETA ACERO INOXIDABLE",
+    "modalidad": "FIJO",
+    "precios": [
+      355000,
+      340000,
+      325000,
+      310000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "355000",
+      "340000",
+      "325000",
+      "310000"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-30",
+    "hoja": "ACCESORIOS",
+    "grupo": "TIROS DE ARRASTRE DEFENDER",
+    "descripcion": "LENGÜETA ROJA/NEGRA/PLATA + KIT",
+    "modalidad": "FIJO",
+    "precios": [
+      470000,
+      460000,
+      450000,
+      435000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "470000",
+      "460000",
+      "450000",
+      "435000"
+    ],
+    "filaExcel": 30,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-35",
+    "hoja": "ACCESORIOS",
+    "grupo": "PORTA MOTOS Y BICILETAS DEFENDER",
+    "descripcion": "PORTABICICLETAS PREMIUM",
+    "modalidad": "FIJO",
+    "precios": [
+      1790000,
+      1775000,
+      1755000,
+      1735000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1790000",
+      "1775000",
+      "1755000",
+      "1735000"
+    ],
+    "filaExcel": 35,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-36",
+    "hoja": "ACCESORIOS",
+    "grupo": "PORTA MOTOS Y BICILETAS DEFENDER",
+    "descripcion": "PORTABICICLETAS SENCILLO",
+    "modalidad": "FIJO",
+    "precios": [
+      750000,
+      735000,
+      720000,
+      695000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "750000",
+      "735000",
+      "720000",
+      "695000"
+    ],
+    "filaExcel": 36,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-37",
+    "hoja": "ACCESORIOS",
+    "grupo": "PORTA MOTOS Y BICILETAS DEFENDER",
+    "descripcion": "PORTAMOTO GRANDE",
+    "modalidad": "FIJO",
+    "precios": [
+      1410000,
+      1390000,
+      1370000,
+      1350000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1410000",
+      "1390000",
+      "1370000",
+      "1350000"
+    ],
+    "filaExcel": 37,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-38",
+    "hoja": "ACCESORIOS",
+    "grupo": "PORTA MOTOS Y BICILETAS DEFENDER",
+    "descripcion": "PORTAMOTO PEQUEÑO",
+    "modalidad": "FIJO",
+    "precios": [
+      1250000,
+      1230000,
+      1210000,
+      1190000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1250000",
+      "1230000",
+      "1210000",
+      "1190000"
+    ],
+    "filaExcel": 38,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-7-39",
+    "hoja": "ACCESORIOS",
+    "grupo": "PORTA MOTOS Y BICILETAS DEFENDER",
+    "descripcion": "PORTA EQUIPAJE + PORTA MALETA IMPERMEABLE",
+    "modalidad": "FIJO",
+    "precios": [
+      2140000,
+      2120000,
+      2090000,
+      2060000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "2140000",
+      "2120000",
+      "2090000",
+      "2060000"
+    ],
+    "filaExcel": 39,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-9",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "LUCES L.E.D",
+    "descripcion": "MUELAS",
+    "modalidad": "FIJO",
+    "precios": [
+      50000,
+      45000,
+      40000,
+      null
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "50000",
+      "45000",
+      "40000",
+      "NA"
+    ],
+    "filaExcel": 9,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-10",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "LUCES L.E.D",
+    "descripcion": "TECHLA 12.000",
+    "modalidad": "FIJO",
+    "precios": [
+      375000,
+      360000,
+      345000,
+      325000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "375000",
+      "360000",
+      "345000",
+      "325000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-11",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "LUCES L.E.D",
+    "descripcion": "TECHLA 17.000",
+    "modalidad": "FIJO",
+    "precios": [
+      545000,
+      530000,
+      515000,
+      490000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "545000",
+      "530000",
+      "515000",
+      "490000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-12",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "LUCES L.E.D",
+    "descripcion": "TECHLA 22.000",
+    "modalidad": "FIJO",
+    "precios": [
+      670000,
+      650000,
+      630000,
+      600000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "670000",
+      "650000",
+      "630000",
+      "600000"
+    ],
+    "filaExcel": 12,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-17",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "ASEGURADA GENERAL",
+    "descripcion": "ASEGURADA GENERAL DE PIEZAS: GUAYA, MARCOS, SIKA, EMBLEMAS, TAPA RIN, PLUMILLA Y TAPAS DE ARRASTRE.",
+    "modalidad": "FIJO",
+    "precios": [
+      370000,
+      350000,
+      330000,
+      300000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000",
+    "originales": [
+      "370000",
+      "350000",
+      "330000",
+      "300000"
+    ],
+    "filaExcel": 17,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-18",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "ASEGURADA GENERAL",
+    "descripcion": "ASEGURADA TRIPLE DE RETROVISORES",
+    "modalidad": "FIJO",
+    "precios": [
+      250000,
+      235000,
+      220000,
+      200000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000",
+    "originales": [
+      "250000",
+      "235000",
+      "220000",
+      "200000"
+    ],
+    "filaExcel": 18,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-19",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "ASEGURADA GENERAL",
+    "descripcion": "MARCOS METÁLICOS",
+    "modalidad": "FIJO",
+    "precios": [
+      150000,
+      140000,
+      130000,
+      null
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000",
+    "originales": [
+      "150000",
+      "140000",
+      "130000",
+      "NA"
+    ],
+    "filaExcel": 19,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-20",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "ASEGURADA GENERAL",
+    "descripcion": "MARCOS CON RESINA EPOXICA",
+    "modalidad": "FIJO",
+    "precios": [
+      280000,
+      265000,
+      250000,
+      235000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000",
+    "originales": [
+      "280000",
+      "265000",
+      "250000",
+      "235000"
+    ],
+    "filaExcel": 20,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-21",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "ASEGURADA GENERAL",
+    "descripcion": "REMACHE EMBLEMAS, PLUMILLA TRASERA Y SIKA TAPA RIN Y TAPAS REMOLQUE",
+    "modalidad": "FIJO",
+    "precios": [
+      180000,
+      170000,
+      160000,
+      null
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000 · AEGURADA CON MARCOS DE RESINA, ADICIONAL 100.000",
+    "originales": [
+      "180000",
+      "170000",
+      "160000",
+      "NA"
+    ],
+    "filaExcel": 21,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-27",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "KIT PLUMILLAS X3 DEFENDER",
+    "modalidad": "FIJO",
+    "precios": [
+      250000,
+      240000,
+      230000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "250000",
+      "240000",
+      "230000"
+    ],
+    "filaExcel": 27,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-28",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "KIT PLIMULLAS X2 DEFENDER",
+    "modalidad": "FIJO",
+    "precios": [
+      180000,
+      170000,
+      160000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "180000",
+      "170000",
+      "160000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-29",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "PLUMILLA INDIVIDUAL DEFENDER",
+    "modalidad": "FIJO",
+    "precios": [
+      90000,
+      85000,
+      80000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "90000",
+      "85000",
+      "80000"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-30",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "VOLANTE TECHLA",
+    "modalidad": "FIJO",
+    "precios": [
+      120000,
+      110000,
+      100000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "120000",
+      "110000",
+      "100000"
+    ],
+    "filaExcel": 30,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-31",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "OPULUM",
+    "modalidad": "FIJO",
+    "precios": [
+      80000,
+      75000,
+      70000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "80000",
+      "75000",
+      "70000"
+    ],
+    "filaExcel": 31,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-32",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "SHAMPOO PH NEUTRO 500 ML",
+    "modalidad": "FIJO",
+    "precios": [
+      40000,
+      40000,
+      40000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "40000",
+      "40000",
+      "40000"
+    ],
+    "filaExcel": 32,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-33",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "LIMPIA VIDRIOS YA (INCLUYE 1 MICRO FIBRA)",
+    "modalidad": "FIJO",
+    "precios": [
+      30000,
+      30000,
+      30000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "30000",
+      "30000",
+      "30000"
+    ],
+    "filaExcel": 33,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-34",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "KIT LIMPIA VIDRIOS YA, SHAMPOO, OPULUM Y 5 MICRO FIBRAS",
+    "modalidad": "FIJO",
+    "precios": [
+      130000,
+      130000,
+      130000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "130000",
+      "130000",
+      "130000"
+    ],
+    "filaExcel": 34,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-8-35",
+    "hoja": "ACCESORIOS 2",
+    "grupo": "OTROS ACCESORIOS",
+    "descripcion": "GRANADA DE OLOR",
+    "modalidad": "FIJO",
+    "precios": [
+      80000,
+      80000,
+      80000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO"
+    ],
+    "notas": "",
+    "originales": [
+      "80000",
+      "80000",
+      "80000"
+    ],
+    "filaExcel": 35,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-10",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES WEATHERTECH  TERMOFORMADOS",
+    "descripcion": "1 + 2 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      1321800,
+      1300000,
+      1285000,
+      1265000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1321800",
+      "1300000",
+      "1285000",
+      "1265000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-11",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES WEATHERTECH  TERMOFORMADOS",
+    "descripcion": "1 + 2 + 3 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      1898000,
+      1880000,
+      1865000,
+      1840000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1898000",
+      "1880000",
+      "1865000",
+      "1840000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-12",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES WEATHERTECH  TERMOFORMADOS",
+    "descripcion": "BAÚL",
+    "modalidad": "FIJO",
+    "precios": [
+      770000,
+      755000,
+      740000,
+      720000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "770000",
+      "755000",
+      "740000",
+      "720000"
+    ],
+    "filaExcel": 12,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-13",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES WEATHERTECH  TERMOFORMADOS",
+    "descripcion": "COMBO 1 + 2 FILA + BAUL",
+    "modalidad": "FIJO",
+    "precios": [
+      1990000,
+      1970000,
+      1950000,
+      1920000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1990000",
+      "1970000",
+      "1950000",
+      "1920000"
+    ],
+    "filaExcel": 13,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-14",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES WEATHERTECH  TERMOFORMADOS",
+    "descripcion": "COMBO 1 + 2 + 3 FILAS + BAÚL",
+    "modalidad": "FIJO",
+    "precios": [
+      2590000,
+      2560000,
+      2530000,
+      2500000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "2590000",
+      "2560000",
+      "2530000",
+      "2500000"
+    ],
+    "filaExcel": 14,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-20",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES PROTECT TERMOFORMADOS",
+    "descripcion": "1 +2 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      790000,
+      770000,
+      750000,
+      720000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "790000",
+      "770000",
+      "750000",
+      "720000"
+    ],
+    "filaExcel": 20,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-21",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES PROTECT TERMOFORMADOS",
+    "descripcion": "1 + 2 + 3 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      1050000,
+      1030000,
+      1010000,
+      980000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1050000",
+      "1030000",
+      "1010000",
+      "980000"
+    ],
+    "filaExcel": 21,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-22",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES PROTECT TERMOFORMADOS",
+    "descripcion": "BAUL",
+    "modalidad": "FIJO",
+    "precios": [
+      390000,
+      375000,
+      360000,
+      340000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "390000",
+      "375000",
+      "360000",
+      "340000"
+    ],
+    "filaExcel": 22,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-27",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES UNIVERSALES",
+    "descripcion": "3D 1 + 2 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      460000,
+      445000,
+      430000,
+      410000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "460000",
+      "445000",
+      "430000",
+      "410000"
+    ],
+    "filaExcel": 27,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-28",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES UNIVERSALES",
+    "descripcion": "WEATHERTECH 1 + 2 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      450000,
+      435000,
+      420000,
+      400000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "450000",
+      "435000",
+      "420000",
+      "400000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-29",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES UNIVERSALES",
+    "descripcion": "WINTERMAD 1 + 2 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      340000,
+      325000,
+      310000,
+      290000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "340000",
+      "325000",
+      "310000",
+      "290000"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-30",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES UNIVERSALES",
+    "descripcion": "PROLINER 1 + 2 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      300000,
+      285000,
+      270000,
+      250000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "300000",
+      "285000",
+      "270000",
+      "250000"
+    ],
+    "filaExcel": 30,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-31",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES UNIVERSALES",
+    "descripcion": "DEFENDER 1 + 2 FILA",
+    "modalidad": "FIJO",
+    "precios": [
+      200000,
+      190000,
+      180000,
+      170000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "200000",
+      "190000",
+      "180000",
+      "170000"
+    ],
+    "filaExcel": 31,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-33",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES UNIVERSALES · BAÚL",
+    "descripcion": "3D",
+    "modalidad": "FIJO",
+    "precios": [
+      450000,
+      435000,
+      420000,
+      405000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "450000",
+      "435000",
+      "420000",
+      "405000"
+    ],
+    "filaExcel": 33,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-34",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES UNIVERSALES · BAÚL",
+    "descripcion": "WEATHERTECH",
+    "modalidad": "FIJO",
+    "precios": [
+      430000,
+      415000,
+      400000,
+      385000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "430000",
+      "415000",
+      "400000",
+      "385000"
+    ],
+    "filaExcel": 34,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-9-35",
+    "hoja": "TAPETES",
+    "grupo": "TAPETES UNIVERSALES · BAÚL",
+    "descripcion": "PROLINER",
+    "modalidad": "FIJO",
+    "precios": [
+      295000,
+      280000,
+      265000,
+      250000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "",
+    "originales": [
+      "295000",
+      "280000",
+      "265000",
+      "250000"
+    ],
+    "filaExcel": 35,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-10",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO AUTOMOVÍL",
+    "descripcion": "1 AÑO",
+    "modalidad": "FIJO",
+    "precios": [
+      599900,
+      585000,
+      570000,
+      550000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000",
+    "originales": [
+      "599900",
+      "585000",
+      "570000",
+      "550000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-11",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO AUTOMOVÍL",
+    "descripcion": "3 AÑOS",
+    "modalidad": "FIJO",
+    "precios": [
+      999900,
+      980000,
+      960000,
+      930000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000",
+    "originales": [
+      "999900",
+      "980000",
+      "960000",
+      "930000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-12",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO AUTOMOVÍL",
+    "descripcion": "5 AÑOS",
+    "modalidad": "FIJO",
+    "precios": [
+      1399900,
+      1365000,
+      1330000,
+      1300000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000",
+    "originales": [
+      "1399900",
+      "1365000",
+      "1330000",
+      "1300000"
+    ],
+    "filaExcel": 12,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-13",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO AUTOMOVÍL",
+    "descripcion": "AUTOBAHN",
+    "modalidad": "FIJO",
+    "precios": [
+      2099900,
+      2050000,
+      2000000,
+      1950000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000",
+    "originales": [
+      "2099900",
+      "2050000",
+      "2000000",
+      "1950000"
+    ],
+    "filaExcel": 13,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-14",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO AUTOMOVÍL",
+    "descripcion": "INTEGRAL",
+    "modalidad": "FIJO",
+    "precios": [
+      3599900,
+      3530000,
+      3450000,
+      3390000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000 · CAPA ADICIONAL TOP COAT: 400.000 - 350.000",
+    "originales": [
+      "3599900",
+      "3530000",
+      "3450000",
+      "3390000"
+    ],
+    "filaExcel": 14,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-20",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO CAMIONETA",
+    "descripcion": "1 AÑO",
+    "modalidad": "FIJO",
+    "precios": [
+      699900,
+      685000,
+      670000,
+      650000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000",
+    "originales": [
+      "699900",
+      "685000",
+      "670000",
+      "650000"
+    ],
+    "filaExcel": 20,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-21",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO CAMIONETA",
+    "descripcion": "3 AÑOS",
+    "modalidad": "FIJO",
+    "precios": [
+      1099900,
+      1080000,
+      1060000,
+      1030000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000",
+    "originales": [
+      "1099900",
+      "1080000",
+      "1060000",
+      "1030000"
+    ],
+    "filaExcel": 21,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-22",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO CAMIONETA",
+    "descripcion": "5 AÑOS",
+    "modalidad": "FIJO",
+    "precios": [
+      1499900,
+      1465000,
+      1430000,
+      1400000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000",
+    "originales": [
+      "1499900",
+      "1465000",
+      "1430000",
+      "1400000"
+    ],
+    "filaExcel": 22,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-23",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO CAMIONETA",
+    "descripcion": "AUTOBAHN",
+    "modalidad": "FIJO",
+    "precios": [
+      2399900,
+      2350000,
+      2300000,
+      2250000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000",
+    "originales": [
+      "2399900",
+      "2350000",
+      "2300000",
+      "2250000"
+    ],
+    "filaExcel": 23,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-24",
+    "hoja": "DETAILING",
+    "grupo": "TRATAMIENTO CERÁMICO CAMIONETA",
+    "descripcion": "INTEGRAL",
+    "modalidad": "FIJO",
+    "precios": [
+      3999900,
+      3930000,
+      3850000,
+      3790000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000 · CAPA ADICIONAL TOP COAT: 450.000 - 400.000",
+    "originales": [
+      "3999900",
+      "3930000",
+      "3850000",
+      "3790000"
+    ],
+    "filaExcel": 24,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-30",
+    "hoja": "DETAILING",
+    "grupo": "ENCERADO CON CORRECCIÓN",
+    "descripcion": "3 EN 1  AUTOMOVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      390000,
+      370000,
+      350000,
+      330000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000",
+    "originales": [
+      "390000",
+      "370000",
+      "350000",
+      "330000"
+    ],
+    "filaExcel": 30,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-31",
+    "hoja": "DETAILING",
+    "grupo": "ENCERADO CON CORRECCIÓN",
+    "descripcion": "3 EN 1 CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      450000,
+      430000,
+      410000,
+      390000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000",
+    "originales": [
+      "450000",
+      "430000",
+      "410000",
+      "390000"
+    ],
+    "filaExcel": 31,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-32",
+    "hoja": "DETAILING",
+    "grupo": "ENCERADO CON CORRECCIÓN",
+    "descripcion": "CORRECCIÓN BARNÍZ AUTOMOVÍL",
+    "modalidad": "FIJO",
+    "precios": [
+      750000,
+      730000,
+      710000,
+      680000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000",
+    "originales": [
+      "750000",
+      "730000",
+      "710000",
+      "680000"
+    ],
+    "filaExcel": 32,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-33",
+    "hoja": "DETAILING",
+    "grupo": "ENCERADO CON CORRECCIÓN",
+    "descripcion": "CORRECCIÓN BARNÍZ CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      850000,
+      830000,
+      810000,
+      780000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000",
+    "originales": [
+      "850000",
+      "830000",
+      "810000",
+      "780000"
+    ],
+    "filaExcel": 33,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-10-34",
+    "hoja": "DETAILING",
+    "grupo": "ENCERADO CON CORRECCIÓN",
+    "descripcion": "ALISTAMIENTO PARA VENTA",
+    "modalidad": "FIJO",
+    "precios": [
+      350000,
+      350000,
+      350000,
+      350000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000 · MATIZADA PIEZA UNIDAD: 70.000",
+    "originales": [
+      "350000",
+      "350000",
+      "350000",
+      "350000"
+    ],
+    "filaExcel": 34,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-10",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "STRONG MOTOR",
+    "modalidad": "FIJO",
+    "precios": [
+      450000,
+      435000,
+      420000,
+      400000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "450000",
+      "435000",
+      "420000",
+      "400000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-11",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "STRONG RINES",
+    "modalidad": "FIJO",
+    "precios": [
+      450000,
+      435000,
+      420000,
+      400000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "450000",
+      "435000",
+      "420000",
+      "400000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-12",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "STRONG MORDAZAS",
+    "modalidad": "FIJO",
+    "precios": [
+      150000,
+      150000,
+      150000,
+      150000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "150000",
+      "150000",
+      "150000",
+      "150000"
+    ],
+    "filaExcel": 12,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-13",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "PLÁSTICOS EXTERNOS L",
+    "modalidad": "FIJO",
+    "precios": [
+      350000,
+      335000,
+      320000,
+      300000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "350000",
+      "335000",
+      "320000",
+      "300000"
+    ],
+    "filaExcel": 13,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-14",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "PLÁSTICOS EXTERNOS XL",
+    "modalidad": "FIJO",
+    "precios": [
+      470000,
+      455000,
+      440000,
+      420000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "470000",
+      "455000",
+      "440000",
+      "420000"
+    ],
+    "filaExcel": 14,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-15",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "PLÁSTICOS INTERNOS",
+    "modalidad": "FIJO",
+    "precios": [
+      185000,
+      170000,
+      155000,
+      140000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "185000",
+      "170000",
+      "155000",
+      "140000"
+    ],
+    "filaExcel": 15,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-16",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "CUERO GYEON",
+    "modalidad": "FIJO",
+    "precios": [
+      540000,
+      520000,
+      500000,
+      480000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "540000",
+      "520000",
+      "500000",
+      "480000"
+    ],
+    "filaExcel": 16,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-17",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "TELA / ALCANTARA",
+    "modalidad": "FIJO",
+    "precios": [
+      185000,
+      170000,
+      155000,
+      140000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "185000",
+      "170000",
+      "155000",
+      "140000"
+    ],
+    "filaExcel": 17,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-18",
+    "hoja": "DETAILING (2)",
+    "grupo": "CERÁMICOS ESPECIALIZADOS",
+    "descripcion": "VIDRIOS: LATERALES, PARABRISAS, LUNETA Y SUN ROOF )INCLUYE DESMANCHADO)",
+    "modalidad": "FIJO",
+    "precios": [
+      370000,
+      350000,
+      335000,
+      320000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO - SISTECREDITO/ ADDI (+ IVA)",
+      "EFECTIVO - TRANSFERENCIA",
+      "EFECTIVO",
+      "GOOGLE 5 ESTRELLAS + FOTO + COMPROBANTE"
+    ],
+    "notas": "CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140 · CERÁMICO EN VIDRIO: PARABRISAS 100 - LUNETA 75 - LATERAL UNIDAD 55.000; SUN ROOF X1 55 - X2 100 - X3 140",
+    "originales": [
+      "370000",
+      "350000",
+      "335000",
+      "320000"
+    ],
+    "filaExcel": 18,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-24",
+    "hoja": "DETAILING (2)",
+    "grupo": "COMBOS DETAILING",
+    "descripcion": "COMBO 1: LAVADO PREMIUM + BOOST CERÁMICO",
+    "modalidad": "FIJO",
+    "precios": [
+      130000,
+      120000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO",
+      "EFECTIVO - TRANSFERENCIA"
+    ],
+    "notas": "",
+    "originales": [
+      "130000",
+      "120000"
+    ],
+    "filaExcel": 24,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-25",
+    "hoja": "DETAILING (2)",
+    "grupo": "COMBOS DETAILING",
+    "descripcion": "COMBO 2: LAVADO PREMIUM + BOOST CERÁMICO + MOTOR",
+    "modalidad": "FIJO",
+    "precios": [
+      180000,
+      170000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO",
+      "EFECTIVO - TRANSFERENCIA"
+    ],
+    "notas": "",
+    "originales": [
+      "180000",
+      "170000"
+    ],
+    "filaExcel": 25,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-26",
+    "hoja": "DETAILING (2)",
+    "grupo": "COMBOS DETAILING",
+    "descripcion": "COMBO 3: LAVADO PREMIUM + BOOST CERÁMICO + DESMANCHADO VIDRIOS",
+    "modalidad": "FIJO",
+    "precios": [
+      220000,
+      210000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO",
+      "EFECTIVO - TRANSFERENCIA"
+    ],
+    "notas": "",
+    "originales": [
+      "220000",
+      "210000"
+    ],
+    "filaExcel": 26,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-27",
+    "hoja": "DETAILING (2)",
+    "grupo": "COMBOS DETAILING",
+    "descripcion": "COMBO 4: COMBO 1 Y 2 + HIDRATACIÓN INTERNA PROFUNDA CUEROS Y PLÁSTICOS",
+    "modalidad": "FIJO",
+    "precios": [
+      330000,
+      315000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO",
+      "EFECTIVO - TRANSFERENCIA"
+    ],
+    "notas": "",
+    "originales": [
+      "330000",
+      "315000"
+    ],
+    "filaExcel": 27,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-28",
+    "hoja": "DETAILING (2)",
+    "grupo": "COMBOS DETAILING",
+    "descripcion": "COMBO 5: COMBO 4 + DESINFECCIÓN DUCTOS AIRE + DESINFECCIÓN SISTEMA 3 PASOS VONNIX + GRANADA DE OLOR",
+    "modalidad": "FIJO",
+    "precios": [
+      530000,
+      510000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO",
+      "EFECTIVO - TRANSFERENCIA"
+    ],
+    "notas": "",
+    "originales": [
+      "530000",
+      "510000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-29",
+    "hoja": "DETAILING (2)",
+    "grupo": "COMBOS DETAILING",
+    "descripcion": "COMBO 6: LAVADO PREMIUM + PULIDO 3 EN 1 + BOOST CERÁMICO + HIDRATACIÓN INTERNA PROFUNDA CUEROS Y PLÁSTICOS + DESINFECCIÓN DUCTOS AIRE + GRANADA",
+    "modalidad": "FIJO",
+    "precios": [
+      630000,
+      600000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO",
+      "EFECTIVO - TRANSFERENCIA"
+    ],
+    "notas": "",
+    "originales": [
+      "630000",
+      "600000"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-32",
+    "hoja": "DETAILING (2)",
+    "grupo": "DETAILING ESPECIALIZADO",
+    "descripcion": "DETALLADO MOTOR",
+    "modalidad": "FIJO",
+    "precios": [
+      100000
+    ],
+    "condiciones": [
+      ""
+    ],
+    "notas": "",
+    "originales": [
+      "100000"
+    ],
+    "filaExcel": 32,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-33",
+    "hoja": "DETAILING (2)",
+    "grupo": "DETAILING ESPECIALIZADO",
+    "descripcion": "DESMANCHADO FAROLAS",
+    "modalidad": "FIJO",
+    "precios": [
+      120000
+    ],
+    "condiciones": [
+      ""
+    ],
+    "notas": "",
+    "originales": [
+      "120000"
+    ],
+    "filaExcel": 33,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-34",
+    "hoja": "DETAILING (2)",
+    "grupo": "DETAILING ESPECIALIZADO",
+    "descripcion": "DESMANCHADO FAROLAS + CERÁMICO",
+    "modalidad": "FIJO",
+    "precios": [
+      170000
+    ],
+    "condiciones": [
+      ""
+    ],
+    "notas": "",
+    "originales": [
+      "170000"
+    ],
+    "filaExcel": 34,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-35",
+    "hoja": "DETAILING (2)",
+    "grupo": "DETAILING ESPECIALIZADO",
+    "descripcion": "DESINFECCIÓN DE DUCTOS",
+    "modalidad": "FIJO",
+    "precios": [
+      50000
+    ],
+    "condiciones": [
+      ""
+    ],
+    "notas": "",
+    "originales": [
+      "50000"
+    ],
+    "filaExcel": 35,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-36",
+    "hoja": "DETAILING (2)",
+    "grupo": "DETAILING ESPECIALIZADO",
+    "descripcion": "SISTEMA VONIX BACTERIANO 3 PASOS + LAVADO PREMIUM",
+    "modalidad": "FIJO",
+    "precios": [
+      250000
+    ],
+    "condiciones": [
+      ""
+    ],
+    "notas": "",
+    "originales": [
+      "250000"
+    ],
+    "filaExcel": 36,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-37",
+    "hoja": "DETAILING (2)",
+    "grupo": "DETAILING ESPECIALIZADO",
+    "descripcion": "HIDRATACIÓN INTERNA PROFUNDA (CUERO Y PLÁSTICOS)",
+    "modalidad": "FIJO",
+    "precios": [
+      100000
+    ],
+    "condiciones": [
+      ""
+    ],
+    "notas": "",
+    "originales": [
+      "100000"
+    ],
+    "filaExcel": 37,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-42",
+    "hoja": "DETAILING (2)",
+    "grupo": "LIMPIEZA INTERNA PROFUNDA",
+    "descripcion": "AUTOMÓVIL",
+    "modalidad": "FIJO",
+    "precios": [
+      370000,
+      350000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO",
+      "EFECTIVO - TRASNFERENCIA"
+    ],
+    "notas": "LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA · LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA · LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA · LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA · LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA",
+    "originales": [
+      "370000",
+      "350000"
+    ],
+    "filaExcel": 42,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-11-43",
+    "hoja": "DETAILING (2)",
+    "grupo": "LIMPIEZA INTERNA PROFUNDA",
+    "descripcion": "CAMIONETA",
+    "modalidad": "FIJO",
+    "precios": [
+      400000,
+      380000
+    ],
+    "condiciones": [
+      "EFECTIVO - TRANSFERENCIA - DATAFONO",
+      "EFECTIVO - TRASNFERENCIA"
+    ],
+    "notas": "LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA · LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA · LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA · LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA · LAVADO PREMIUM + DETALLADO DE: CARTERAS, PISO, TECHO, MILLARE, CINTURONES, PLÁSTICOS Y CUEROS + DESINFECCIÓN DUCTOS AIRE + HIDRATACIÓN PROFUNDA",
+    "originales": [
+      "400000",
+      "380000"
+    ],
+    "filaExcel": 43,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-10",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "AUTO PEQUEÑO COMPLETO",
+    "modalidad": "FIJO",
+    "precios": [
+      11500000,
+      11000000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "11500000",
+      "11000000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-11",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "AUTO GRANDE - SUV COMPLETO",
+    "modalidad": "FIJO",
+    "precios": [
+      13500000,
+      13000000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "13500000",
+      "13000000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-12",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "PLATON - CAMIONETA GRANDE COMPLETO",
+    "modalidad": "FIJO",
+    "precios": [
+      17000000,
+      16500000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "17000000",
+      "16500000"
+    ],
+    "filaExcel": 12,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-13",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "CAPOT (Según analisis)",
+    "modalidad": "FIJO",
+    "precios": [
+      1750000,
+      1550000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1750000",
+      "1550000"
+    ],
+    "filaExcel": 13,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-14",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "PUERTA UNIDAD (Según analisis)",
+    "modalidad": "FIJO",
+    "precios": [
+      900000,
+      850000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "900000",
+      "850000"
+    ],
+    "filaExcel": 14,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-15",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "GUARDAFANGO PAR",
+    "modalidad": "FIJO",
+    "precios": [
+      1350000,
+      1250000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1350000",
+      "1250000"
+    ],
+    "filaExcel": 15,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-16",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "AHUMADO FAROLAS  40% VLT",
+    "modalidad": "FIJO",
+    "precios": [
+      550000,
+      515300
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "550000",
+      "515300"
+    ],
+    "filaExcel": 16,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-17",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "AHUMADO STOPS 20% VLT",
+    "modalidad": "FIJO",
+    "precios": [
+      690000,
+      645600
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "690000",
+      "645600"
+    ],
+    "filaExcel": 17,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-18",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AUTOBAHN",
+    "descripcion": "COMBO AHUMADO FAROLA Y STOPS",
+    "modalidad": "FIJO",
+    "precios": [
+      990000,
+      990000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "990000",
+      "990000"
+    ],
+    "filaExcel": 18,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-23",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AVERY",
+    "descripcion": "AUTO PEQUEÑO COMPLETO",
+    "modalidad": "FIJO",
+    "precios": [
+      8800000,
+      8500000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "8800000",
+      "8500000"
+    ],
+    "filaExcel": 23,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-24",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AVERY",
+    "descripcion": "AUTO GRANDE - SUV COMPLETO",
+    "modalidad": "FIJO",
+    "precios": [
+      10800000,
+      10300000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "10800000",
+      "10300000"
+    ],
+    "filaExcel": 24,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-25",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AVERY",
+    "descripcion": "PLATON - CAMIONETA GRANDE COMPLETO",
+    "modalidad": "FIJO",
+    "precios": [
+      12500000,
+      12000000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "12500000",
+      "12000000"
+    ],
+    "filaExcel": 25,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-26",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AVERY",
+    "descripcion": "CAPOT (Según analisis)",
+    "modalidad": "FIJO",
+    "precios": [
+      1300000,
+      1200000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1300000",
+      "1200000"
+    ],
+    "filaExcel": 26,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-27",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AVERY",
+    "descripcion": "PUERTA UNIDAD (Según analisis)",
+    "modalidad": "FIJO",
+    "precios": [
+      750000,
+      700000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "750000",
+      "700000"
+    ],
+    "filaExcel": 27,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-12-28",
+    "hoja": "PPF",
+    "grupo": "FORRADA PPF AVERY",
+    "descripcion": "GUARDAFANGO PAR",
+    "modalidad": "FIJO",
+    "precios": [
+      1050000,
+      950000
+    ],
+    "condiciones": [
+      "NIVEL 2 EFECTIVO SOLAMENTE",
+      "NIVEL 2 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "1050000",
+      "950000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-10",
+    "hoja": "PPF (2)",
+    "grupo": "VINILO",
+    "descripcion": "AUTOMOVIL TECHO BRILLANTE O MATE",
+    "modalidad": "FIJO",
+    "precios": [
+      680000,
+      660000,
+      640000
+    ],
+    "condiciones": [
+      "NIVEL 3 EFECTIVO SOLAMENTE",
+      "NIVEL 3 EFECTIVO SOLAMENTE",
+      "NIVEL 3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "680000",
+      "660000",
+      "640000"
+    ],
+    "filaExcel": 10,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-11",
+    "hoja": "PPF (2)",
+    "grupo": "VINILO",
+    "descripcion": "CAMIONETA TECHO BRILLANTE O MATE",
+    "modalidad": "FIJO",
+    "precios": [
+      780000,
+      760000,
+      740000
+    ],
+    "condiciones": [
+      "NIVEL 3 EFECTIVO SOLAMENTE",
+      "NIVEL 3 EFECTIVO SOLAMENTE",
+      "NIVEL 3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "780000",
+      "760000",
+      "740000"
+    ],
+    "filaExcel": 11,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-12",
+    "hoja": "PPF (2)",
+    "grupo": "VINILO",
+    "descripcion": "RETROVISORES X2 BRILLANTE O MATE",
+    "modalidad": "FIJO",
+    "precios": [
+      240000,
+      230000,
+      220000
+    ],
+    "condiciones": [
+      "NIVEL 3 EFECTIVO SOLAMENTE",
+      "NIVEL 3 EFECTIVO SOLAMENTE",
+      "NIVEL 3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "240000",
+      "230000",
+      "220000"
+    ],
+    "filaExcel": 12,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-17",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "RETROVISORES X2",
+    "modalidad": "FIJO",
+    "precios": [
+      320000,
+      300000,
+      290000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "320000",
+      "300000",
+      "290000"
+    ],
+    "filaExcel": 17,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-18",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "PANTALLA GRANDE",
+    "modalidad": "FIJO",
+    "precios": [
+      280000,
+      270000,
+      260000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "280000",
+      "270000",
+      "260000"
+    ],
+    "filaExcel": 18,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-19",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "PANTALLA MEDIANA",
+    "modalidad": "FIJO",
+    "precios": [
+      180000,
+      170000,
+      160000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "180000",
+      "170000",
+      "160000"
+    ],
+    "filaExcel": 19,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-20",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "PANTALLA PEQUEÑA",
+    "modalidad": "FIJO",
+    "precios": [
+      120000,
+      110000,
+      100000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "120000",
+      "110000",
+      "100000"
+    ],
+    "filaExcel": 20,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-21",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "BORDE DE PUERTAS X4",
+    "modalidad": "FIJO",
+    "precios": [
+      170000,
+      160000,
+      150000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "170000",
+      "160000",
+      "150000"
+    ],
+    "filaExcel": 21,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-22",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "MANIJAS X4 ESTANDAR",
+    "modalidad": "FIJO",
+    "precios": [
+      170000,
+      160000,
+      150000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "170000",
+      "160000",
+      "150000"
+    ],
+    "filaExcel": 22,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-23",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "ESTRIBOS X4 (PISA PIES)",
+    "modalidad": "FIJO",
+    "precios": [
+      250000,
+      240000,
+      230000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "250000",
+      "240000",
+      "230000"
+    ],
+    "filaExcel": 23,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-24",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "ESTRIBO BAUL",
+    "modalidad": "FIJO",
+    "precios": [
+      180000,
+      170000,
+      160000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "180000",
+      "170000",
+      "160000"
+    ],
+    "filaExcel": 24,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-25",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "PARALES X4",
+    "modalidad": "FIJO",
+    "precios": [
+      300000,
+      290000,
+      280000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "300000",
+      "290000",
+      "280000"
+    ],
+    "filaExcel": 25,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-26",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "PARALES X6",
+    "modalidad": "FIJO",
+    "precios": [
+      380000,
+      360000,
+      350000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "380000",
+      "360000",
+      "350000"
+    ],
+    "filaExcel": 26,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-27",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "PARALES X8",
+    "modalidad": "FIJO",
+    "precios": [
+      480000,
+      460000,
+      450000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "480000",
+      "460000",
+      "450000"
+    ],
+    "filaExcel": 27,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-28",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "FAROLAS X2",
+    "modalidad": "FIJO",
+    "precios": [
+      320000,
+      300000,
+      290000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "320000",
+      "300000",
+      "290000"
+    ],
+    "filaExcel": 28,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  },
+  {
+    "codigo": "EXCEL2026-13-29",
+    "hoja": "PPF (2)",
+    "grupo": "PPF GENERAL",
+    "descripcion": "STOPS X2",
+    "modalidad": "FIJO",
+    "precios": [
+      450000,
+      430000,
+      420000
+    ],
+    "condiciones": [
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE",
+      "NIVEL  3 EFECTIVO SOLAMENTE"
+    ],
+    "notas": "",
+    "originales": [
+      "450000",
+      "430000",
+      "420000"
+    ],
+    "filaExcel": 29,
+    "activo": true,
+    "requiereRevision": false,
+    "revision": 0
+  }
+]

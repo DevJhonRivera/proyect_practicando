@@ -28,6 +28,7 @@ import accesorioRoutes from "./modules/accesorios/accesorio.routes.js";
 import ordenTrabajoRoutes from "./modules/ordenesTrabajo/ordenTrabajo.routes.js";
 import inventarioRoutes from "./modules/inventario/inventario.routes.js";
 import servicioAdicionalRoutes from "./modules/serviciosAdicionales/servicioAdicional.routes.js";
+import precioVentaRoutes from "./modules/preciosVenta/precioVenta.routes.js";
 import {
   corsOptions,
   securityHeaders,
@@ -119,6 +120,7 @@ app.use("/api/accesorios", accesorioRoutes);
 app.use("/api/ordenes-trabajo", ordenTrabajoRoutes);
 app.use("/api/inventario", inventarioRoutes);
 app.use("/api/servicios-adicionales", servicioAdicionalRoutes);
+app.use("/api/precios-venta", precioVentaRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

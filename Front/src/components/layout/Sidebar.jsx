@@ -130,6 +130,12 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
           url: "/porcentajes-mano-obra",
           soloAdmin: true,
         },
+        {
+          icon: BadgeDollarSign,
+          text: "Lista de precios de venta",
+          url: "/precios-venta",
+          soloAdmin: true,
+        },
       ],
     },
     {
@@ -242,6 +248,14 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
       section: "Comercial",
       items: [
         {
+          icon: BadgeDollarSign,
+          text: "Lista de precios de venta",
+          url: "/precios-venta",
+          modulo: "asesores",
+          accion: "read",
+          ocultarAdmin: true,
+        },
+        {
           icon: BookOpen,
           text: "Catálogo para asesores",
           url: "/asesores",
@@ -270,7 +284,7 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
     .map((group) => ({
       ...group,
       items: group.items.filter((item) =>
-        item.esChat ? chatPermitido : item.soloAdmin
+        item.ocultarAdmin && ["SUPERUSUARIO", "ADMIN"].includes(usuario?.rol) ? false : item.esChat ? chatPermitido : item.soloAdmin
           ? ["SUPERUSUARIO", "ADMIN"].includes(usuario?.rol)
           : tienePermiso(usuario, item.modulo, item.accion)
       ),

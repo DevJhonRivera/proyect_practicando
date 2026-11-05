@@ -1,4 +1,5 @@
 import ServicioAdicional from "./servicioAdicional.model.js";
+import { obtenerTarifasManoObra } from "../coordinacion/manoObra.js";
 
 const CATEGORIAS = ["LAVADO", "POLICHADA", "DETAILING", "PDR", "PINTURA", "ASEGURADA", "INSTALACIONES", "OTRO"];
 const PREDETERMINADOS = [
@@ -61,6 +62,25 @@ const asegurarPredeterminados = async () => {
 
 export const listarServiciosAdicionales = async () => {
   await asegurarPredeterminados();
+  const tarifas = await obtenerTarifasManoObra();
+  const existentes = await ServicioAdicional.find({}).select("nombre categoria").lean();
+  const normalizar = (valor) => mayusculas(valor).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const nombres = new Set(existentes.map((item) => normalizar(item.nombre)));
+  const categorias = new Set(existentes.map((item) => normalizar(item.categoria)));
+  const operaciones = [];
+  for (const regla of Object.keys(tarifas)) {
+    const clave = (regla.startsWith("FIJO|") ? regla.slice(5) : regla).split("|")[0];
+    if (!clave.startsWith("SERVICIO:")) continue;
+    const nombre = clave.slice(9).trim();
+    if (!nombre || nombres.has(normalizar(nombre)) || categorias.has(normalizar(nombre))) continue;
+    nombres.add(normalizar(nombre));
+    operaciones.push({ updateOne: {
+      filter: { categoria: "OTRO", nombre },
+      update: { $setOnInsert: { categoria: "OTRO", nombre, precioSugerido: 0, activo: true, creadoPorNombre: "SISTEMA" } },
+      upsert: true,
+    } });
+  }
+  if (operaciones.length) await ServicioAdicional.bulkWrite(operaciones, { ordered: false });
   return ServicioAdicional.find({ activo: { $ne: false } }).sort({ categoria: 1, nombre: 1 }).lean();
 };
 
