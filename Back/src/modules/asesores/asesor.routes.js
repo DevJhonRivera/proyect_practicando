@@ -10,6 +10,7 @@ import {
   getAsesorias,
   getAsesoriaPorId,
   getHistorialServicio,
+  getHistorialServicios,
   sendAsesoriaToSales,
   updateAsesoria,
   createNovedadAsesoria,
@@ -22,7 +23,7 @@ import {
 const router = Router();
 
 const soloAdministracion = requireRole("ADMIN", "SUPERUSUARIO");
-router.get("/historial-servicios", authMiddleware, soloAdministracion, getAsesorias);
+router.get("/historial-servicios", authMiddleware, soloAdministracion, getHistorialServicios);
 router.get("/historial-servicios/:id", authMiddleware, soloAdministracion, getHistorialServicio);
 
 router.get(

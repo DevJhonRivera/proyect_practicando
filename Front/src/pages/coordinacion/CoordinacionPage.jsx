@@ -1,10 +1,11 @@
 import ControlCalidad from "./ControlCalidad";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Camera, ClipboardCheck, Plus, Ruler, Search, Trash2 } from "lucide-react";
 import Swal from "sweetalert2";
 
 import {
+  getTarifasManoObra,
   getInstaladoresCoordinacion,
   getOrdenesCoordinacion,
   reviewPropuestaCoordinacion,
@@ -136,6 +137,7 @@ function CoordinacionPage() {
   const [ordenes, setOrdenes] = useState([]);
   const [instaladores, setInstaladores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const ultimaCarga = useRef(0);
   const [enviandoVentasId, setEnviandoVentasId] = useState("");
   const [actualizandoTrabajoId, setActualizandoTrabajoId] = useState("");
   const [seleccionada, setSeleccionada] = useState(null);
@@ -143,24 +145,27 @@ function CoordinacionPage() {
   const [filtrosInstalador, setFiltrosInstalador] = useState(() => ({ ...quincenaActual(), instalador: "TODOS", material: "TODOS", estado: "TODOS", buscar: "" }));
 
   const cargar = async () => {
+    const solicitud = ++ultimaCarga.current;
     try {
       setLoading(true);
       const [ordenesResponse, instaladoresResponse] = await Promise.all([
-        getOrdenesCoordinacion(),
+        getOrdenesCoordinacion(puedeLiquidarInstaladores ? { desde: filtrosInstalador.desde, hasta: filtrosInstalador.hasta } : undefined),
         ["COORDINADOR", "ADMIN", "SUPERUSUARIO"].includes(usuario?.rol)
           ? getInstaladoresCoordinacion()
           : Promise.resolve({ data: { data: [] } }),
       ]);
+      if (solicitud !== ultimaCarga.current) return;
       setOrdenes(ordenesResponse.data?.data || []);
       setInstaladores(instaladoresResponse.data?.data || []);
     } catch (error) {
+      if (solicitud !== ultimaCarga.current) return;
       Swal.fire({ icon: "error", title: "No fue posible cargar coordinación", text: error.response?.data?.message || "Intente nuevamente." });
     } finally {
-      setLoading(false);
+      if (solicitud === ultimaCarga.current) setLoading(false);
     }
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); }, [filtrosInstalador.desde, filtrosInstalador.hasta]);
 
   const ordenesBase = useMemo(() => ordenes.filter((orden) => {
     if (usuario?.rol === "INSTALADOR") return orden.coordinacion?.asignaciones?.some((item) => String(item.instaladorId) === String(usuario._id)) || String(orden.garantia?.instaladorId || "") === String(usuario._id) || (orden.garantia?.tipo === "GARANTIA_INSTALADOR" && nombresCompatibles(orden.garantia?.instalador, usuario.nombre)) || orden.novedades?.some((item) => String(item.instaladorId || "") === String(usuario._id));
@@ -197,8 +202,8 @@ function CoordinacionPage() {
   const instalacionesFiltradas = useMemo(() => instalacionesPropias.filter((item) => {
     const fechaItem = item.fecha ? new Date(item.fecha) : null;
     const fechaValida = fechaItem && !Number.isNaN(fechaItem.getTime());
-    const desde = filtrosInstalador.desde ? new Date(`${filtrosInstalador.desde}T00:00:00`) : null;
-    const hasta = filtrosInstalador.hasta ? new Date(`${filtrosInstalador.hasta}T23:59:59.999`) : null;
+    const desde = filtrosInstalador.desde ? new Date(`${filtrosInstalador.desde}T00:00:00-05:00`) : null;
+    const hasta = filtrosInstalador.hasta ? new Date(`${filtrosInstalador.hasta}T23:59:59.999-05:00`) : null;
     const texto = `${item.codigo} ${item.placa} ${item.vehiculo} ${item.cliente} ${item.descripcion}`.toLowerCase();
     return (!desde || (fechaValida && fechaItem >= desde))
       && (!hasta || (fechaValida && fechaItem <= hasta))
@@ -252,7 +257,7 @@ function CoordinacionPage() {
       const nombre = item.instaladorNombre || "SIN INSTALADOR";
       const instaladorId = String(item.instaladorId || "");
       let actual = totales.find((grupo) =>
-        (instaladorId && grupo.ids.has(instaladorId)) || nombresCompatibles(grupo.nombre, nombre)
+        instaladorId && grupo.ids.size ? grupo.ids.has(instaladorId) : nombresCompatibles(grupo.nombre, nombre)
       );
       if (!actual) {
         actual = { nombre, ids: new Set(), trabajos: 0, total: 0, descuentos: 0 };
@@ -424,8 +429,39 @@ function CoordinacionPage() {
   );
 }
 
+const tiposManoObra = ["BLACK", "AMERICANO", "PPF"];
+
 function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
   const servicios = serviciosOrden(orden);
+  const [tarifas, setTarifas] = useState(null);
+  const [errorTarifas, setErrorTarifas] = useState(false);
+  const clavesTarifa = (servicio) => {
+    if (orden.garantia?.esGarantia) return [];
+    if (servicio.startsWith("PPF ")) return ["PPF"];
+    const adicional = servicio.match(/^ADICIONAL (\d+)$/);
+    if (adicional) {
+      const item = orden.serviciosAdicionales?.[Number(adicional[1]) - 1];
+      return [`${item?.tipo || ""} ${item?.detalle || ""}`, item?.detalle, item?.tipo]
+        .map(normalizarNombre).filter(Boolean).map((valor) => `SERVICIO:${valor}`);
+    }
+    const indice = servicio.match(/^POLARIZADO (\d+)$/);
+    const linea = indice && orden.polarizados?.[Number(indice[1]) - 1];
+    const material = normalizarNombre(linea?.material);
+    if (material === "PELICULA") {
+      const micraje = normalizarNombre(linea.porcentaje).match(/^([1-9]\d{0,5})(?:\s*MICRAS)?$/)?.[1];
+      return micraje ? [`PELICULA:${micraje}`] : [];
+    }
+    const clave = `MATERIAL:${material}`;
+    return material ? [clave, ...(material.startsWith("CLEAR PLEX ") ? ["MATERIAL:CLEAR PLEX"] : []),
+      ...tiposManoObra.filter((tipo) => material.split(/\s+/).includes(tipo))] : [];
+  };
+  useEffect(() => {
+    let activa = true;
+    getTarifasManoObra()
+      .then(({ data }) => { if (activa) setTarifas(data); })
+      .catch(() => { if (activa) setErrorTarifas(true); });
+    return () => { activa = false; };
+  }, []);
   const lineas = lineasOrden(orden);
   const garantiaInstalador = orden.garantia?.esGarantia && (orden.garantia?.tipo === "GARANTIA_INSTALADOR" || orden.garantia?.responsable === "INSTALADOR");
   const [fichaMedidas, setFichaMedidas] = useState(null);
@@ -440,14 +476,41 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
   const [asignaciones, setAsignaciones] = useState(() => servicios.flatMap((servicio) => {
     const existentes = (orden.coordinacion?.asignaciones || []).filter((item) => item.servicio === servicio.servicio);
     if (!existentes.length) return [{ ...servicio, descripcion: (servicio.partes || []).join(" | "), instaladorId: "", valorInstalacion: "" }];
-    return existentes.map((item) => ({
+    return existentes.map((item, index) => ({
       ...servicio,
       ...item,
       descripcion: partesGuardadas(servicio, item.descripcion),
       instaladorId: item.instaladorId || "",
       valorInstalacion: item.valorInstalacion || "",
+      participacionManoObra: item.manoObra?.participacion ?? "",
+      porcentajeManoObra: index === 0 && item.manoObra?.motivo ? item.manoObra.porcentaje : "",
+      motivoManoObra: index === 0 ? item.manoObra?.motivo || "" : "",
     }));
   }));
+  const primeraFila = (servicio) => asignaciones.find((fila) => fila.servicio === servicio);
+  const reglaAplicada = (fila) => {
+    const claves = clavesTarifa(fila.servicio);
+    const candidatas = [...claves.map((clave) => `${clave}|${fila.instaladorId}`), ...claves];
+    return candidatas.flatMap((clave) => [clave, `FIJO|${clave}`]).find((clave) => tarifas?.[clave] != null);
+  };
+  const usaCalculo = (servicio) => Boolean(clavesTarifa(servicio).length &&
+    (primeraFila(servicio)?.porcentajeManoObra || asignaciones.some((fila) => fila.servicio === servicio && reglaAplicada(fila))));
+  const estimarManoObra = (servicio) => {
+    if (!usaCalculo(servicio)) return null;
+    const excepcional = primeraFila(servicio)?.porcentajeManoObra;
+    const bruto = Number(orden.comercial?.valorVenta || 0);
+    const base = bruto > 0 ? Number(orden.comercial.totalAcordado || 0) * valorCobradoServicio(orden, servicio) / bruto : 0;
+    const filas = asignaciones.filter((fila) => fila.servicio === servicio);
+    let total = 0;
+    for (const fila of filas) {
+      const regla = reglaAplicada(fila);
+      if (!excepcional && !regla) return null;
+      const importe = !excepcional && regla.startsWith("FIJO|") ? Number(tarifas[regla])
+        : Math.round(base * Number(excepcional || tarifas[regla]) / 100);
+      total += importe * (filas.length === 1 ? 100 : Number(fila.participacionManoObra || 0)) / 100;
+    }
+    return Math.round(total);
+  };
   useEffect(() => {
     getMedidasVehiculos().then((response) => {
       const lista = response.data?.data || [];
@@ -491,7 +554,9 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
         });
         if (!confirmacion.isConfirmed) return;
       }
-      const { data } = await savePropuestaCoordinacion(orden._id, { propuesta, asignaciones });
+      const { data } = await savePropuestaCoordinacion(orden._id, { propuesta,
+        asignaciones: asignaciones.map((fila) => ({ ...fila, calcularManoObra: usaCalculo(fila.servicio) })),
+      });
       onSaved(data.data);
       Swal.fire({ icon: "success", title: "Responsables asignados" });
     } catch (error) {
@@ -514,7 +579,15 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
       Swal.fire({ icon: "info", title: "Este servicio necesita al menos un instalador" });
       return;
     }
-    setAsignaciones((actual) => actual.filter((_, i) => i !== index));
+    setAsignaciones((actual) => {
+      const fila = actual[index];
+      const restantes = actual.filter((_, i) => i !== index);
+      if (fila.porcentajeManoObra) {
+        const siguiente = restantes.findIndex((item) => item.servicio === servicio);
+        restantes[siguiente] = { ...restantes[siguiente], porcentajeManoObra: fila.porcentajeManoObra, motivoManoObra: fila.motivoManoObra };
+      }
+      return restantes;
+    });
   };
 
   return <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4">
@@ -540,18 +613,30 @@ function AsignacionModal({ orden, instaladores, onClose, onSaved }) {
           </div>)}
         </section>
         <section>
-          <div className="mb-3"><h3 className="font-bold">Instaladores y precios</h3><p className="text-xs text-slate-500">Puede asignar toda la instalación a una persona o dividir cada servicio entre varios instaladores.</p>{garantiaInstalador && <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">Garantía por instalador: únicamente el responsable de la garantía puede quedar sin pago. Si otro instalador realiza el trabajo, debe registrar su precio.</p>}</div>
+          {errorTarifas && <p role="alert" className="text-sm text-red-700">No se pudieron cargar los porcentajes. Vuelve a abrir la asignación.</p>}
+          <div className="my-3"><h3 className="font-bold">Instaladores y precios</h3><p className="text-xs text-slate-500">Puede asignar toda la instalación a una persona o dividir cada servicio entre varios instaladores.</p>{garantiaInstalador && <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">Garantía por instalador: únicamente el responsable de la garantía puede quedar sin pago. Si otro instalador realiza el trabajo, debe registrar su precio.</p>}</div>
           <div className="space-y-4">{servicios.map((servicio) => <div key={servicio.servicio} className="overflow-hidden rounded-lg border border-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-slate-50 px-3 py-2"><div><p className="text-sm font-black text-slate-800">{servicio.descripcion}</p><p className="text-[10px] font-bold uppercase text-slate-400">{servicio.servicio}</p></div><button type="button" onClick={() => dividirServicio(servicio)} className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-white px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50"><Plus size={14}/>Dividir entre otro instalador</button></div>
             <div className="divide-y divide-slate-100">{asignaciones.map((item, index) => item.servicio === servicio.servicio ? <div key={`${item.servicio}-${index}`} className="grid items-end gap-3 p-3 md:grid-cols-[minmax(0,1fr)_220px_170px_auto]">
               <SelectorPartes partes={servicio.partes || []} value={item.descripcion} onChange={(value) => actualizarAsignacion(index, { descripcion: value })} />
               <label className="text-xs font-bold text-slate-500">Instalador<select value={item.instaladorId} onChange={(event) => actualizarAsignacion(index, { instaladorId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border bg-white px-3 text-sm font-normal"><option value="">Seleccione instalador</option>{instaladores.map((instalador) => <option key={instalador._id} value={instalador._id}>{instalador.nombre}</option>)}</select></label>
-              <Input label={garantiaInstalador && String(item.instaladorId) === String(orden.garantia?.instaladorId || "") ? "Precio instalación (opcional)" : "Precio instalación"} value={item.valorInstalacion} onChange={(value) => actualizarAsignacion(index, { valorInstalacion: value })}/>
+              {usaCalculo(item.servicio) ? (
+                asignaciones.filter((fila) => fila.servicio === item.servicio).length === 1
+                  ? <p className="text-sm">Participación: 100 %</p>
+                  : <Input label="Participación (%)" step="0.01" value={item.participacionManoObra ?? ""} onChange={(value) => actualizarAsignacion(index, { participacionManoObra: value })} />
+              ) : <Input label={garantiaInstalador && String(item.instaladorId) === String(orden.garantia?.instaladorId || "") ? "Precio instalación (opcional)" : "Precio instalación"} value={item.valorInstalacion} onChange={(value) => actualizarAsignacion(index, { valorInstalacion: value })}/>}
               <button type="button" onClick={() => quitarAsignacion(index, item.servicio)} title="Quitar esta asignación" className="mb-0.5 flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"><Trash2 size={16}/></button>
+              {clavesTarifa(item.servicio).length > 0 && primeraFila(item.servicio) === item && (
+                <div className="grid gap-2 border-t pt-2 sm:grid-cols-2 md:col-span-4">
+                  <Input label="Porcentaje excepcional del servicio (%)" step="0.01" value={item.porcentajeManoObra ?? ""} onChange={(value) => actualizarAsignacion(index, { porcentajeManoObra: value })} />
+                  {item.porcentajeManoObra && <label className="text-xs font-bold text-slate-500">Motivo de la excepción<input value={item.motivoManoObra || ""} onChange={(e) => actualizarAsignacion(index, { motivoManoObra: e.target.value })} className="mt-1 h-10 w-full rounded-lg border px-3" /></label>}
+                  {estimarManoObra(item.servicio) != null && <p className="text-sm font-semibold sm:col-span-2">Mano de obra estimada del servicio: {cop.format(estimarManoObra(item.servicio))}. Las participaciones deben sumar 100 %.</p>}
+                </div>
+              )}
             </div> : null)}</div>
           </div>)}</div>
         </section>
-        <button onClick={guardar} className="w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white">Enviar propuesta a Inventario</button>
+        <button onClick={guardar} disabled={!tarifas} className="w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white disabled:opacity-50">Enviar propuesta a Inventario</button>
       </div>
     </div>
   </div>;

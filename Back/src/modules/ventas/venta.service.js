@@ -640,7 +640,21 @@ export const crearVenta = async (data, user) => {
   return venta;
 };
 
-export const obtenerVentas = async ({ asesoriaIds, desde, hasta, limite } = {}) => {
+export const obtenerVentas = async ({ asesoriaIds, desde, hasta, limite, recaudoDesde, recaudoHasta } = {}) => {
+  if (recaudoDesde !== undefined || recaudoHasta !== undefined) {
+    const rango = {};
+    for (const [dia, operador, hora] of [[recaudoDesde, "$gte", "00:00:00.000"], [recaudoHasta, "$lte", "23:59:59.999"]]) {
+      if (dia === undefined) continue;
+      const fecha = new Date(`${dia}T${hora}-05:00`);
+      if (typeof dia !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dia) || !Number.isFinite(fecha.getTime())) {
+        throw new Error("Fecha de recaudo no válida");
+      }
+      rango[operador] = fecha;
+    }
+    return Venta.find({ pagos: { $elemMatch: { fecha: rango } } })
+      .select("cliente.nombre vehiculo.placa codigoVenta pagos.tipo pagos.valor pagos.metodoPago pagos.entidadPago pagos.fecha")
+      .lean();
+  }
   const ids = String(asesoriaIds || "")
     .split(",")
     .map((id) => id.trim())

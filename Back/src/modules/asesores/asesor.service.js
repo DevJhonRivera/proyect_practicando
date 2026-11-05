@@ -1013,7 +1013,7 @@ export const obtenerAsesoriaPorId = async (id, user) => {
 export const obtenerHistorialServicio = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Servicio no valido");
   const servicio = await Asesoria.findById(id)
-    .select("codigo vehiculo.placa asesorNombre flujo.etapa seguroVehiculo.estado trazabilidad")
+    .select("codigo vehiculo.placa asesorNombre flujo.etapa seguroVehiculo.estado trazabilidad auditoria.accion auditoria.descripcion auditoria.fecha auditoria.usuarioNombre novedades.tipo novedades.estado novedades.descripcion novedades.fecha novedades.usuarioNombre autorizaciones.documentos.tipo autorizaciones.documentos.respuestaCliente.motivo autorizaciones.documentos.respuestaCliente.fecha")
     .lean();
   if (!servicio) throw new Error("Servicio no encontrado");
   return servicio;

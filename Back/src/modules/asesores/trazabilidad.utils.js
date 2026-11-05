@@ -30,3 +30,14 @@ export const registrarCambios = (orden, anterior, fecha) => {
       usuarioId: usuarioId || null, usuarioNombre: usuarioNombre || "Sistema" });
   }
 };
+export function medirEtapas(eventos = [], ahora = Date.now()) {
+  const historial = eventos.filter((evento) => evento.proceso === "SERVICIO" && evento.fecha)
+    .map((evento) => ({ ...evento, inicio: new Date(evento.fecha).getTime() }))
+    .filter((evento) => Number.isFinite(evento.inicio) && evento.inicio <= ahora)
+    .sort((a, b) => a.inicio - b.inicio);
+  return historial.flatMap((evento, indice) => {
+    if (["FINALIZADA", "CANCELADA"].includes(evento.estado)) return [];
+    const siguiente = historial[indice + 1];
+    return [{ ...evento, activo: !siguiente, duracionMs: (siguiente?.inicio ?? ahora) - evento.inicio }];
+  });
+}

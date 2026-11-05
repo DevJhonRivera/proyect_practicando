@@ -1,3 +1,4 @@
+import { listarHistorialServicios } from "./historial.service.js";
 import {
   buscarClienteAsesoria,
   buscarClientesAsesoria,
@@ -85,6 +86,14 @@ export const getAsesoriaPorId = async (req, res) => {
     res.json({ success: true, data: await obtenerAsesoriaPorId(req.params.id, req.user) });
   } catch (error) {
     res.status(404).json({ message: error.message });
+  }
+};
+
+export const getHistorialServicios = async (req, res) => {
+  try {
+    res.json({ success: true, data: await listarHistorialServicios(req.query) });
+  } catch (error) {
+    res.status(error instanceof RangeError ? 400 : 500).json({ message: error instanceof RangeError ? error.message : "No se pudo consultar el historial." });
   }
 };
 

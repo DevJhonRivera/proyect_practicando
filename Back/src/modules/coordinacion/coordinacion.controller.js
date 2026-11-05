@@ -5,7 +5,7 @@ const responder = (fn) => async (req, res) => {
   catch (error) { res.status(400).json({ message: error.message }); }
 };
 
-export const getOrdenes = responder((req) => service.listarOrdenesCoordinacion(req.user));
+export const getOrdenes = responder((req) => service.listarOrdenesCoordinacion(req.user, req.query));
 export const getInstaladores = responder(() => service.listarInstaladores());
 export const putPropuesta = responder((req) => service.guardarPropuesta(req.params.id, req.body, req.user));
 export const patchRevision = responder((req) => service.revisarPropuesta(req.params.id, req.body, req.user));

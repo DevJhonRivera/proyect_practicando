@@ -231,6 +231,14 @@ const asesoriaSchema = new mongoose.Schema(
           instaladorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
           instaladorNombre: { type: String, required: true, trim: true, uppercase: true },
           valorInstalacion: { type: Number, default: 0, min: 0 },
+          manoObra: {
+            tipo: String,
+            base: Number,
+            porcentaje: Number,
+            montoFijo: Number,
+            participacion: Number,
+            motivo: String,
+          },
           estado: {
             type: String,
             enum: ["ESPERANDO_MATERIAL", "PENDIENTE", "EN_PROCESO", "COMPLETADA"],

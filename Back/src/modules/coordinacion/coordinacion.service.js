@@ -2,6 +2,7 @@ import { validarFirmasTrabajo } from "../asesores/autorizaciones.utils.js";
 import { ultimaRevision, validarRevisionCalidad } from "./calidad.utils.js";
 import { avisarVehiculoListo } from "./notificacionCalidad.service.js";
 import mongoose from "mongoose";
+import { calcularManoObra, obtenerTarifasManoObra } from "./manoObra.js";
 import { validarSinNovedadesBloqueantes } from "../asesores/asesoriaWorkflow.utils.js";
 
 import Asesoria from "../asesores/asesoria.model.js";
@@ -106,7 +107,7 @@ const obtenerOrden = async (id) => {
   return asesoria;
 };
 
-export const listarOrdenesCoordinacion = async (user) => {
+export const listarOrdenesCoordinacion = async (user, { desde, hasta } = {}) => {
   const query = {};
   const nombresCompatibles = [...new Set([
     mayusculas(user.nombre),
@@ -123,11 +124,35 @@ export const listarOrdenesCoordinacion = async (user) => {
   if (user.rol !== "INSTALADOR") {
     query["flujo.etapa"] = { $nin: ["FINALIZADA", "CANCELADA"] };
   }
+  const campos = "codigo cliente vehiculo polarizados ppf serviciosAdicionales garantia comercial coordinacion flujo novedades asesorNombre createdAt accesorios.nombre accesorios.marca accesorios.cantidadPendiente";
   const ordenes = await Asesoria.find(query)
-    .select("codigo cliente vehiculo polarizados ppf serviciosAdicionales garantia comercial coordinacion flujo novedades asesorNombre createdAt accesorios.nombre accesorios.marca accesorios.cantidadPendiente")
+    .select(campos)
     .sort({ createdAt: -1 })
     .limit(500)
     .lean();
+  if (["VENTAS", "ADMIN", "SUPERUSUARIO"].includes(user.rol) && (desde || hasta)) {
+    const rango = {};
+    for (const [dia, operador, hora] of [[desde, "$gte", "00:00:00.000"], [hasta, "$lte", "23:59:59.999"]]) {
+      if (!dia) continue;
+      const fecha = new Date(`${dia}T${hora}-05:00`);
+      if (typeof dia !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dia) || !Number.isFinite(fecha.getTime())) {
+        throw new Error("Fecha de liquidación no válida");
+      }
+      rango[operador] = fecha;
+    }
+    const historial = await Asesoria.find({
+      _id: { $nin: ordenes.map((orden) => orden._id) },
+      "flujo.etapa": { $ne: "CANCELADA" },
+      $or: [
+        { "coordinacion.asignaciones": { $elemMatch: { estado: "COMPLETADA", $or: [{ fechaFinalizacion: rango }, { fechaFinalizacion: null, fechaInicio: rango }] } } },
+        { "flujo.fechaFinalizacion": rango },
+        { "novedades.fechaResolucion": rango },
+        { "novedades.fecha": rango },
+        { createdAt: rango, "coordinacion.asignaciones.estado": "COMPLETADA" },
+      ],
+    }).select(campos).lean();
+    ordenes.push(...historial);
+  }
   const garantiasIds = ordenes.filter((orden) => orden.garantia?.esGarantia).map((orden) => orden._id);
   const costos = garantiasIds.length ? await Corte.aggregate([
     { $match: { asesoriaId: { $in: garantiasIds } } },
@@ -245,7 +270,15 @@ export const guardarPropuesta = async (id, data, user) => {
     asesoria.garantia?.tipo === "GARANTIA_INSTALADOR" || asesoria.garantia?.responsable === "INSTALADOR"
   );
   const instaladorResponsableId = String(asesoria.garantia?.instaladorId || "");
+  const tarifas = entradasAsignacion.some((item) => item.calcularManoObra === true) ? await obtenerTarifasManoObra() : {};
+  const calculos = new Map();
+  for (const servicio of servicios) {
+    const filas = entradasAsignacion.filter((item) => mayusculas(item.servicio) === servicio.servicio);
+    const valores = calcularManoObra(asesoria, servicio, filas, tarifas);
+    if (valores) filas.forEach((fila, index) => calculos.set(fila, valores[index]));
+  }
   const asignacionesSinPago = entradasAsignacion.filter((item) => {
+    if (calculos.has(item)) return false;
     const esResponsableGarantia = garantiaInstalador && instaladorResponsableId && String(item.instaladorId) === instaladorResponsableId;
     return !esResponsableGarantia && Number(item.valorInstalacion || 0) <= 0;
   });
@@ -265,6 +298,7 @@ export const guardarPropuesta = async (id, data, user) => {
       ? 0
       : Math.max(Number(item.valorInstalacion || 0), 0),
     estado: "ESPERANDO_MATERIAL",
+    ...calculos.get(item),
   }));
   asesoria.coordinacion.coordinadorId = user._id;
   asesoria.coordinacion.coordinadorNombre = mayusculas(user.nombre || user.rol);

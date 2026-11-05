@@ -191,6 +191,9 @@ function VentasPage() {
   const [cortes, setCortes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [recaudoDesde, setRecaudoDesde] = useState("");
+  const [recaudoHasta, setRecaudoHasta] = useState("");
+  const [consultaRecaudo, setConsultaRecaudo] = useState(null);
   const [filtroVerificacion, setFiltroVerificacion] =
     useState("PENDIENTES");
   const [form, setForm] = useState(ventaInicial);
@@ -340,6 +343,20 @@ function VentasPage() {
       .catch((error) => Swal.fire({ icon: "error", title: "No se pudo cargar la orden", text: error.response?.data?.message || "Intente nuevamente." }));
   }, [loading, searchParams]);
 
+  const rangoRecaudo = Boolean(recaudoDesde || recaudoHasta);
+  const rangoInvalido = recaudoDesde && recaudoHasta && recaudoDesde > recaudoHasta;
+  const claveRecaudo = `${recaudoDesde}/${recaudoHasta}`;
+  const resultadoRecaudo = consultaRecaudo?.clave === claveRecaudo ? consultaRecaudo : null;
+
+  useEffect(() => {
+    if (!rangoRecaudo || rangoInvalido) return;
+    let activa = true;
+    getVentas({ recaudoDesde: recaudoDesde || undefined, recaudoHasta: recaudoHasta || undefined })
+      .then(({ data }) => { if (activa) setConsultaRecaudo({ clave: claveRecaudo, ventas: data }); })
+      .catch(() => { if (activa) setConsultaRecaudo({ clave: claveRecaudo, error: true }); });
+    return () => { activa = false; };
+  }, [recaudoDesde, recaudoHasta, claveRecaudo, rangoRecaudo, rangoInvalido, ventas]);
+
   const ventasFiltradas = useMemo(() => {
     const texto = search.toLowerCase();
 
@@ -361,13 +378,20 @@ function VentasPage() {
   const resumenPagos = useMemo(() => {
     const importes = new Map();
     const cuentas = new Map();
+    const inicio = recaudoDesde ? Date.parse(`${recaudoDesde}T00:00:00-05:00`) : -Infinity;
+    const fin = recaudoHasta ? Date.parse(`${recaudoHasta}T23:59:59.999-05:00`) : Infinity;
+    const enRango = (fecha) => !rangoRecaudo || (fecha && Date.parse(fecha) >= inicio && Date.parse(fecha) <= fin);
     const sumar = (metodo, valor, entidad) => {
       if (!valor) return;
       importes.set(metodo, (importes.get(metodo) || 0) + valor);
       const cuenta = entidad?.trim().toUpperCase() || (metodo === "EFECTIVO" ? "Efectivo en caja" : "Sin cuenta registrada");
       cuentas.set(cuenta, (cuentas.get(cuenta) || 0) + valor);
     };
-    for (const venta of ventasFiltradas) {
+    const texto = search.toLowerCase();
+    const origen = rangoRecaudo ? resultadoRecaudo?.ventas || [] : ventasFiltradas;
+    for (const venta of origen) {
+      if (rangoRecaudo && ![venta.cliente?.nombre, venta.vehiculo?.placa, venta.codigoVenta]
+        .some((dato) => (dato || "").toLowerCase().includes(texto))) continue;
       let pagosRegistrados = 0;
       let devolucionesRegistradas = 0;
       for (const movimiento of venta.pagos || []) {
@@ -375,18 +399,20 @@ function VentasPage() {
         const metodo = movimiento.metodoPago || "SIN_DESGLOSE";
         if (movimiento.tipo === "DEVOLUCION") {
           devolucionesRegistradas += valor;
-          sumar(metodo, -valor, movimiento.entidadPago);
+          if (enRango(movimiento.fecha)) sumar(metodo, -valor, movimiento.entidadPago);
         } else if (movimiento.tipo === "PAGO") {
           pagosRegistrados += valor;
-          sumar(metodo, valor, movimiento.entidadPago);
+          if (enRango(movimiento.fecha)) sumar(metodo, valor, movimiento.entidadPago);
         }
       }
       const pagado = Number(venta.valorPagado || (!venta.pagos?.length && venta.estado === "PAGADA" ? venta.total : 0));
-      sumar(pagosRegistrados ? "SIN_DESGLOSE" : venta.metodoPago || "SIN_DESGLOSE", Math.max(0, pagado - pagosRegistrados));
-      sumar("SIN_DESGLOSE", -Math.max(0, Number(venta.valorDevuelto || 0) - devolucionesRegistradas));
+      if (!rangoRecaudo) {
+        sumar(pagosRegistrados ? "SIN_DESGLOSE" : venta.metodoPago || "SIN_DESGLOSE", Math.max(0, pagado - pagosRegistrados));
+        sumar("SIN_DESGLOSE", -Math.max(0, Number(venta.valorDevuelto || 0) - devolucionesRegistradas));
+      }
     }
     return { importes, cuentas, total: [...importes.values()].reduce((total, valor) => total + valor, 0) };
-  }, [ventasFiltradas]);
+  }, [ventasFiltradas, rangoRecaudo, resultadoRecaudo, recaudoDesde, recaudoHasta, search]);
   const paginationVentas = usePagination(ventasFiltradas);
 
   const subtotal = form.items.reduce(
@@ -1448,7 +1474,17 @@ function VentasPage() {
 
           <div className="border-b border-slate-200 bg-white p-3">
             <h3 className="text-sm font-bold text-slate-800">Recaudo por método de pago</h3>
-            <p className="mb-3 text-xs text-slate-500">Pagos y abonos menos devoluciones de las ventas que coinciden con los filtros.</p>
+            <p className="mb-3 text-xs text-slate-500">Con un rango, el recaudo usa la fecha de cada pago, abono o devolución (hora de Colombia). El filtro de mes sigue aplicando al historial de ventas.</p>
+            <div className="mb-3 flex flex-wrap items-end gap-3">
+              <label className="text-xs font-semibold">Desde<input type="date" value={recaudoDesde} onChange={(e) => setRecaudoDesde(e.target.value)} className="mt-1 block rounded border border-slate-300 p-2" /></label>
+              <label className="text-xs font-semibold">Hasta<input type="date" value={recaudoHasta} onChange={(e) => setRecaudoHasta(e.target.value)} className="mt-1 block rounded border border-slate-300 p-2" /></label>
+              {rangoRecaudo && <button type="button" onClick={() => { setRecaudoDesde(""); setRecaudoHasta(""); setConsultaRecaudo(null); }} className="rounded border px-3 py-2 text-sm">Limpiar fechas</button>}
+            </div>
+            {rangoInvalido ? <p role="alert">La fecha Hasta debe ser igual o posterior a Desde.</p>
+              : rangoRecaudo && !resultadoRecaudo ? <p role="status">Consultando recaudo…</p>
+              : resultadoRecaudo?.error ? <p role="alert">No se pudo consultar el recaudo. Vuelve a seleccionar las fechas.</p>
+              : <>
+            {rangoRecaudo && <p className="mb-2 text-xs text-slate-500">El rango incluye movimientos con fecha registrada.</p>}
             <dl className="flex flex-wrap gap-2">
               <div className="rounded-lg bg-emerald-50 px-4 py-2 text-emerald-800">
                 <dt className="text-xs font-semibold">Total neto</dt>
@@ -1471,6 +1507,7 @@ function VentasPage() {
                 </div>
               ))}
             </dl>
+              </>}
           </div>
 
           <div className="divide-y max-h-[820px] overflow-y-auto">

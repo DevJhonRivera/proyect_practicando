@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { capturarEstado, registrarCambios } from "../src/modules/asesores/trazabilidad.utils.js";
+import { capturarEstado, medirEtapas, registrarCambios } from "../src/modules/asesores/trazabilidad.utils.js";
 
 test("records transitions and rework with server time and responsible user", () => {
   const orden = { flujo: { etapa: "EN_INSTALACION" }, auditoria: [{ usuarioNombre: "Ana" }], isModified: () => true };
@@ -53,3 +53,29 @@ test("billing query updates append history without replacing earlier events", as
 });
 
 
+
+test("mide corte y pago desde su turno y conserva las visitas de reproceso", () => {
+  const inicio = Date.UTC(2026, 10, 3, 15);
+  const minuto = 60000;
+  const servicio = (estado, offset) => ({ proceso: "SERVICIO", estado, fecha: new Date(inicio + offset * minuto) });
+  const eventos = [
+    servicio("PENDIENTE_COORDINACION", 0),
+    { ...servicio("PENDIENTE", 0), proceso: "PAGO" },
+    servicio("PENDIENTE_INVENTARIO", 20),
+    servicio("EN_INSTALACION", 45),
+    servicio("REPROCESO", 60),
+    servicio("EN_INSTALACION", 80),
+    servicio("PENDIENTE_PAGO", 100),
+  ];
+  const medidas = (filas) => filas.map(({ estado, duracionMs, activo }) => [estado, duracionMs / minuto, activo]);
+  assert.deepEqual(medidas(medirEtapas(eventos, inicio + 115 * minuto)), [
+    ["PENDIENTE_COORDINACION", 20, false],
+    ["PENDIENTE_INVENTARIO", 25, false],
+    ["EN_INSTALACION", 15, false],
+    ["REPROCESO", 20, false],
+    ["EN_INSTALACION", 20, false],
+    ["PENDIENTE_PAGO", 15, true],
+  ]);
+  assert.deepEqual(medidas(medirEtapas([...eventos, servicio("FINALIZADA", 110)], inicio + 140 * minuto)).at(-1),
+    ["PENDIENTE_PAGO", 10, false]);
+});

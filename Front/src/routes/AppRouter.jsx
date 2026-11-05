@@ -24,6 +24,7 @@ const FinanzasPage = lazy(() => import("../pages/finanzas/FinanzasPage"));
 const VentasPage = lazy(() => import("../pages/ventas/VentasPage"));
 const AuditoriaPage = lazy(() => import("../pages/auditoria/AuditoriaPage"));
 const HistorialServiciosPage = lazy(() => import("../pages/historialServicios/HistorialServiciosPage"));
+const TarifasManoObraPage = lazy(() => import("../pages/coordinacion/TarifasManoObraPage"));
 const UsuariosPage = lazy(() => import("../pages/usuarios/UsuariosPage"));
 const AsesoresPage = lazy(() => import("../pages/asesores/AsesoresPage"));
 const CoordinacionPage = lazy(() => import("../pages/coordinacion/CoordinacionPage"));
@@ -267,6 +268,10 @@ function AppRouter() {
           <Route
             path="/historial-servicios"
             element={<RutaAdministracion><HistorialServiciosPage /></RutaAdministracion>}
+          />
+          <Route
+            path="/porcentajes-mano-obra"
+            element={<RutaAdministracion><TarifasManoObraPage /></RutaAdministracion>}
           />
 
         </Route>

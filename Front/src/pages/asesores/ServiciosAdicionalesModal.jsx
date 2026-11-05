@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 import AppModal from "../../components/ui/AppModal";
 import { createServicioAdicional, deleteServicioAdicional, getServiciosAdicionales } from "../../api/serviciosAdicionales.api";
 
-const CATEGORIAS = ["LAVADO", "POLICHADA", "DETAILING", "PDR", "PINTURA", "ASEGURADA", "OTRO"];
+const CATEGORIAS = ["LAVADO", "POLICHADA", "DETAILING", "PDR", "PINTURA", "ASEGURADA", "INSTALACIONES", "OTRO"];
 const soloDigitos = (value) => String(value || "").replace(/\D/g, "");
 
 export default function ServiciosAdicionalesModal({ onClose }) {

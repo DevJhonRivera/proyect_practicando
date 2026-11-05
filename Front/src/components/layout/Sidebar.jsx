@@ -124,6 +124,12 @@ function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCo
           url: "/historial-servicios",
           soloAdmin: true,
         },
+        {
+          icon: ClipboardList,
+          text: "Porcentajes de mano de obra",
+          url: "/porcentajes-mano-obra",
+          soloAdmin: true,
+        },
       ],
     },
     {
