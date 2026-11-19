@@ -4,13 +4,18 @@ import {
   verificarStockReserva,
 } from "./alerta.service.js";
 
+let ultimaVerificacionStock = 0;
+
 export const getAlertas =
   async (req, res) => {
     try {
-      await verificarStockReserva();
+      if (Date.now() - ultimaVerificacionStock > 60000) {
+        await verificarStockReserva();
+        ultimaVerificacionStock = Date.now();
+      }
 
       const alertas =
-        await obtenerAlertas(req.user);
+        await obtenerAlertas(req.user, req.query);
 
       res.json(alertas);
     } catch (error) {

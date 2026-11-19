@@ -1,4 +1,4 @@
-import { CalendarDays, Search } from "lucide-react";
+import { FilterField, FilterSearch, FilterToolbar, filterControlClass } from "../../../components/ui/FilterToolbar";
 
 function CortesSearch({
   value,
@@ -9,31 +9,9 @@ function CortesSearch({
   onFechaHastaChange,
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="font-bold text-slate-800">
-          Buscar cortes
-        </h2>
-        <p className="text-sm text-slate-500">
-          Filtra por texto o por rango de fechas.
-        </p>
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
-        <div className="relative">
-          <Search
-            size={18}
-            className="absolute left-3 top-3.5 text-slate-400"
-          />
-
-          <input
-            type="text"
-            placeholder="Buscar por marca, modelo, placa, rollo, retazo, servicio, instalador o tipo de corte..."
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
-          />
-        </div>
+    <FilterToolbar activeCount={[value, fechaDesde, fechaHasta].filter(Boolean).length} onClear={() => { onChange(""); onFechaDesdeChange(""); onFechaHastaChange(""); }} title="Filtros de cortes">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_160px] lg:items-end">
+        <FilterField label="Buscar"><FilterSearch value={value} onChange={onChange} placeholder="Marca, placa, rollo, servicio o instalador"/></FilterField>
 
         <FechaInput
           label="Desde"
@@ -47,26 +25,20 @@ function CortesSearch({
           onChange={onFechaHastaChange}
         />
       </div>
-    </div>
+    </FilterToolbar>
   );
 }
 
 function FechaInput({ label, value, onChange }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {label}
-      </span>
-      <div className="relative mt-1">
-        <CalendarDays
-          size={18}
-          className="pointer-events-none absolute left-3 top-3.5 text-slate-400"
-        />
+      <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">{label}</span>
+      <div className="relative">
         <input
           type="date"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+          className={filterControlClass}
         />
       </div>
     </label>

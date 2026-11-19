@@ -7,6 +7,7 @@ import {
   ClipboardPlus,
   Scissors,
   Truck,
+  ListTodo,
 } from "lucide-react";
 import {
   obtenerUsuarioActual,
@@ -14,6 +15,16 @@ import {
 } from "../../../utils/permisos";
 
 const acciones = [
+  {
+    title: "Órdenes de trabajo",
+    text: "Sigue cada vehículo hasta el pago.",
+    url: "/ordenes-trabajo",
+    icon: ListTodo,
+    color: "bg-cyan-700",
+    surface: "border-cyan-100 hover:border-cyan-200",
+    modulo: "dashboard",
+    accion: "read",
+  },
   {
     title: "Crear pedido",
     text: "Registra una compra al proveedor.",

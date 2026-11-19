@@ -1,3 +1,4 @@
+import { validarFirmaEntrega } from "../asesores/autorizaciones.utils.js";
 import mongoose from "mongoose";
 import { mongoSoportaTransacciones } from "../../config/db.js";
 import Corte from "../cortes/corte.model.js";
@@ -524,6 +525,7 @@ export const crearVenta = async (data, user) => {
     }
     asesoria = await Asesoria.findById(data.asesoriaId).lean();
     if (!asesoria) throw new Error("La orden de servicio no existe");
+    validarFirmaEntrega(asesoria);
     if (asesoria.flujo?.etapa !== "PENDIENTE_PAGO") {
       throw new Error("La orden no esta disponible para registrar el pago");
     }
@@ -638,14 +640,44 @@ export const crearVenta = async (data, user) => {
   return venta;
 };
 
-export const obtenerVentas = async () => {
-  return await Venta.find()
+export const obtenerVentas = async ({ asesoriaIds, desde, hasta, limite, recaudoDesde, recaudoHasta } = {}) => {
+  if (recaudoDesde !== undefined || recaudoHasta !== undefined) {
+    const rango = {};
+    for (const [dia, operador, hora] of [[recaudoDesde, "$gte", "00:00:00.000"], [recaudoHasta, "$lte", "23:59:59.999"]]) {
+      if (dia === undefined) continue;
+      const fecha = new Date(`${dia}T${hora}-05:00`);
+      if (typeof dia !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dia) || !Number.isFinite(fecha.getTime())) {
+        throw new Error("Fecha de recaudo no válida");
+      }
+      rango[operador] = fecha;
+    }
+    return Venta.find({ pagos: { $elemMatch: { fecha: rango } } })
+      .select("cliente.nombre vehiculo.placa codigoVenta pagos.tipo pagos.valor pagos.metodoPago pagos.entidadPago pagos.fecha")
+      .lean();
+  }
+  const ids = String(asesoriaIds || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => mongoose.Types.ObjectId.isValid(id));
+  const query = asesoriaIds !== undefined ? { asesoriaId: { $in: ids } } : {};
+  if (desde || hasta) {
+    query.createdAt = {};
+    if (desde) query.createdAt.$gte = new Date(`${desde}T00:00:00`);
+    if (hasta) query.createdAt.$lte = new Date(`${hasta}T23:59:59.999`);
+  }
+  const maximo = Math.min(Math.max(Number(limite) || 500, 1), 1000);
+  return await Venta.find(query)
+    // Las fotos base64 se consultan solo al abrir un comprobante. Incluirlas en
+    // el historial multiplica innecesariamente el peso de cada respuesta.
+    .select("-pagos.comprobanteImagen")
     .populate("asesoriaId", "cliente vehiculo codigo")
     .populate("items.corteId")
     .populate("items.corteIds")
     .sort({
       createdAt: -1,
-    });
+    })
+    .limit(maximo)
+    .lean();
 };
 
 export const obtenerVentaPorId = async (id) => {
@@ -785,6 +817,11 @@ export const registrarMovimientoPago = async (id, data, user) => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Venta no valida");
   const venta = await Venta.findById(id);
   if (!venta) throw new Error("Venta no encontrada");
+  if (venta.asesoriaId) {
+    const orden = await Asesoria.findById(venta.asesoriaId);
+    if (!orden) throw new Error("Servicio no encontrado");
+    validarFirmaEntrega(orden);
+  }
   if (venta.estado === "ANULADA") throw new Error("No se pueden registrar movimientos en una venta anulada");
 
   const tipo = normalizarMayusculas(data.tipo || "PAGO");

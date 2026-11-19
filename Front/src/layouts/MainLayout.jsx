@@ -1,3 +1,4 @@
+import { iniciarEventos } from "../utils/tiempoReal";
 import { useCallback, useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Menu } from "lucide-react";
@@ -14,13 +15,14 @@ import {
 function MainLayout() {
   const [, setPermisosActualizados] = useState(0);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [menuCompacto, setMenuCompacto] = useState(() => localStorage.getItem("polarizadosya.sidebar.compacto") === "true");
   const cerrarMenu = useCallback(() => setMenuAbierto(false), []);
   const usuario = obtenerUsuarioActual();
   const puedeVerAlertas = tienePermiso(
     usuario,
     "alertas",
     "read"
-  );
+  ) || tienePermiso(usuario, "asesores", "read");
 
   useEffect(() => {
     let active = true;
@@ -50,12 +52,24 @@ function MainLayout() {
     };
   }, []);
 
+  useEffect(() => iniciarEventos(), []);
+
+  const alternarMenuCompacto = () => {
+    setMenuCompacto((actual) => {
+      const siguiente = !actual;
+      localStorage.setItem("polarizadosya.sidebar.compacto", String(siguiente));
+      return siguiente;
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-slate-100 lg:h-screen lg:min-h-0 lg:overflow-hidden">
 
       <Sidebar
         open={menuAbierto}
         onClose={cerrarMenu}
+        compact={menuCompacto}
+        onToggleCompact={alternarMenuCompacto}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">

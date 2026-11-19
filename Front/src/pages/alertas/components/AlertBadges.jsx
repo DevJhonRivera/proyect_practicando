@@ -7,6 +7,7 @@ import {
   TIPO_STOCK_RESERVA_UN_ROLLO,
   TIPO_VENTA_PENDIENTE,
   TIPO_VENTA_REVISION_CORTES,
+  TIPO_ACCESORIO_PENDIENTE,
 } from "../alertas.constants";
 
 export function TipoBadge({ tipo }) {
@@ -14,6 +15,7 @@ export function TipoBadge({ tipo }) {
 
   const style =
     tipo === TIPO_STOCK_RESERVA_UN_ROLLO ||
+    tipo === TIPO_ACCESORIO_PENDIENTE ||
     upper.includes("CRITICO") ||
     upper.includes("AGOTADO")
       ? "border-red-200 bg-red-50 text-red-700"
@@ -32,7 +34,7 @@ export function TipoBadge({ tipo }) {
 
   return (
     <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${style}`}>
-      {tipo}
+      {String(tipo || "ALERTA").replaceAll("_", " ")}
     </span>
   );
 }

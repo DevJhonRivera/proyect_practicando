@@ -1,4 +1,7 @@
 import { Router } from "express";
+import User from "./user.model.js";
+import { validarRemuneracion } from "./remuneracion.js";
+import { requireRole } from "../../middlewares/permission.middleware.js";
 
 import {
   createUsuario,
@@ -54,5 +57,14 @@ router.delete(
   requirePermission("usuarios", "delete"),
   deleteUsuario
 );
+
+router.patch("/:id/remuneracion", authMiddleware, requireRole("ADMIN", "SUPERUSUARIO"), async (req, res) => {
+  try {
+    const remuneracion = validarRemuneracion(req.body);
+    const user = await User.findOneAndUpdate({ _id: req.params.id, rol: "INSTALADOR" }, { $set: { remuneracion } }, { new: true, runValidators: true }).select("nombre remuneracion");
+    if (!user) return res.status(404).json({ message: "Instalador no encontrado" });
+    res.json(user);
+  } catch (error) { res.status(400).json({ message: error.message }); }
+});
 
 export default router;

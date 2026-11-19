@@ -1,3 +1,4 @@
+import { listarHistorialServicios } from "./historial.service.js";
 import {
   buscarClienteAsesoria,
   buscarClientesAsesoria,
@@ -5,13 +6,23 @@ import {
   listarAsesorias,
   obtenerCatalogoDisponible,
   obtenerAsesoriaPorId,
+  obtenerHistorialServicio,
   enviarAsesoriaAVentas,
   actualizarAsesoria,
   registrarNovedadAsesoria,
   revisarNovedadAsesoria,
   revisarGarantiaAsesoria,
   resolverNovedadAsesoria,
+  listarOrigenesGarantia,
 } from "./asesor.service.js";
+
+export const getOrigenesGarantia = async (req, res) => {
+  try {
+    res.json({ success: true, data: await listarOrigenesGarantia(req.query) });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
 
 export const resolveNovedadAsesoria = async (req, res) => {
   try {
@@ -72,7 +83,23 @@ export const sendAsesoriaToSales = async (req, res) => {
 
 export const getAsesoriaPorId = async (req, res) => {
   try {
-    res.json({ success: true, data: await obtenerAsesoriaPorId(req.params.id) });
+    res.json({ success: true, data: await obtenerAsesoriaPorId(req.params.id, req.user) });
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const getHistorialServicios = async (req, res) => {
+  try {
+    res.json({ success: true, data: await listarHistorialServicios(req.query) });
+  } catch (error) {
+    res.status(error instanceof RangeError ? 400 : 500).json({ message: error instanceof RangeError ? error.message : "No se pudo consultar el historial." });
+  }
+};
+
+export const getHistorialServicio = async (req, res) => {
+  try {
+    res.json({ success: true, data: await obtenerHistorialServicio(req.params.id) });
   } catch (error) {
     res.status(404).json({ message: error.message });
   }

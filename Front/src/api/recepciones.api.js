@@ -1,9 +1,10 @@
 import api from "./axios";
 
 export const getRecepciones =
-() =>
+(params = {}) =>
 api.get(
-  "/recepcion"
+  "/recepcion",
+  { params }
 );
 
 export const createRecepcion =

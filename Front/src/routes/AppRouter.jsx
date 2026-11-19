@@ -1,29 +1,37 @@
+const PoliticaDatosPage = lazy(() => import("../pages/privacidad/PoliticaDatosPage"));
+const FirmaClientePage = lazy(() => import("../pages/asesores/FirmaClientePage"));
 import {
   Routes,
   Route,
   Navigate
 } from "react-router-dom";
+import { lazy, Suspense } from "react";
 
-import LoginPage from "../pages/auth/LoginPage";
-import RegisterPage from "../pages/auth/RegisterPage";
-import DashboardPage from "../pages/dashboard/DashboardPage";
-
-import PedidoList from "../pages/pedidos/PedidoList";
-import PedidoCreate from "../pages/pedidos/PedidoCreate";
-import RecepcionList from "../pages/recepciones/RecepcionList";
-import ReservaPage from "../pages/reserva/ReservaPage";
-import UsoPage from "../pages/uso/UsoPage";
-import CortesPage from "../pages/cortes/CortesPage";
-import PiezasPpfPage from "../pages/piezasPpf/PiezasPpfPage";
-import AlertasPage from "../pages/alertas/AlertasPage";
-import RetazosPage from "../pages/retazos/RetazosPage";
-import FinanzasPage from "../pages/finanzas/FinanzasPage";
-import VentasPage from "../pages/ventas/VentasPage";
-import AuditoriaPage from "../pages/auditoria/AuditoriaPage";
-import UsuariosPage from "../pages/usuarios/UsuariosPage";
-import AsesoresPage from "../pages/asesores/AsesoresPage";
-import CoordinacionPage from "../pages/coordinacion/CoordinacionPage";
-import MedidasVehiculosPage from "../pages/medidasVehiculos/MedidasVehiculosPage";
+const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
+const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
+const ChatPage = lazy(() => import("../pages/chat/ChatPage"));
+const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
+const PedidoList = lazy(() => import("../pages/pedidos/PedidoList"));
+const PedidoCreate = lazy(() => import("../pages/pedidos/PedidoCreate"));
+const RecepcionList = lazy(() => import("../pages/recepciones/RecepcionList"));
+const ReservaPage = lazy(() => import("../pages/reserva/ReservaPage"));
+const UsoPage = lazy(() => import("../pages/uso/UsoPage"));
+const CortesPage = lazy(() => import("../pages/cortes/CortesPage"));
+const PiezasPpfPage = lazy(() => import("../pages/piezasPpf/PiezasPpfPage"));
+const AlertasPage = lazy(() => import("../pages/alertas/AlertasPage"));
+const RetazosPage = lazy(() => import("../pages/retazos/RetazosPage"));
+const FinanzasPage = lazy(() => import("../pages/finanzas/FinanzasPage"));
+const VentasPage = lazy(() => import("../pages/ventas/VentasPage"));
+const AuditoriaPage = lazy(() => import("../pages/auditoria/AuditoriaPage"));
+const HistorialServiciosPage = lazy(() => import("../pages/historialServicios/HistorialServiciosPage"));
+const TarifasManoObraPage = lazy(() => import("../pages/coordinacion/TarifasManoObraPage"));
+const PreciosVentaPage = lazy(() => import("../pages/preciosVenta/PreciosVentaPage"));
+const UsuariosPage = lazy(() => import("../pages/usuarios/UsuariosPage"));
+const AsesoresPage = lazy(() => import("../pages/asesores/AsesoresPage"));
+const CoordinacionPage = lazy(() => import("../pages/coordinacion/CoordinacionPage"));
+const MedidasVehiculosPage = lazy(() => import("../pages/medidasVehiculos/MedidasVehiculosPage"));
+const AccesoriosPage = lazy(() => import("../pages/accesorios/AccesoriosPage"));
+const OrdenesTrabajoPage = lazy(() => import("../pages/ordenesTrabajo/OrdenesTrabajoPage"));
 
 import PrivateRoute from "./PrivateRoute";
 import MainLayout from "../layouts/MainLayout";
@@ -47,9 +55,19 @@ function RutaPermitida({ modulo, accion = "read", children }) {
   return children;
 }
 
+function RutaAdministracion({ children }) {
+  const rol = obtenerUsuarioActual()?.rol;
+  return ["ADMIN", "SUPERUSUARIO"].includes(rol)
+    ? children
+    : <Navigate to="/dashboard" replace />;
+}
+
 function AppRouter() {
   return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-600">Cargando módulo...</div>}>
     <Routes>
+      <Route path="/firmar" element={<FirmaClientePage />} />
+      <Route path="/politica-de-datos" element={<PoliticaDatosPage />} />
 
       <Route
         path="/login"
@@ -79,9 +97,16 @@ function AppRouter() {
             }
           />
 
+          <Route path="/chat" element={<ChatPage />} />
+
           <Route
             path="/dashboard"
             element={<DashboardPage />}
+          />
+
+          <Route
+            path="/ordenes-trabajo"
+            element={<RutaPermitida modulo="dashboard"><OrdenesTrabajoPage /></RutaPermitida>}
           />
 
           <Route
@@ -175,6 +200,11 @@ function AppRouter() {
           />
 
           <Route
+            path="/accesorios"
+            element={<RutaPermitida modulo="accesorios"><AccesoriosPage /></RutaPermitida>}
+          />
+
+          <Route
             path="/alertas"
             element={
               <RutaPermitida modulo="alertas">
@@ -188,6 +218,15 @@ function AppRouter() {
             element={
               <RutaPermitida modulo="finanzas">
                 <FinanzasPage />
+              </RutaPermitida>
+            }
+          />
+
+          <Route
+            path="/costeo-pedidos"
+            element={
+              <RutaPermitida modulo="pedidos" accion="read">
+                <FinanzasPage soloCosteo />
               </RutaPermitida>
             }
           />
@@ -227,12 +266,24 @@ function AppRouter() {
               </RutaPermitida>
             }
           />
+          <Route
+            path="/historial-servicios"
+            element={<RutaAdministracion><HistorialServiciosPage /></RutaAdministracion>}
+          />
+          <Route
+            path="/porcentajes-mano-obra"
+            element={<RutaAdministracion><TarifasManoObraPage /></RutaAdministracion>}
+          />
+          <Route path="/precios-venta" element={["ADMIN", "SUPERUSUARIO"].includes(obtenerUsuarioActual()?.rol)
+            ? <RutaAdministracion><PreciosVentaPage /></RutaAdministracion>
+            : <RutaPermitida modulo="asesores"><PreciosVentaPage /></RutaPermitida>} />
 
         </Route>
 
       </Route>
 
     </Routes>
+    </Suspense>
   );
 }
 

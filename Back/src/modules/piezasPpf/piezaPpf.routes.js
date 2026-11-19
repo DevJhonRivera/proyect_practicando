@@ -8,14 +8,14 @@ import {
 } from "./piezaPpf.controller.js";
 
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { requirePermission } from "../../middlewares/permission.middleware.js";
+import { requireAnyPermission, requirePermission } from "../../middlewares/permission.middleware.js";
 
 const router = Router();
 
 router.get(
   "/",
   authMiddleware,
-  requirePermission("piezasPpf", "read"),
+  requireAnyPermission(["piezasPpf", "read"], ["coordinacion", "read"]),
   getPiezasPpf
 );
 

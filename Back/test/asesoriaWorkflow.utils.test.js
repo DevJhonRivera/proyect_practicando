@@ -19,6 +19,15 @@ test("una novedad resuelta deja continuar el flujo", () => {
   assert.doesNotThrow(() => validarSinNovedadesBloqueantes(asesoria));
 });
 
+test("una repeticion de corte bloquea hasta consumir el nuevo material", () => {
+  const pendiente = { novedades: [{ tipo: "REPETICION_CORTE", estado: "APROBADA" }] };
+  assert.equal(novedadesBloqueantes(pendiente).length, 1);
+  assert.throws(() => validarSinNovedadesBloqueantes(pendiente), /REPETICION CORTE/);
+
+  pendiente.novedades[0].estado = "RESUELTA";
+  assert.doesNotThrow(() => validarSinNovedadesBloqueantes(pendiente));
+});
+
 test("recalcula el total despues de retirar un servicio", () => {
   const comercial = recalcularComercial({
     polarizados: [{ valor: 500000 }],
@@ -42,5 +51,33 @@ test("limita el descuento al nuevo valor de la venta", () => {
     comercial: { descuento: 300000 },
   });
   assert.equal(comercial.descuento, 200000);
+  assert.equal(comercial.totalAcordado, 0);
+});
+
+test("incluye accesorios en una cotizacion sin otros servicios", () => {
+  const comercial = recalcularComercial({
+    polarizados: [],
+    ppf: [],
+    serviciosAdicionales: [],
+    accesorios: [{ cantidad: 2, precioUnitario: 120000, valor: 240000 }],
+    comercial: { descuento: 40000 },
+  });
+  assert.deepEqual(comercial, {
+    valorVenta: 240000,
+    descuento: 40000,
+    aplicaDescuento: true,
+    totalAcordado: 200000,
+  });
+});
+
+test("una garantia sin cobro conserva total cero", () => {
+  const comercial = recalcularComercial({
+    polarizados: [{ valor: 0 }],
+    ppf: [{ valor: 0 }],
+    serviciosAdicionales: [],
+    accesorios: [{ cantidad: 1, precioUnitario: 0, valor: 0 }],
+    comercial: { descuento: 0 },
+  });
+  assert.equal(comercial.valorVenta, 0);
   assert.equal(comercial.totalAcordado, 0);
 });

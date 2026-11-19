@@ -20,6 +20,7 @@ import { getCortes } from "../../api/cortes.api";
 import { getAsesoriaPorId } from "../../api/asesores.api";
 import {
   createVenta,
+  getVentaById,
   getVentas,
   updateVenta,
   createMovimientoPago,
@@ -31,7 +32,8 @@ import TablePagination from "../../components/ui/TablePagination";
 import { useMonthFilter } from "../../hooks/useMonthFilter";
 import { usePagination } from "../../hooks/usePagination";
 import { etiquetaDetalle } from "../../utils/materiales";
-import { obtenerUsuarioActual } from "../../utils/permisos";
+import { obtenerUsuarioActual, tienePermiso } from "../../utils/permisos";
+import { preguntarEnvioFactura } from "../../utils/envioFacturaVenta";
 import { generarFacturaVenta } from "../../utils/facturaVenta";
 
 const formatoCop = new Intl.NumberFormat("es-CO", {
@@ -168,6 +170,17 @@ const llenarEntidadesPago = (popup, metodo) => {
   select.innerHTML = `<option value="">Seleccione...</option>${opciones.map((item) => `<option value="${item}">${item}</option>`).join("")}`;
 };
 
+const parametrosMes = (mes) => {
+  if (!/^\d{4}-\d{2}$/.test(String(mes || ""))) return { limite: 500 };
+  const [year, month] = mes.split("-").map(Number);
+  const ultimoDia = new Date(year, month, 0).getDate();
+  return {
+    desde: `${mes}-01`,
+    hasta: `${mes}-${String(ultimoDia).padStart(2, "0")}`,
+    limite: 1000,
+  };
+};
+
 function VentasPage() {
   const usuario = obtenerUsuarioActual();
   const puedeEditar = ["ADMIN", "SUPERUSUARIO"].includes(usuario?.rol);
@@ -178,6 +191,9 @@ function VentasPage() {
   const [cortes, setCortes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [recaudoDesde, setRecaudoDesde] = useState("");
+  const [recaudoHasta, setRecaudoHasta] = useState("");
+  const [consultaRecaudo, setConsultaRecaudo] = useState(null);
   const [filtroVerificacion, setFiltroVerificacion] =
     useState("PENDIENTES");
   const [form, setForm] = useState(ventaInicial);
@@ -199,8 +215,8 @@ function VentasPage() {
       setLoading(true);
       const [ventasRes, cortesRes] =
         await Promise.all([
-          getVentas(),
-          getCortes(),
+          getVentas(parametrosMes(mesVentas)),
+          getCortes(parametrosMes(mesVentas)),
         ]);
 
       setVentas(ventasRes.data || []);
@@ -223,8 +239,8 @@ function VentasPage() {
       try {
         const [ventasRes, cortesRes] =
           await Promise.all([
-            getVentas(),
-            getCortes(),
+            getVentas(parametrosMes(mesVentas)),
+            getCortes(parametrosMes(mesVentas)),
           ]);
 
         if (active) {
@@ -249,17 +265,20 @@ function VentasPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [mesVentas]);
 
   useEffect(() => {
     const asesoriaId = searchParams.get("asesoria");
     if (!asesoriaId || loading || asesoriaCargadaRef.current === asesoriaId) return;
     asesoriaCargadaRef.current = asesoriaId;
-    getAsesoriaPorId(asesoriaId)
-      .then((response) => {
+    Promise.all([
+      getAsesoriaPorId(asesoriaId),
+      getCortes({ asesoriaId, limite: 100 }),
+    ])
+      .then(([response, cortesResponse]) => {
         const orden = response.data?.data;
         if (!orden) return;
-        const cortesOrden = cortes.filter((corte) => String(corte.asesoriaId || "") === asesoriaId);
+        const cortesOrden = cortesResponse.data?.data || cortesResponse.data || [];
         const cortesLinea = (etiqueta) => cortesOrden.filter((corte) => corte.asesoriaLinea === etiqueta).map((corte) => corte._id);
         const items = [
           ...(orden.polarizados || []).map((item, index) => {
@@ -293,6 +312,13 @@ function VentasPage() {
             descripcion: `${item.tipo}${item.detalle ? ` - ${item.detalle}` : ""}`,
             cantidad: 1, valorUnitario: Number(item.valor || 0), total: Number(item.valor || 0),
           })),
+          ...(orden.accesorios || []).map((item) => ({
+            tipoServicio: "OTRO",
+            descripcion: `ACCESORIO - ${item.nombre} ${item.marca || ""}${item.referencia ? ` ${item.referencia}` : ""}`.trim(),
+            cantidad: Number(item.cantidad || 1),
+            valorUnitario: Number(item.precioUnitario || 0),
+            total: Number(item.valor || (Number(item.cantidad || 1) * Number(item.precioUnitario || 0))),
+          })),
         ];
         setForm({
           ...ventaInicial,
@@ -315,7 +341,21 @@ function VentasPage() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       })
       .catch((error) => Swal.fire({ icon: "error", title: "No se pudo cargar la orden", text: error.response?.data?.message || "Intente nuevamente." }));
-  }, [cortes, loading, searchParams]);
+  }, [loading, searchParams]);
+
+  const rangoRecaudo = Boolean(recaudoDesde || recaudoHasta);
+  const rangoInvalido = recaudoDesde && recaudoHasta && recaudoDesde > recaudoHasta;
+  const claveRecaudo = `${recaudoDesde}/${recaudoHasta}`;
+  const resultadoRecaudo = consultaRecaudo?.clave === claveRecaudo ? consultaRecaudo : null;
+
+  useEffect(() => {
+    if (!rangoRecaudo || rangoInvalido) return;
+    let activa = true;
+    getVentas({ recaudoDesde: recaudoDesde || undefined, recaudoHasta: recaudoHasta || undefined })
+      .then(({ data }) => { if (activa) setConsultaRecaudo({ clave: claveRecaudo, ventas: data }); })
+      .catch(() => { if (activa) setConsultaRecaudo({ clave: claveRecaudo, error: true }); });
+    return () => { activa = false; };
+  }, [recaudoDesde, recaudoHasta, claveRecaudo, rangoRecaudo, rangoInvalido, ventas]);
 
   const ventasFiltradas = useMemo(() => {
     const texto = search.toLowerCase();
@@ -335,6 +375,44 @@ function VentasPage() {
       );
     });
   }, [ventasDelMes, search]);
+  const resumenPagos = useMemo(() => {
+    const importes = new Map();
+    const cuentas = new Map();
+    const inicio = recaudoDesde ? Date.parse(`${recaudoDesde}T00:00:00-05:00`) : -Infinity;
+    const fin = recaudoHasta ? Date.parse(`${recaudoHasta}T23:59:59.999-05:00`) : Infinity;
+    const enRango = (fecha) => !rangoRecaudo || (fecha && Date.parse(fecha) >= inicio && Date.parse(fecha) <= fin);
+    const sumar = (metodo, valor, entidad) => {
+      if (!valor) return;
+      importes.set(metodo, (importes.get(metodo) || 0) + valor);
+      const cuenta = entidad?.trim().toUpperCase() || (metodo === "EFECTIVO" ? "Efectivo en caja" : "Sin cuenta registrada");
+      cuentas.set(cuenta, (cuentas.get(cuenta) || 0) + valor);
+    };
+    const texto = search.toLowerCase();
+    const origen = rangoRecaudo ? resultadoRecaudo?.ventas || [] : ventasFiltradas;
+    for (const venta of origen) {
+      if (rangoRecaudo && ![venta.cliente?.nombre, venta.vehiculo?.placa, venta.codigoVenta]
+        .some((dato) => (dato || "").toLowerCase().includes(texto))) continue;
+      let pagosRegistrados = 0;
+      let devolucionesRegistradas = 0;
+      for (const movimiento of venta.pagos || []) {
+        const valor = Number(movimiento.valor || 0);
+        const metodo = movimiento.metodoPago || "SIN_DESGLOSE";
+        if (movimiento.tipo === "DEVOLUCION") {
+          devolucionesRegistradas += valor;
+          if (enRango(movimiento.fecha)) sumar(metodo, -valor, movimiento.entidadPago);
+        } else if (movimiento.tipo === "PAGO") {
+          pagosRegistrados += valor;
+          if (enRango(movimiento.fecha)) sumar(metodo, valor, movimiento.entidadPago);
+        }
+      }
+      const pagado = Number(venta.valorPagado || (!venta.pagos?.length && venta.estado === "PAGADA" ? venta.total : 0));
+      if (!rangoRecaudo) {
+        sumar(pagosRegistrados ? "SIN_DESGLOSE" : venta.metodoPago || "SIN_DESGLOSE", Math.max(0, pagado - pagosRegistrados));
+        sumar("SIN_DESGLOSE", -Math.max(0, Number(venta.valorDevuelto || 0) - devolucionesRegistradas));
+      }
+    }
+    return { importes, cuentas, total: [...importes.values()].reduce((total, valor) => total + valor, 0) };
+  }, [ventasFiltradas, rangoRecaudo, resultadoRecaudo, recaudoDesde, recaudoHasta, search]);
   const paginationVentas = usePagination(ventasFiltradas);
 
   const subtotal = form.items.reduce(
@@ -347,8 +425,8 @@ function VentasPage() {
   const total = Math.max(subtotal - descuento, 0);
 
   const gruposCortes = useMemo(
-    () => agruparCortesPorCarroMaterial(cortes),
-    [cortes]
+    () => agruparCortesPorCarroMaterial(cortes, ventas),
+    [cortes, ventas]
   );
 
   const grupoActual = gruposCortes.find(
@@ -356,7 +434,7 @@ function VentasPage() {
   );
 
   const gruposSinVenta = gruposCortes.filter(
-    (grupo) => !grupoTieneVenta(grupo)
+    (grupo) => !grupo.esGarantia && !grupoTieneVenta(grupo)
   );
 
   const placaVenta = normalizarPlaca(form.vehiculo.placa);
@@ -372,12 +450,15 @@ function VentasPage() {
   }, [gruposSinVenta, placaVenta]);
 
   const gruposConVenta = gruposCortes.filter(
-    grupoTieneVenta
+    (grupo) => !grupo.esGarantia && grupoTieneVenta(grupo)
   );
+  const gruposGarantia = gruposCortes.filter((grupo) => grupo.esGarantia);
 
   const gruposVerificacion =
     filtroVerificacion === "TODOS"
       ? gruposCortes
+      : filtroVerificacion === "GARANTIAS"
+      ? gruposGarantia
       : filtroVerificacion === "VENDIDOS"
       ? gruposConVenta
       : gruposSinVenta;
@@ -419,6 +500,11 @@ function VentasPage() {
 
   const cargarCorteEnVenta = (grupo) => {
     if (grupo.asesoriaId) {
+      if (String(form.asesoriaId || "") === String(grupo.asesoriaId)) {
+        setVistaVentas("nueva");
+        window.setTimeout(() => document.getElementById("cobro-orden")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+        return;
+      }
       asesoriaCargadaRef.current = "";
       navigate(`/ventas?asesoria=${encodeURIComponent(grupo.asesoriaId)}`);
       return;
@@ -591,15 +677,10 @@ function VentasPage() {
         });
       }
 
-      await createVenta({
-        ...form,
-        descuento,
-      });
+      const respuesta = await createVenta({ ...form, descuento });
 
-      Swal.fire({
-        icon: "success",
-        title: "Venta registrada",
-      });
+      if (respuesta.data.estado === "PAGADA") await preguntarEnvioFactura(respuesta.data);
+      else await Swal.fire({ icon: "success", title: "Venta registrada" });
 
       setForm(ventaInicial);
       await cargar();
@@ -647,7 +728,8 @@ function VentasPage() {
           observacion: "ABONO INICIAL",
         });
       }
-      await Swal.fire({ icon: "success", title: valorPago === total ? "Pago registrado" : "Abono registrado", text: valorPago === total ? "La orden quedó finalizada." : `Queda pendiente ${formatoCop.format(total - valorPago)}.` });
+      if (ventaResponse.data.estado === "PAGADA") await preguntarEnvioFactura(ventaResponse.data);
+      else await Swal.fire({ icon: "success", title: "Abono registrado", text: `Queda pendiente ${formatoCop.format(total - valorPago)}.` });
       setForm(ventaInicial);
       setVistaVentas("historial");
       navigate("/ventas", { replace: true });
@@ -691,8 +773,9 @@ function VentasPage() {
     });
     if (!resultado.isConfirmed) return;
     try {
-      await createMovimientoPago(venta._id, resultado.value);
-      await Swal.fire({ icon: "success", title: resultado.value.valor === saldo ? "Pago completado" : "Abono registrado", timer: 1600, showConfirmButton: false });
+      const respuesta = await createMovimientoPago(venta._id, resultado.value);
+      if (respuesta.data.estado === "PAGADA") await preguntarEnvioFactura(respuesta.data);
+      else await Swal.fire({ icon: "success", title: "Abono registrado", timer: 1600, showConfirmButton: false });
       await cargar();
     } catch (error) {
       Swal.fire({ icon: "error", title: "No fue posible registrar el pago", text: error.response?.data?.message || "Intente nuevamente." });
@@ -1008,6 +1091,7 @@ function VentasPage() {
           totalGrupos={gruposCortes.length}
           gruposSinVenta={gruposSinVenta.length}
           gruposConVenta={gruposConVenta.length}
+          gruposGarantia={gruposGarantia.length}
           filtro={filtroVerificacion}
           setFiltro={setFiltroVerificacion}
           onSelectCorte={cargarCorteEnVenta}
@@ -1352,13 +1436,13 @@ function VentasPage() {
 
       {vistaVentas === "historial" && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 bg-slate-50/80 p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-                <ClipboardList size={19} />
+          <div className="border-b border-slate-200 bg-slate-50/80 p-3">
+            <div className="mb-3 flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700">
+                <ClipboardList size={15} />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-800">
+                <h2 className="text-sm font-bold text-slate-800">
                   Historial de ventas
                 </h2>
                 <p className="text-xs text-slate-500">
@@ -1378,7 +1462,7 @@ function VentasPage() {
                     setSearch(event.target.value)
                   }
                   placeholder="Buscar cliente, placa o venta..."
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                  className="h-9 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
               <MonthFilter
@@ -1386,6 +1470,44 @@ function VentasPage() {
                 onChange={setMesVentas}
               />
             </div>
+          </div>
+
+          <div className="border-b border-slate-200 bg-white p-3">
+            <h3 className="text-sm font-bold text-slate-800">Recaudo por método de pago</h3>
+            <p className="mb-3 text-xs text-slate-500">Con un rango, el recaudo usa la fecha de cada pago, abono o devolución (hora de Colombia). El filtro de mes sigue aplicando al historial de ventas.</p>
+            <div className="mb-3 flex flex-wrap items-end gap-3">
+              <label className="text-xs font-semibold">Desde<input type="date" value={recaudoDesde} onChange={(e) => setRecaudoDesde(e.target.value)} className="mt-1 block rounded border border-slate-300 p-2" /></label>
+              <label className="text-xs font-semibold">Hasta<input type="date" value={recaudoHasta} onChange={(e) => setRecaudoHasta(e.target.value)} className="mt-1 block rounded border border-slate-300 p-2" /></label>
+              {rangoRecaudo && <button type="button" onClick={() => { setRecaudoDesde(""); setRecaudoHasta(""); setConsultaRecaudo(null); }} className="rounded border px-3 py-2 text-sm">Limpiar fechas</button>}
+            </div>
+            {rangoInvalido ? <p role="alert">La fecha Hasta debe ser igual o posterior a Desde.</p>
+              : rangoRecaudo && !resultadoRecaudo ? <p role="status">Consultando recaudo…</p>
+              : resultadoRecaudo?.error ? <p role="alert">No se pudo consultar el recaudo. Vuelve a seleccionar las fechas.</p>
+              : <>
+            {rangoRecaudo && <p className="mb-2 text-xs text-slate-500">El rango incluye movimientos con fecha registrada.</p>}
+            <dl className="flex flex-wrap gap-2">
+              <div className="rounded-lg bg-emerald-50 px-4 py-2 text-emerald-800">
+                <dt className="text-xs font-semibold">Total neto</dt>
+                <dd className="font-bold">{formatoCop.format(resumenPagos.total)}</dd>
+              </div>
+              {[...resumenPagos.importes].map(([metodo, valor]) => (
+                <div key={metodo} className="rounded-lg bg-slate-50 px-4 py-2 text-slate-700">
+                  <dt className="text-xs font-semibold">{({ DATAFONO: "Datáfono", CREDITO: "Crédito", TRANSFERENCIA: "Transferencia", EFECTIVO: "Efectivo", OTROS: "Otros", SIN_DESGLOSE: "Sin desglose", POR_DEFINIR: "Sin método definido" })[metodo] || metodo}</dt>
+                  <dd className="font-bold">{formatoCop.format(valor)}</dd>
+                </div>
+              ))}
+            </dl>
+            <h3 className="mb-2 mt-4 text-sm font-bold text-slate-800">Total por cuenta o entidad</h3>
+            {resumenPagos.cuentas.size === 0 && <p className="text-xs text-slate-500">No hay movimientos para estos filtros.</p>}
+            <dl className="flex flex-wrap gap-2">
+              {[...resumenPagos.cuentas].sort(([a], [b]) => a.localeCompare(b, "es-CO")).map(([cuenta, valor]) => (
+                <div key={cuenta} className="rounded-lg bg-blue-50 px-4 py-2 text-slate-700">
+                  <dt className="text-xs font-semibold">{cuenta}</dt>
+                  <dd className="font-bold">{formatoCop.format(valor)}</dd>
+                </div>
+              ))}
+            </dl>
+              </>}
           </div>
 
           <div className="divide-y max-h-[820px] overflow-y-auto">
@@ -1399,6 +1521,10 @@ function VentasPage() {
                   key={venta._id}
                   venta={venta}
                   onMarkPaid={registrarPago}
+                  onEnviarComprobante={tienePermiso(usuario, "ventas", "write") ? async (item) => {
+                    await preguntarEnvioFactura(item);
+                    await cargar();
+                  } : null}
                   onRefund={registrarDevolucion}
                   onReject={registrarPagoRechazado}
                   onEdit={editarVenta}
@@ -1424,7 +1550,7 @@ function CobroOrden({ form, subtotal, descuento, total, onMetodoPagoChange, onEn
     }
   };
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section id="cobro-orden" className="scroll-mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 bg-slate-50 p-5">
         <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><BadgeDollarSign size={22} /></div><div><h2 className="text-lg font-black text-slate-900">Verificar y recibir pago</h2><p className="text-sm text-slate-500">La cotización fue creada por el asesor. Ventas solamente confirma el cobro.</p></div></div>
       </div>
@@ -1461,8 +1587,8 @@ function VentasTabs({
   const tabs = [
     {
       id: "cortes",
-      label: "Cortes por costear",
-      detail: `${pendientes} pendientes`,
+      label: "Órdenes por cobrar",
+      detail: `${pendientes} pendiente${pendientes === 1 ? "" : "s"}`,
     },
     {
       id: "nueva",
@@ -1516,6 +1642,7 @@ function VerificacionCortesAgrupada({
   totalGrupos,
   gruposSinVenta,
   gruposConVenta,
+  gruposGarantia,
   filtro,
   setFiltro,
   onSelectCorte,
@@ -1558,7 +1685,9 @@ function VerificacionCortesAgrupada({
     {
       header: "Estado",
       value: (grupo) =>
-        grupoTieneVenta(grupo)
+        grupo.esGarantia
+          ? "Garantia - no genera cobro"
+          : grupoTieneVenta(grupo)
           ? "Con valor"
           : "Falta valor",
     },
@@ -1573,10 +1702,10 @@ function VerificacionCortesAgrupada({
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-800">
-              Verificacion de cortes
+              Órdenes y cortes pendientes
             </h2>
             <p className="text-sm text-slate-500">
-              Una fila comercial por carro/material, con los cortes detallados debajo.
+              Cargue la orden completa para verificar sus servicios y recibir el pago.
             </p>
           </div>
         </div>
@@ -1590,7 +1719,7 @@ function VerificacionCortesAgrupada({
         />
       </div>
 
-      <div className="p-5 grid gap-4 md:grid-cols-3">
+      <div className="p-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <ResumenVenta
           label="Total carros/material"
           value={totalGrupos}
@@ -1606,12 +1735,18 @@ function VerificacionCortesAgrupada({
           value={gruposSinVenta}
           color="text-red-700"
         />
+        <ResumenVenta
+          label="Garantias sin cobro"
+          value={gruposGarantia}
+          color="text-violet-700"
+        />
       </div>
 
       <div className="px-5 pb-4 flex flex-wrap gap-2">
         {[
           ["PENDIENTES", "Faltan por venta"],
           ["VENDIDOS", "Con valor"],
+          ["GARANTIAS", "Garantias"],
           ["TODOS", "Todos"],
         ].map(([value, label]) => (
           <button
@@ -1709,7 +1844,9 @@ function VerificacionCortesAgrupada({
                           rowSpan={grupo.cortes.length}
                           className="p-3 text-right font-bold align-top bg-white text-slate-800"
                         >
-                          {grupoTieneVenta(grupo)
+                          {grupo.esGarantia
+                            ? "No aplica"
+                            : grupoTieneVenta(grupo)
                             ? formatoCop.format(grupo.valorVenta)
                             : "-"}
                         </td>
@@ -1721,7 +1858,9 @@ function VerificacionCortesAgrupada({
                               : "text-green-700"
                           }`}
                         >
-                          {grupoTieneVenta(grupo)
+                          {grupo.esGarantia
+                            ? "No aplica"
+                            : grupoTieneVenta(grupo)
                             ? formatoCop.format(utilidadGrupo(grupo))
                             : "-"}
                         </td>
@@ -1731,12 +1870,16 @@ function VerificacionCortesAgrupada({
                         >
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              grupoTieneVenta(grupo)
+                              grupo.esGarantia
+                                ? "bg-violet-100 text-violet-700"
+                                : grupoTieneVenta(grupo)
                                 ? "bg-green-100 text-green-700"
                                 : "bg-red-100 text-red-700"
                             }`}
                           >
-                            {grupoTieneVenta(grupo)
+                            {grupo.esGarantia
+                              ? "Garantia"
+                              : grupoTieneVenta(grupo)
                               ? "Con valor"
                               : "Falta valor"}
                           </span>
@@ -1745,13 +1888,19 @@ function VerificacionCortesAgrupada({
                           rowSpan={grupo.cortes.length}
                           className="p-3 text-center align-top bg-white"
                         >
-                          <button
-                            type="button"
-                            onClick={() => onSelectCorte(grupo)}
-                            className="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold"
-                          >
-                            Cargar
-                          </button>
+                          {grupo.esGarantia ? (
+                            <span className="text-xs font-semibold text-slate-500">
+                              Sin cobro
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onSelectCorte(grupo)}
+                              className="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-semibold"
+                            >
+                              {grupo.asesoriaId ? "Abrir cobro" : "Cargar corte"}
+                            </button>
+                          )}
                         </td>
                       </>
                     )}
@@ -1836,7 +1985,7 @@ function ItemsVenta({ items, onDelete }) {
   );
 }
 
-function VentaCard({ venta, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
+function VentaCard({ venta, onEnviarComprobante, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
   const valorPagado = Number(venta.valorPagado || (venta.estado === "PAGADA" && !venta.pagos?.length ? venta.total : 0));
   const valorDevuelto = Number(venta.valorDevuelto || 0);
   const netoRecibido = Math.max(valorPagado - valorDevuelto, 0);
@@ -1859,16 +2008,22 @@ function VentaCard({ venta, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
         </div>
         <div className="flex items-start gap-2">
           <EstadoBadge estado={venta.estado} />
+          {venta.estado === "PAGADA" && onEnviarComprobante && (
+            <button type="button" onClick={() => onEnviarComprobante(venta)}
+              className="rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50">
+              Enviar comprobante
+            </button>
+          )}
           {venta.estado !== "ANULADA" && <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               try {
-                generarFacturaVenta(venta);
+                await generarFacturaVenta(venta);
               } catch (error) {
                 Swal.fire({
                   icon: "warning",
                   title: "No se pudo abrir el comprobante",
-                  text: error.message,
+                  text: error.response?.data?.message || error.message,
                 });
               }
             }}
@@ -1928,27 +2083,32 @@ function VentaCard({ venta, onMarkPaid, onRefund, onReject, onEdit, canEdit }) {
         {canEdit && venta.estado !== "ANULADA" && netoRecibido > 0 && <button type="button" onClick={() => onRefund(venta)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">Registrar devolución</button>}
         </div>
       </div>
-      {venta.pagos?.length > 0 && <details className="rounded-xl border border-slate-200 bg-white"><summary className="cursor-pointer px-3 py-2 text-xs font-bold text-slate-600">Ver pagos y comprobantes ({venta.pagos.length})</summary><div className="divide-y divide-slate-100">{[...venta.pagos].reverse().map((movimiento) => <div key={movimiento._id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-xs"><div className="flex min-w-0 items-center gap-3">{movimiento.comprobanteImagen && <button type="button" onClick={() => abrirComprobantePago(movimiento)} title="Ver comprobante de pago" className="group relative shrink-0 overflow-hidden rounded-lg border border-blue-200 bg-blue-50"><img src={movimiento.comprobanteImagen} alt="Comprobante de pago" className="h-14 w-14 object-cover transition group-hover:opacity-70" /><span className="absolute inset-0 flex items-center justify-center text-blue-700 opacity-0 transition group-hover:opacity-100"><Eye size={20} /></span></button>}<div><p className={`font-bold ${movimiento.tipo === "DEVOLUCION" ? "text-red-700" : "text-emerald-700"}`}>{movimiento.tipo} · {movimiento.metodoPago.replaceAll("_", " ")}{movimiento.entidadPago ? ` · ${movimiento.entidadPago}` : ""}</p><p className="text-slate-500">{new Date(movimiento.fecha).toLocaleString("es-CO")} · {movimiento.usuarioNombre || "Usuario"}{movimiento.observacion ? ` · ${movimiento.observacion}` : ""}</p>{movimiento.comprobanteImagen && <button type="button" onClick={() => abrirComprobantePago(movimiento)} className="mt-1 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900"><Eye size={13} /> Ver comprobante</button>}</div></div><strong>{movimiento.tipo === "DEVOLUCION" ? "- " : "+ "}{formatoCop.format(movimiento.valor)}</strong></div>)}</div></details>}
+      {venta.pagos?.length > 0 && <details className="rounded-xl border border-slate-200 bg-white"><summary className="cursor-pointer px-3 py-2 text-xs font-bold text-slate-600">Ver pagos y comprobantes ({venta.pagos.length})</summary><div className="divide-y divide-slate-100">{[...venta.pagos].reverse().map((movimiento) => <div key={movimiento._id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-xs"><div className="flex min-w-0 items-center gap-3"><div><p className={`font-bold ${movimiento.tipo === "DEVOLUCION" ? "text-red-700" : "text-emerald-700"}`}>{movimiento.tipo} · {movimiento.metodoPago.replaceAll("_", " ")}{movimiento.entidadPago ? ` · ${movimiento.entidadPago}` : ""}</p><p className="text-slate-500">{new Date(movimiento.fecha).toLocaleString("es-CO")} · {movimiento.usuarioNombre || "Usuario"}{movimiento.observacion ? ` · ${movimiento.observacion}` : ""}</p>{movimiento.comprobanteNombre && <button type="button" onClick={() => abrirComprobantePago(venta._id, movimiento._id)} className="mt-1 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900"><Eye size={13} /> Ver comprobante</button>}</div></div><strong>{movimiento.tipo === "DEVOLUCION" ? "- " : "+ "}{formatoCop.format(movimiento.valor)}</strong></div>)}</div></details>}
     </article>
   );
 }
 
-function abrirComprobantePago(movimiento) {
-  if (!movimiento?.comprobanteImagen) return;
+async function abrirComprobantePago(ventaId, movimientoId) {
+  try {
+    Swal.fire({ title: "Cargando comprobante...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    const response = await getVentaById(ventaId);
+    const movimiento = response.data?.pagos?.find((item) => String(item._id) === String(movimientoId));
+    if (!movimiento?.comprobanteImagen) throw new Error("La venta no tiene una imagen adjunta");
 
-  Swal.fire({
-    title: "Comprobante de pago",
-    text: movimiento.comprobanteNombre || "Imagen adjunta al movimiento",
-    imageUrl: movimiento.comprobanteImagen,
-    imageAlt: "Comprobante de pago",
-    imageWidth: "100%",
-    width: 720,
-    confirmButtonText: "Cerrar",
-    confirmButtonColor: "#2563eb",
-    customClass: {
-      image: "max-h-[65vh] object-contain rounded-lg border border-slate-200",
-    },
-  });
+    Swal.fire({
+      title: "Comprobante de pago",
+      text: movimiento.comprobanteNombre || "Imagen adjunta al movimiento",
+      imageUrl: movimiento.comprobanteImagen,
+      imageAlt: "Comprobante de pago",
+      imageWidth: "100%",
+      width: 720,
+      confirmButtonText: "Cerrar",
+      confirmButtonColor: "#2563eb",
+      customClass: { image: "max-h-[65vh] object-contain rounded-lg border border-slate-200" },
+    });
+  } catch (error) {
+    Swal.fire({ icon: "error", title: "No se pudo abrir el comprobante", text: error.response?.data?.message || error.message });
+  }
 }
 
 function ItemCortesRelacionados({ item }) {
@@ -2051,7 +2211,9 @@ function labelTipoCorte(tipoCorte) {
     DELANTERAS: "Delanteras",
     TRASERAS: "Traseras",
     FIJOS: "Fijos",
+    CUSTODIAS: "Custodias",
     SUNROOF: "Sunroof",
+    U: "U (sin panorámico ni Sunroof)",
     COMPLETO: "Completo",
     PIEZAS_PPF: "Piezas PPF",
     OTROS: "Otros",
@@ -2119,7 +2281,68 @@ function costoMaterialCorte(corte) {
   return Number(corte?.costoMaterialCop || 0);
 }
 
-function agruparCortesPorCarroMaterial(cortes) {
+function normalizarComparacion(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]+/gi, " ")
+    .trim()
+    .toUpperCase();
+}
+
+function ventaDeGrupo(grupo, ventas) {
+  if (!grupo.asesoriaId) return null;
+  return ventas.find(
+    (venta) => String(getEntityId(venta.asesoriaId) || "") === String(grupo.asesoriaId)
+  );
+}
+
+function valorVentaGrupo(grupo, ventas) {
+  if (grupo.valorVenta > 0) {
+    return { valor: grupo.valorVenta, tieneVenta: true };
+  }
+
+  const venta = ventaDeGrupo(grupo, ventas);
+  if (!venta) return { valor: 0, tieneVenta: false };
+
+  const idsGrupo = new Set(grupo.cortes.map((corte) => String(corte._id)));
+  const material = normalizarComparacion(grupo.material);
+  const itemsCompatibles = (venta.items || []).filter((item) => {
+    const tipoCompatible = item.tipoServicio === grupo.tipoServicio
+      || (grupo.tipoServicio === "POLARIZADO" && item.tipoServicio === "PELICULA_SEGURIDAD");
+    return tipoCompatible;
+  });
+  let candidatos = itemsCompatibles.filter((item) => {
+
+    const idsItem = [item.corteId, ...(item.corteIds || [])]
+      .map(getEntityId)
+      .filter(Boolean)
+      .map(String);
+    if (idsItem.some((id) => idsGrupo.has(id))) return true;
+
+    const descripcion = normalizarComparacion(item.descripcion);
+    return material && (descripcion.includes(material) || material.includes(descripcion));
+  });
+
+  if (!candidatos.length && grupo.tipoServicio !== "PPF") {
+    const indices = [...new Set(grupo.cortes
+      .map((corte) => String(corte.asesoriaLinea || "").match(/POLARIZADO\s+(\d+)/i)?.[1])
+      .filter(Boolean)
+      .map((numero) => Number(numero) - 1))];
+    candidatos = indices.map((indice) => itemsCompatibles[indice]).filter(Boolean);
+  }
+
+  if (!candidatos.length && itemsCompatibles.length === 1) {
+    candidatos = itemsCompatibles;
+  }
+
+  return {
+    valor: candidatos.reduce((total, item) => total + Number(item.total || 0), 0),
+    tieneVenta: true,
+  };
+}
+
+function agruparCortesPorCarroMaterial(cortes, ventas = []) {
   const grupos = new Map();
 
   cortes.forEach((corte) => {
@@ -2152,6 +2375,7 @@ function agruparCortesPorCarroMaterial(cortes) {
         costoMaterial: 0,
         valorVenta: 0,
         metrosUtilizados: 0,
+        esGarantia: false,
       };
 
     actual.cortes.push(corte);
@@ -2161,23 +2385,26 @@ function agruparCortesPorCarroMaterial(cortes) {
       Number(corte.valorVenta || 0);
     actual.metrosUtilizados +=
       Number(corte.metrosUtilizados || 0);
+    actual.esGarantia = actual.esGarantia || String(corte.tipoServicio || "").startsWith("GARANTIA");
 
     grupos.set(key, actual);
   });
 
-  return Array.from(grupos.values()).map((grupo) => ({
-    ...grupo,
-    costoMaterial:
-      Math.round(grupo.costoMaterial),
-    valorVenta:
-      Math.round(grupo.valorVenta),
-    metrosUtilizados:
-      Math.round((grupo.metrosUtilizados + Number.EPSILON) * 100) / 100,
-  }));
+  return Array.from(grupos.values()).map((grupo) => {
+    const ventaGrupo = valorVentaGrupo(grupo, ventas);
+    return {
+      ...grupo,
+      costoMaterial: Math.round(grupo.costoMaterial),
+      valorVenta: Math.round(ventaGrupo.valor),
+      tieneVentaAsociada: ventaGrupo.tieneVenta,
+      metrosUtilizados:
+        Math.round((grupo.metrosUtilizados + Number.EPSILON) * 100) / 100,
+    };
+  });
 }
 
 function grupoTieneVenta(grupo) {
-  return Number(grupo?.valorVenta || 0) > 0;
+  return Boolean(grupo?.tieneVentaAsociada) || Number(grupo?.valorVenta || 0) > 0;
 }
 
 function utilidadGrupo(grupo) {

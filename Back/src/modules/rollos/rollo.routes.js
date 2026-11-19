@@ -8,6 +8,7 @@ import {
   getRollosPorEstado,
   cerrarRollo,
   getReabastecimiento,
+  darBajaMaterial,
 } from "./rollo.controller.js";
 
 import {
@@ -57,6 +58,13 @@ router.patch(
   authMiddleware,
   requirePermission("rollos", "update"),
   cerrarRollo
+);
+
+router.patch(
+  "/:id/baja-material",
+  authMiddleware,
+  requirePermission("rollos", "update"),
+  darBajaMaterial
 );
 
 router.get(

@@ -1,3 +1,7 @@
+import eventosRoutes from "./modules/tiempoReal/eventos.routes.js";
+import chatRoutes from "./modules/chat/chat.routes.js";
+import privacidadRoutes from "./modules/privacidad/privacidad.routes.js";
+import autorizacionesRoutes from "./modules/asesores/autorizaciones.routes.js";
 import express from "express"
 import mongoose from "mongoose";
 import morgan from "morgan";
@@ -20,6 +24,12 @@ import piezaPpfRoutes from "./modules/piezasPpf/piezaPpf.routes.js";
 import asesorRoutes from "./modules/asesores/asesor.routes.js";
 import coordinacionRoutes from "./modules/coordinacion/coordinacion.routes.js";
 import medidaVehiculoRoutes from "./modules/medidasVehiculos/medidaVehiculo.routes.js";
+import accesorioRoutes from "./modules/accesorios/accesorio.routes.js";
+import ordenTrabajoRoutes from "./modules/ordenesTrabajo/ordenTrabajo.routes.js";
+import inventarioRoutes from "./modules/inventario/inventario.routes.js";
+import servicioAdicionalRoutes from "./modules/serviciosAdicionales/servicioAdicional.routes.js";
+import precioVentaRoutes from "./modules/preciosVenta/precioVenta.routes.js";
+import comboPpfRoutes from "./modules/combosPpf/comboPpf.routes.js";
 import {
   corsOptions,
   securityHeaders,
@@ -39,7 +49,8 @@ app.use(
   morgan(
     process.env.NODE_ENV === "production"
       ? "combined"
-      : "dev"
+      : "dev",
+    { skip: (req) => /^\/api\/ventas\/[^/]+\/comprobante-cliente\/?$/i.test(req.path) },
   )
 );
 app.use(express.json({ limit: "3mb" }));
@@ -74,6 +85,8 @@ app.get("/api/login", (req, res) => {
 });
 
 app.use("/api/auth",authRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/eventos", eventosRoutes);
 
 app.use("/api/usuarios", userRoutes);
 
@@ -99,9 +112,17 @@ app.use("/api/ventas",ventaRoutes);
 
 app.use("/api/piezas-ppf", piezaPpfRoutes);
 
+app.use("/api/privacidad", privacidadRoutes);
+app.use("/api/autorizaciones", autorizacionesRoutes);
 app.use("/api/asesores", asesorRoutes);
 app.use("/api/coordinacion", coordinacionRoutes);
 app.use("/api/medidas-vehiculos", medidaVehiculoRoutes);
+app.use("/api/accesorios", accesorioRoutes);
+app.use("/api/ordenes-trabajo", ordenTrabajoRoutes);
+app.use("/api/inventario", inventarioRoutes);
+app.use("/api/servicios-adicionales", servicioAdicionalRoutes);
+app.use("/api/precios-venta", precioVentaRoutes);
+app.use("/api/combos-ppf", comboPpfRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

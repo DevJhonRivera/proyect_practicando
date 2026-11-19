@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { requirePermission, requireRole } from "../../middlewares/permission.middleware.js";
+import { requireAnyPermission, requirePermission, requireRole } from "../../middlewares/permission.middleware.js";
 import {
   createBorradorAsesoria,
   getCatalogoDisponible,
@@ -9,15 +9,22 @@ import {
   searchClientesAsesoria,
   getAsesorias,
   getAsesoriaPorId,
+  getHistorialServicio,
+  getHistorialServicios,
   sendAsesoriaToSales,
   updateAsesoria,
   createNovedadAsesoria,
   reviewNovedadAsesoria,
   reviewGarantiaAsesoria,
   resolveNovedadAsesoria,
+  getOrigenesGarantia,
 } from "./asesor.controller.js";
 
 const router = Router();
+
+const soloAdministracion = requireRole("ADMIN", "SUPERUSUARIO");
+router.get("/historial-servicios", authMiddleware, soloAdministracion, getHistorialServicios);
+router.get("/historial-servicios/:id", authMiddleware, soloAdministracion, getHistorialServicio);
 
 router.get(
   "/materiales",
@@ -29,14 +36,14 @@ router.get(
 router.put(
   "/servicios/:id",
   authMiddleware,
-  requireRole("ADMIN", "SUPERUSUARIO"),
+  requirePermission("asesores", "write"),
   updateAsesoria
 );
 
 router.post(
   "/servicios/:id/novedades",
   authMiddleware,
-  requireRole("ADMIN", "SUPERUSUARIO", "INVENTARIO"),
+  requireRole("ADMIN", "SUPERUSUARIO", "INVENTARIO", "COORDINADOR"),
   createNovedadAsesoria
 );
 
@@ -62,6 +69,13 @@ router.patch(
 );
 
 router.get(
+  "/garantias/origenes",
+  authMiddleware,
+  requirePermission("asesores", "read"),
+  getOrigenesGarantia
+);
+
+router.get(
   "/servicios",
   authMiddleware,
   requirePermission("asesores", "read"),
@@ -71,7 +85,7 @@ router.get(
 router.get(
   "/servicios/:id",
   authMiddleware,
-  requirePermission("cortes", "read"),
+  requireAnyPermission(["asesores", "read"], ["cortes", "read"], ["ventas", "read"]),
   getAsesoriaPorId
 );
 

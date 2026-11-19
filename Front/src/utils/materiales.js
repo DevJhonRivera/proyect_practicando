@@ -6,10 +6,13 @@ export const MATERIAL_PPF = "PPF";
 
 export const MICRAJES_SEGURIDAD = [
   120,
+  200,
   300,
   500,
   700,
   1500,
+  1800,
+  2200,
   3000,
 ];
 

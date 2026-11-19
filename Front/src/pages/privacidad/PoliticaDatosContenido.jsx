@@ -1,0 +1,11 @@
+import { Mail, Phone, MapPin, ShieldCheck } from "lucide-react";
+import SeccionLegal from "../../components/ui/SeccionLegal";
+export default function PoliticaDatosContenido({ politica }) {
+  const r = politica.responsable;
+  return <div className="min-w-0 space-y-5 text-sm leading-7 text-slate-700">
+    <section className="rounded-2xl bg-blue-50 p-5"><h2 className="flex items-center gap-2 font-bold text-blue-950"><ShieldCheck size={20} />Lo esencial sobre tu información</h2><ul className="mt-3 space-y-2">{politica.resumen.map((texto) => <li key={texto} className="flex gap-2"><span className="font-bold text-blue-700">✓</span><span>{texto}</span></li>)}</ul></section>
+    <section className="rounded-2xl border border-slate-200 p-5"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Responsable del tratamiento</p><h2 className="mt-2 text-lg font-bold text-slate-950">{r.nombre}</h2><p>NIT {r.nit}</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><p className="flex items-start gap-2"><MapPin size={17} className="mt-1 shrink-0" />{r.direccion}</p><p className="flex items-center gap-2"><Phone size={17} />{r.telefono}</p><a href={`mailto:${r.correo}`} className="flex items-start gap-2 break-all font-semibold text-blue-700 sm:col-span-2"><Mail size={17} className="mt-1 shrink-0" />{r.correo}</a></div><p className="mt-3 text-xs text-slate-500">{r.area}</p></section>
+    <div className="space-y-3">{politica.secciones.map((seccion) => <SeccionLegal key={seccion.id} titulo={seccion.titulo} resumen={seccion.resumen}><div className="space-y-3">{seccion.parrafos.map((texto, i) => <p key={i}>{texto}</p>)}</div></SeccionLegal>)}</div>
+    <footer className="rounded-xl bg-slate-50 p-4 text-xs text-slate-500"><p>Versión {politica.version} · Vigencia desde {politica.vigenteDesde}</p><p>La consulta de esta política no equivale a otorgar una autorización.</p><div className="mt-2 flex flex-wrap gap-4">{politica.fuentes.map((fuente) => <a key={fuente.url} href={fuente.url} target="_blank" rel="noreferrer" className="text-blue-700 underline">{fuente.nombre}</a>)}</div><p className="mt-3 break-all">Identificador de esta versión: {politica.huella}</p></footer>
+  </div>;
+}

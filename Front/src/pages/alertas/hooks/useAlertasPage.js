@@ -1,3 +1,4 @@
+import { observarActualizaciones } from "../../../utils/tiempoReal";
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import { currentMonthValue } from "../../../hooks/useMonthFilter";
@@ -20,7 +21,7 @@ export function useAlertasPage() {
     try {
       setLoading(true);
 
-      const res = await getAlertas();
+      const res = await getAlertas({ month });
 
       setAlertas(res.data.data || res.data || []);
     } catch (error) {
@@ -35,7 +36,7 @@ export function useAlertasPage() {
 
     const cargarInicial = async () => {
       try {
-        const res = await getAlertas();
+        const res = await getAlertas({ month });
 
         if (active) {
           setAlertas(res.data.data || res.data || []);
@@ -49,21 +50,9 @@ export function useAlertasPage() {
       }
     };
 
-    cargarInicial();
-    const intervalId = window.setInterval(async () => {
-      try {
-        const res = await getAlertas();
-        if (active) setAlertas(res.data.data || res.data || []);
-      } catch {
-        // Conserva la información visible si una actualización temporal falla.
-      }
-    }, 5000);
-
-    return () => {
-      active = false;
-      window.clearInterval(intervalId);
-    };
-  }, []);
+    const dejarDeObservar = observarActualizaciones(["realtime:alertas"], cargarInicial, 30000);
+    return () => { active = false; dejarDeObservar(); };
+  }, [month]);
 
   const tipos = useMemo(
     () => [

@@ -1,7 +1,7 @@
 import api from "./axios";
 
-export const getPedidos = () =>
-  api.get("/pedidos");
+export const getPedidos = (params = {}) =>
+  api.get("/pedidos", { params });
 
 export const createPedido = (data) =>
   api.post("/pedidos", data);

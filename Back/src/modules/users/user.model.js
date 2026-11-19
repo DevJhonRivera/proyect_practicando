@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema(
       default: "INVENTARIO"
     },
 
+    remuneracion: {
+      modalidad: { type: String, enum: ["SOLO_COMISION", "SOLO_SALARIO", "SALARIO_COMISION"], default: "SOLO_COMISION" },
+      salarioMensual: { type: Number, default: 0, min: 0 },
+    },
+
     creadoPor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

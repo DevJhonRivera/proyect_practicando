@@ -7,21 +7,23 @@ import {
 
 import { authMiddleware }
 from "../../middlewares/auth.middleware.js";
-import { requirePermission } from "../../middlewares/permission.middleware.js";
+import { requireAnyPermission } from "../../middlewares/permission.middleware.js";
 
 const router = Router();
+// Acknowledging an alert uses the same inbox scope as listing it.
+const requireInboxAccess = requireAnyPermission(["alertas", "read"], ["asesores", "read"]);
 
 router.get(
   "/",
   authMiddleware,
-  requirePermission("alertas", "read"),
+  requireInboxAccess,
   getAlertas
 );
 
 router.patch(
   "/:id/atender",
   authMiddleware,
-  requirePermission("alertas", "write"),
+  requireInboxAccess,
   updateAlerta
 );
 

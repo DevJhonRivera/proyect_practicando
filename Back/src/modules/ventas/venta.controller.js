@@ -33,7 +33,7 @@ export const getVentas =
   async (req, res) => {
     try {
       const ventas =
-        await obtenerVentas();
+        await obtenerVentas(req.query);
 
       res.json(ventas);
     } catch (error) {

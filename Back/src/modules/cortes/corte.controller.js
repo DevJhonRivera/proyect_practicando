@@ -3,6 +3,7 @@ import {
   obtenerCortes,
   obtenerSugerenciasCortes,
   registrarCorte,
+  registrarPropuestaCompleta,
 } from "./corte.service.js";
 
 const rolesConCostos = [
@@ -62,11 +63,19 @@ export const createCorte =
       });
     }
   };
+
+export const createCortesPropuesta = async (req, res) => {
+  try {
+    res.status(201).json({ success: true, data: await registrarPropuestaCompleta(req.params.asesoriaId, req.user) });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
 export const getCortes =
   async (req, res) => {
     try {
       const cortes =
-        await obtenerCortes();
+        await obtenerCortes(req.query);
 
       if (rolesConCostos.includes(req.user?.rol)) {
         return res.json(cortes);

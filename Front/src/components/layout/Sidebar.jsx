@@ -1,5 +1,7 @@
+import { observarActualizaciones } from "../../utils/tiempoReal";
 import {
   Activity,
+  MessageCircle,
   BadgeDollarSign,
   BookOpen,
   Bell,
@@ -12,15 +14,21 @@ import {
   LayoutDashboard,
   LogOut,
   PackageOpen,
+  PackageSearch,
   Scissors,
   ShoppingCart,
   Truck,
   UserPlus,
   X,
+  ListTodo,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import api from "../../api/axios";
+import { puedeAbrirChat } from "../../utils/permisosChat";
 import logo from "../../assets/polarizadosya.png";
 import {
   obtenerUsuarioActual,
@@ -28,9 +36,32 @@ import {
 } from "../../utils/permisos";
 import { cerrarSesion as cerrarSesionUsuario } from "../../utils/session";
 
-function Sidebar({ open = false, onClose = () => {} }) {
+function Sidebar({ open = false, onClose = () => {}, compact = false, onToggleCompact = () => {} }) {
   const navigate = useNavigate();
   const usuario = obtenerUsuarioActual();
+  const chatPermitido = puedeAbrirChat(usuario?.rol);
+  const [chatsSinLeer, setChatsSinLeer] = useState(0);
+
+  useEffect(() => {
+    if (!chatPermitido) return;
+    const control = new AbortController();
+    let consultando = false;
+    const actualizar = async () => {
+      if (consultando || document.hidden) return;
+      consultando = true;
+      try {
+        const config = { signal: control.signal, skipGlobalActivity: true };
+        const { data } = await api.get("/chat/no-leidos", config);
+        if (!control.signal.aborted) setChatsSinLeer(data.cantidad);
+        await Promise.allSettled((data.pendientes || []).map(({ _id, ultimo }) =>
+          api.post(`/chat/conversaciones/${_id}/recibido`, { mensaje: ultimo }, config)));
+      } catch {
+        // Navigation stays available when the chat service is temporarily unreachable.
+      } finally { consultando = false; }
+    };
+    const dejarDeObservar = observarActualizaciones(["realtime:chat", "realtime:chat-leido", "chat:leido"], actualizar, 15000);
+    return () => { control.abort(); dejarDeObservar(); };
+  }, [chatPermitido]);
   const iniciales = String(usuario?.nombre || "U")
     .trim()
     .split(/\s+/)
@@ -59,10 +90,18 @@ function Sidebar({ open = false, onClose = () => {} }) {
     {
       section: "Principal",
       items: [
+        { icon: MessageCircle, text: "Chat interno", url: "/chat", esChat: true },
         {
           icon: LayoutDashboard,
           text: "Inicio",
           url: "/dashboard",
+          modulo: "dashboard",
+          accion: "read",
+        },
+        {
+          icon: ListTodo,
+          text: "Órdenes de trabajo",
+          url: "/ordenes-trabajo",
           modulo: "dashboard",
           accion: "read",
         },
@@ -72,6 +111,29 @@ function Sidebar({ open = false, onClose = () => {} }) {
           url: "/usuarios",
           modulo: "usuarios",
           accion: "write",
+          soloAdmin: true,
+        },
+      ],
+    },
+    {
+      section: "Administración",
+      items: [
+        {
+          icon: ClipboardList,
+          text: "Historial de servicios",
+          url: "/historial-servicios",
+          soloAdmin: true,
+        },
+        {
+          icon: ClipboardList,
+          text: "Porcentajes de mano de obra",
+          url: "/porcentajes-mano-obra",
+          soloAdmin: true,
+        },
+        {
+          icon: BadgeDollarSign,
+          text: "Lista de precios de venta",
+          url: "/precios-venta",
           soloAdmin: true,
         },
       ],
@@ -103,8 +165,8 @@ function Sidebar({ open = false, onClose = () => {} }) {
         {
           icon: CircleDollarSign,
           text: "Costos por pedido",
-          url: "/finanzas",
-          modulo: "finanzas",
+          url: usuario?.rol === "INVENTARIO" ? "/costeo-pedidos" : "/finanzas",
+          modulo: usuario?.rol === "INVENTARIO" ? "pedidos" : "finanzas",
           accion: "read",
         },
       ],
@@ -131,6 +193,13 @@ function Sidebar({ open = false, onClose = () => {} }) {
           text: "Retazos disponibles",
           url: "/retazos",
           modulo: "retazos",
+          accion: "read",
+        },
+        {
+          icon: PackageSearch,
+          text: "Accesorios",
+          url: "/accesorios",
+          modulo: "accesorios",
           accion: "read",
         },
         {
@@ -179,6 +248,14 @@ function Sidebar({ open = false, onClose = () => {} }) {
       section: "Comercial",
       items: [
         {
+          icon: BadgeDollarSign,
+          text: "Lista de precios de venta",
+          url: "/precios-venta",
+          modulo: "asesores",
+          accion: "read",
+          ocultarAdmin: true,
+        },
+        {
           icon: BookOpen,
           text: "Catálogo para asesores",
           url: "/asesores",
@@ -207,7 +284,7 @@ function Sidebar({ open = false, onClose = () => {} }) {
     .map((group) => ({
       ...group,
       items: group.items.filter((item) =>
-        item.soloAdmin
+        item.ocultarAdmin && ["SUPERUSUARIO", "ADMIN"].includes(usuario?.rol) ? false : item.esChat ? chatPermitido : item.soloAdmin
           ? ["SUPERUSUARIO", "ADMIN"].includes(usuario?.rol)
           : tienePermiso(usuario, item.modulo, item.accion)
       ),
@@ -251,9 +328,10 @@ function Sidebar({ open = false, onClose = () => {} }) {
       className={`
       fixed inset-y-0 left-0 z-50
       h-dvh w-[min(86vw,20rem)]
-      transition-transform duration-200 ease-out
+      transition-[transform,width] duration-200 ease-out
       ${open ? "visible translate-x-0" : "invisible -translate-x-full"}
-      lg:visible lg:static lg:z-auto lg:h-screen lg:w-72 lg:translate-x-0
+      lg:visible lg:static lg:z-auto lg:h-screen lg:translate-x-0
+      ${compact ? "lg:w-20" : "lg:w-72"}
       min-h-0 overflow-hidden
       bg-slate-950
       text-white
@@ -267,15 +345,16 @@ function Sidebar({ open = false, onClose = () => {} }) {
       aria-label="Navegación principal"
     >
       <div
-        className="
+        className={`
         px-4
         py-4
         shrink-0
         border-b
-        border-white/[0.08]"
+        border-white/[0.08]
+        ${compact ? "lg:px-2" : ""}`}
       >
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-[4.5rem] shrink-0 items-center justify-center rounded-lg bg-white px-2 shadow-sm shadow-black/20">
+        <div className={`flex items-center gap-3 ${compact ? "lg:flex-col lg:gap-2" : ""}`}>
+          <div className={`flex h-12 shrink-0 items-center justify-center rounded-lg bg-white px-2 shadow-sm shadow-black/20 ${compact ? "lg:h-10 lg:w-14 lg:px-1" : "w-[4.5rem]"}`}>
             <img
               src={logo}
               alt="Polarizados YA"
@@ -283,7 +362,7 @@ function Sidebar({ open = false, onClose = () => {} }) {
             />
           </div>
 
-          <div className="min-w-0">
+          <div className={`min-w-0 ${compact ? "lg:hidden" : ""}`}>
             <h1 className="truncate text-base font-bold leading-tight text-white">
               Polarizados YA
             </h1>
@@ -300,13 +379,23 @@ function Sidebar({ open = false, onClose = () => {} }) {
           >
             <X size={20} />
           </button>
+
+          <button
+            type="button"
+            onClick={onToggleCompact}
+            title={compact ? "Expandir menú" : "Contraer menú"}
+            aria-label={compact ? "Expandir menú lateral" : "Contraer menú lateral"}
+            className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-white/[0.08] hover:text-white lg:flex ${compact ? "" : "ml-auto"}`}
+          >
+            {compact ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+          </button>
         </div>
 
-        <div className="mt-4 flex items-center gap-3 border-t border-white/[0.08] pt-3">
+        <div className={`mt-4 flex items-center gap-3 border-t border-white/[0.08] pt-3 ${compact ? "lg:justify-center" : ""}`} title={compact ? `${usuario?.nombre || "Usuario"} · ${rolLabel}` : undefined}>
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200 ring-1 ring-inset ring-blue-400/20">
             {iniciales}
           </div>
-          <div className="min-w-0">
+          <div className={`min-w-0 ${compact ? "lg:hidden" : ""}`}>
             <p className="truncate text-sm font-semibold text-slate-100">
               {usuario?.nombre || "Usuario"}
             </p>
@@ -316,7 +405,7 @@ function Sidebar({ open = false, onClose = () => {} }) {
       </div>
 
       <nav
-        className="
+        className={`
         flex-1
         min-h-0
         overflow-y-auto
@@ -324,19 +413,21 @@ function Sidebar({ open = false, onClose = () => {} }) {
         px-3
         py-4
         space-y-5
-        sidebar-scroll"
+        sidebar-scroll
+        ${compact ? "lg:px-2 lg:space-y-3" : ""}`}
       >
         {menusPermitidos.map((group) => (
           <div key={group.section}>
             <p
-              className="
+              className={`
               text-xs
               uppercase
               tracking-[0.08em]
               text-slate-600
               font-semibold
               mb-1.5
-              px-2.5"
+              px-2.5
+              ${compact ? "lg:hidden" : ""}`}
             >
               {group.section}
             </p>
@@ -350,6 +441,8 @@ function Sidebar({ open = false, onClose = () => {} }) {
                     key={item.url}
                     to={item.url}
                     onClick={onClose}
+                    title={compact ? item.text : undefined}
+                    aria-label={item.text}
                     className={({ isActive }) =>
                       `
                       flex
@@ -364,6 +457,7 @@ function Sidebar({ open = false, onClose = () => {} }) {
                       text-sm
                       font-medium
                       relative
+                      ${compact ? "lg:justify-center lg:gap-0 lg:px-0" : ""}
 
                       ${
                         isActive
@@ -374,7 +468,8 @@ function Sidebar({ open = false, onClose = () => {} }) {
                     }
                   >
                     <Icon size={18} strokeWidth={1.9} className="shrink-0" />
-                    <span className="truncate">{item.text}</span>
+                    <span className={`truncate ${compact ? "lg:hidden" : ""}`}>{item.text}</span>
+                    {item.esChat && chatsSinLeer > 0 && <span className="ml-auto rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white" aria-label={`${chatsSinLeer} conversaciones sin leer`}>{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
                   </NavLink>
                 );
               })}
@@ -384,15 +479,18 @@ function Sidebar({ open = false, onClose = () => {} }) {
       </nav>
 
       <div
-        className="
+        className={`
         p-3
         shrink-0
         border-t
-        border-white/[0.08]"
+        border-white/[0.08]
+        ${compact ? "lg:px-2" : ""}`}
       >
         <button
           onClick={cerrarSesion}
-          className="
+          title={compact ? "Cerrar sesión" : undefined}
+          aria-label="Cerrar sesión"
+          className={`
           w-full
           flex
           items-center
@@ -406,13 +504,14 @@ function Sidebar({ open = false, onClose = () => {} }) {
           hover:text-red-300
           transition-colors
           text-sm
-          font-medium"
+          font-medium
+          ${compact ? "lg:justify-center lg:gap-0 lg:px-0" : ""}`}
         >
           <LogOut size={18} strokeWidth={1.9} />
-          Cerrar sesion
+          <span className={compact ? "lg:hidden" : ""}>Cerrar sesion</span>
         </button>
 
-        <p className="mt-2 px-3 text-[10px] text-slate-700">
+        <p className={`mt-2 px-3 text-[10px] text-slate-700 ${compact ? "lg:hidden" : ""}`}>
           Polarizados YA 2026
         </p>
       </div>

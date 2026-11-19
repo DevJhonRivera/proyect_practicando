@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
   ClipboardList,
+  Clock3,
   Eye,
   Package,
   Plus,
@@ -19,7 +21,7 @@ import { getPedidos } from "../../api/pedidos.api";
 import ExcelButton from "../../components/ui/ExcelButton";
 import MonthFilter from "../../components/ui/MonthFilter";
 import TablePagination from "../../components/ui/TablePagination";
-import { useMonthFilter } from "../../hooks/useMonthFilter";
+import { monthValueRange, useMonthFilter } from "../../hooks/useMonthFilter";
 import { usePagination } from "../../hooks/usePagination";
 import {
   anchoLabel,
@@ -51,6 +53,7 @@ const largosRolloOpciones = [
 ];
 
 function RecepcionList() {
+  const [searchParams] = useSearchParams();
   const [data, setData] =
     useState([]);
   const {
@@ -101,8 +104,8 @@ function RecepcionList() {
       try {
         const [recepcionesRes, pedidosRes] =
           await Promise.all([
-            getRecepciones(),
-            getPedidos(),
+            getRecepciones({ ...monthValueRange(mesRecepciones), limite: 500 }),
+            getPedidos({ estadoActivo: true, limite: 500 }),
           ]);
 
         setData(
@@ -132,8 +135,8 @@ function RecepcionList() {
       try {
         const [recepcionesRes, pedidosRes] =
           await Promise.all([
-            getRecepciones(),
-            getPedidos(),
+            getRecepciones({ ...monthValueRange(mesRecepciones), limite: 500 }),
+            getPedidos({ estadoActivo: true, limite: 500 }),
           ]);
 
         if (active) {
@@ -165,7 +168,14 @@ function RecepcionList() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [mesRecepciones]);
+
+  useEffect(() => {
+    const recepcionId = searchParams.get("recepcion");
+    if (!recepcionId || !data.length) return;
+    const objetivo = data.find((item) => String(item._id) === recepcionId);
+    if (objetivo) setViewRecepcion(objetivo);
+  }, [data, searchParams]);
 
   const guardarRecepcion =
     async () => {
@@ -505,6 +515,26 @@ function RecepcionList() {
         pedido.estado !== "COMPLETADO" &&
         detallesPendientes(pedido).length > 0
     );
+  const pedidosPagination = usePagination(pedidosPendientes, 8);
+  const rollosPendientesLlegada = pedidosPendientes.reduce(
+    (total, pedido) => total + detallesPendientes(pedido).reduce(
+      (subtotal, detalle) => subtotal + Math.max(Number(detalle.cantidadRollos || 0) - Number(detalle.cantidadRecibida || 0), 0),
+      0
+    ),
+    0
+  );
+
+  const abrirEntradaPedido = (pedido) => {
+    const cantidadPendiente = detallesPendientes(pedido).reduce(
+      (total, detalle) => total + Math.max(Number(detalle.cantidadRollos || 0) - Number(detalle.cantidadRecibida || 0), 0),
+      0
+    );
+    setForm({
+      cantidadRollos: String(cantidadPendiente || ""),
+      observaciones: `LLEGADA DEL PEDIDO ${pedido.codigoPedido} - ${pedido.proveedor}`,
+    });
+    setOpenModal(true);
+  };
 
   const pedidoSeleccionado =
     pedidosPendientes.find(
@@ -608,12 +638,19 @@ function RecepcionList() {
         </button>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Stat
           icon={<ClipboardList />}
           label="Entradas"
           value={totalRecepciones}
           color="text-blue-600"
+        />
+
+        <Stat
+          icon={<Clock3 />}
+          label="Rollos por llegar"
+          value={rollosPendientesLlegada}
+          color="text-amber-600"
         />
 
         <Stat
@@ -637,6 +674,33 @@ function RecepcionList() {
           color="text-yellow-600"
         />
       </div>
+
+      <section className="overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-100 bg-amber-50 px-5 py-4">
+          <div>
+            <h2 className="font-bold text-slate-900">Material pendiente por llegar</h2>
+            <p className="text-sm text-slate-600">{pedidosPendientes.length} pedido(s) activo(s) · {rollosPendientesLlegada} rollo(s) todavía pendientes.</p>
+          </div>
+          <span className="rounded-md bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">Compras en tránsito o parciales</span>
+        </div>
+        {pedidosPendientes.length === 0 ? (
+          <div className="p-7 text-center text-sm text-slate-500"><Package className="mx-auto mb-2 text-emerald-500" size={28} />No hay materiales pendientes por recibir.</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-3 text-left">Pedido</th><th className="p-3 text-left">Proveedor</th><th className="p-3 text-left">Fecha</th><th className="p-3 text-left">Material pendiente</th><th className="p-3 text-center">Estado</th><th className="p-3 text-right">Acción</th></tr></thead>
+                <tbody>{pedidosPagination.pageItems.map((pedido) => {
+                  const detalles = detallesPendientes(pedido);
+                  const faltantes = detalles.reduce((total, detalle) => total + Math.max(Number(detalle.cantidadRollos || 0) - Number(detalle.cantidadRecibida || 0), 0), 0);
+                  return <tr key={pedido._id} className="border-t border-slate-100 align-top hover:bg-slate-50"><td className="p-3 font-bold text-slate-900">{pedido.codigoPedido}</td><td className="p-3 text-slate-700">{pedido.proveedor}</td><td className="p-3 text-slate-600">{new Date(pedido.fechaPedido || pedido.createdAt).toLocaleDateString("es-CO")}</td><td className="p-3"><p className="font-semibold text-slate-800">{faltantes} rollo(s) por llegar</p><div className="mt-1 space-y-0.5 text-xs text-slate-500">{detalles.map((detalle) => <p key={detalleKey(detalle)}>{detalle.tipoPolarizado} {etiquetaDetalle(detalle)} · {anchoLabel(detalle.ancho)} · faltan {Math.max(Number(detalle.cantidadRollos || 0) - Number(detalle.cantidadRecibida || 0), 0)} de {detalle.cantidadRollos}</p>)}</div></td><td className="p-3 text-center"><span className={`rounded-md px-2.5 py-1 text-xs font-bold ${pedido.estado === "PARCIAL" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-800"}`}>{pedido.estado === "PARCIAL" ? "Llegada parcial" : "Pendiente"}</span></td><td className="p-3 text-right"><button type="button" onClick={() => abrirEntradaPedido(pedido)} className="rounded-md bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Registrar llegada</button></td></tr>;
+                })}</tbody>
+              </table>
+            </div>
+            <TablePagination pagination={pedidosPagination} />
+          </>
+        )}
+      </section>
 
       <div className="bg-white rounded-xl shadow overflow-hidden">
         <div className="p-6 border-b flex flex-wrap items-end justify-between gap-4">

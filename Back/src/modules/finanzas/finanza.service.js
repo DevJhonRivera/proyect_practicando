@@ -4,6 +4,7 @@ import DetallePedido from "../pedidos/detallePedido.model.js";
 import Rollo from "../rollos/rollo.model.js";
 import Corte from "../cortes/corte.model.js";
 import Retazo from "../retazos/retazo.model.js";
+import Venta from "../ventas/venta.model.js";
 
 const roundMoney = (value) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -143,6 +144,9 @@ export const calcularCosteo = async (data) => {
   }
 
   const moneda = data.moneda || "COP";
+  if (!["COP", "USD"].includes(moneda)) {
+    throw new Error("Seleccione una moneda valida");
+  }
   const trm =
     moneda === "USD"
       ? Number(data.trm || 0)
@@ -175,6 +179,10 @@ export const calcularCosteo = async (data) => {
 
     const valorUnitario =
       Number(entrada.valorUnitario || 0);
+
+    if (!Number.isFinite(valorUnitario) || valorUnitario <= 0) {
+      throw new Error(`Ingrese el valor unitario de ${detalle.tipoPolarizado}`);
+    }
 
     const subtotalOriginal =
       valorUnitario * cantidadRollos;
@@ -230,6 +238,9 @@ export const calcularCosteo = async (data) => {
   const flete = Number(data.flete || 0);
   const otrosCostos =
     Number(data.otrosCostos || 0);
+  if (![flete, otrosCostos].every(Number.isFinite) || flete < 0 || otrosCostos < 0) {
+    throw new Error("Revise el flete y los otros costos");
+  }
 
   if (moneda === "USD" && flete > 0 && trmFlete <= 0) {
     throw new Error(
@@ -274,6 +285,9 @@ export const calcularCosteo = async (data) => {
 
   const metodoProrrateoFlete =
     data.metodoProrrateoFlete || "VALOR";
+  if (!["VALOR", "CANTIDAD"].includes(metodoProrrateoFlete)) {
+    throw new Error("Seleccione un metodo valido para repartir los costos");
+  }
 
   const detallesCalculados =
     detalles.map((detalle) => {
@@ -478,32 +492,29 @@ export const obtenerCosteoPorPedido =
 
 export const obtenerResumenFinanciero =
   async () => {
-    const costeos =
-      await CosteoPedido.find();
-
-    const totalCosteado =
-      costeos.reduce(
-        (acc, item) =>
-          acc + Number(item.totalCop || 0),
-        0
-      );
-
-    const totalRollos =
-      costeos.reduce(
-        (acc, item) =>
-          acc +
-          item.detalles.reduce(
-            (sum, detalle) =>
-              sum +
-              Number(detalle.cantidadRollos || 0),
-            0
-          ),
-        0
-      );
+    const [resumen = {}] = await CosteoPedido.aggregate([
+      { $project: {
+        totalCop: { $ifNull: ["$totalCop", 0] },
+        totalRollosPedido: { $sum: { $map: {
+          input: { $ifNull: ["$detalles", []] },
+          as: "detalle",
+          in: { $ifNull: ["$$detalle.cantidadRollos", 0] },
+        } } },
+      } },
+      { $group: {
+        _id: null,
+        pedidosCosteados: { $sum: 1 },
+        totalCosteado: { $sum: "$totalCop" },
+        totalRollos: { $sum: "$totalRollosPedido" },
+      } },
+      { $project: { _id: 0, pedidosCosteados: 1, totalCosteado: 1, totalRollos: 1 } },
+    ]);
+    const totalCosteado = Number(resumen.totalCosteado || 0);
+    const totalRollos = Number(resumen.totalRollos || 0);
 
     return {
       pedidosCosteados:
-        costeos.length,
+        Number(resumen.pedidosCosteados || 0),
       totalCosteado:
         roundMoney(totalCosteado),
       totalRollos,
@@ -516,43 +527,56 @@ export const obtenerResumenFinanciero =
     };
   };
 
-export const obtenerReporteFinanciero =
-  async () => {
-    const cortes =
-      await Corte.find().lean();
-
-    const totalVentas =
-      cortes.reduce(
-        (acc, corte) =>
-          acc + Number(corte.valorVenta || 0),
-        0
-      );
-
-    const costoMaterial =
-      cortes.reduce(
-        (acc, corte) =>
-          acc +
-          Number(corte.costoMaterialCop || 0),
-        0
-      );
-
-    const utilidadBruta =
-      totalVentas - costoMaterial;
-
-    return {
-      rentabilidad: {
-        totalVentas:
-          roundMoney(totalVentas),
-        costoMaterial:
-          roundMoney(costoMaterial),
-        utilidadBruta:
-          roundMoney(utilidadBruta),
-        margenBrutoPorcentaje:
-          roundMoney(
-            totalVentas > 0
-              ? (utilidadBruta / totalVentas) * 100
-              : 0
-          ),
-      },
-    };
+export const obtenerReporteFinanciero = async ({ desde, hasta, material } = {}) => {
+  const fechaColombia = (valor) => {
+    if (typeof valor !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) throw new Error("Fecha de reporte inválida");
+    const fecha = new Date(`${valor}T00:00:00-05:00`);
+    if (!Number.isFinite(fecha.getTime()) || fecha.toISOString().slice(0, 10) !== valor) throw new Error("Fecha de reporte inválida");
+    return fecha;
   };
+  const fecha = {};
+  if (desde) fecha.$gte = fechaColombia(desde);
+  if (hasta) fecha.$lt = new Date(fechaColombia(hasta).getTime() + 86400000);
+  if (fecha.$gte && fecha.$lt && fecha.$gte >= fecha.$lt) throw new Error("El rango de fechas no es válido");
+  if (material && (typeof material !== "string" || material.length > 150)) throw new Error("Material inválido");
+
+  const cortesDelMaterial = material ? [
+    { $lookup: { from: Rollo.collection.name, localField: "rolloId", foreignField: "_id", as: "rollo" } },
+    { $lookup: { from: Retazo.collection.name, localField: "retazoId", foreignField: "_id", as: "retazo" } },
+    { $match: { $or: [{ "rollo.tipoPolarizado": material }, { "retazo.tipoPolarizado": material }] } },
+  ] : [];
+  const [[totales = {}], materialesRollo, materialesRetazo] = await Promise.all([
+    Venta.aggregate([
+      { $match: { estado: { $ne: "ANULADA" }, ...(desde || hasta ? { fecha } : {}) } },
+      { $lookup: {
+        from: Corte.collection.name, localField: "_id", foreignField: "ventaId", as: "costos",
+        pipeline: [
+          ...cortesDelMaterial,
+          { $group: { _id: null, costo: { $sum: "$costoMaterialCop" }, venta: { $sum: "$valorVenta" } } },
+        ],
+      } },
+      { $group: {
+        _id: null,
+        totalVentas: { $sum: material ? { $cond: [
+          { $gt: ["$subtotal", 0] },
+          { $multiply: [{ $ifNull: [{ $first: "$costos.venta" }, 0] }, { $divide: ["$total", "$subtotal"] }] },
+          0,
+        ] } : "$total" },
+        costoMaterial: { $sum: { $first: "$costos.costo" } },
+      } },
+    ]),
+    Rollo.distinct("tipoPolarizado"),
+    Retazo.distinct("tipoPolarizado"),
+  ]);
+  const totalVentas = roundMoney(totales.totalVentas);
+  const costoMaterial = roundMoney(totales.costoMaterial);
+  const utilidadBruta = roundMoney(totalVentas - costoMaterial);
+  return {
+    materiales: [...new Set([...materialesRollo, ...materialesRetazo].filter(Boolean))].sort(),
+    rentabilidad: {
+      totalVentas, costoMaterial, utilidadBruta,
+      margenBrutoPorcentaje: totalVentas > 0 ? roundMoney(utilidadBruta / totalVentas * 100) : 0,
+      costoSobreVentasPorcentaje: totalVentas > 0 ? roundMoney(costoMaterial / totalVentas * 100) : null,
+    },
+  };
+};

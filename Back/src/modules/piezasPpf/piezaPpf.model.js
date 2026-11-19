@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const piezaPpfSchema = new mongoose.Schema(
   {
+    tipoVehiculo: { type: String, enum: ["CARRO", "MOTO"], default: "CARRO" },
     marca: {
       type: String,
       required: true,
@@ -12,6 +13,13 @@ const piezaPpfSchema = new mongoose.Schema(
     modelo: {
       type: String,
       required: true,
+      trim: true,
+      uppercase: true,
+    },
+
+    anio: {
+      type: String,
+      default: "",
       trim: true,
     },
 
@@ -59,6 +67,8 @@ const piezaPpfSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    origenAsesoriaId: { type: mongoose.Schema.Types.ObjectId, ref: "Asesoria", default: null },
+    actualizadoPorNombre: { type: String, default: "", trim: true, uppercase: true },
   },
   {
     timestamps: true,
@@ -66,8 +76,10 @@ const piezaPpfSchema = new mongoose.Schema(
 );
 
 piezaPpfSchema.index({
+  tipoVehiculo: 1,
   marca: 1,
   modelo: 1,
+  anio: 1,
   ubicacion: 1,
   pieza: 1,
 });

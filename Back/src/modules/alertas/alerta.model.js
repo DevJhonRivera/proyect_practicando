@@ -1,3 +1,4 @@
+import { avisarCambioAlertas } from "../tiempoReal/canales.js";
 import mongoose from "mongoose";
 
 const alertaSchema =
@@ -41,6 +42,17 @@ const alertaSchema =
       timestamps: true
     }
   );
+
+alertaSchema.index({ destinatarioId: 1, atendida: 1, activa: 1, createdAt: -1 });
+alertaSchema.index({ tipo: 1, createdAt: -1 });
+
+alertaSchema.post(["save", "insertMany", "bulkWrite"], () => avisarCambioAlertas());
+alertaSchema.post(["findOneAndUpdate", "findOneAndDelete", "findOneAndReplace"], (resultado) => {
+  if (resultado) avisarCambioAlertas();
+});
+alertaSchema.post(["updateOne", "updateMany", "replaceOne", "deleteOne", "deleteMany"], (resultado) => {
+  if (resultado?.modifiedCount || resultado?.upsertedCount || resultado?.deletedCount) avisarCambioAlertas();
+});
 
 export default mongoose.model(
   "Alerta",

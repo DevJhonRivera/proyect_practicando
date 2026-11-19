@@ -9,6 +9,9 @@ export const getClienteAsesoria = (cedula) =>
 export const searchClientesAsesoria = (buscar) =>
   api.get("/asesores/clientes", { params: { buscar } });
 
+export const getOrigenesGarantia = (cedula, placa) =>
+  api.get("/asesores/garantias/origenes", { params: { cedula, placa } });
+
 export const createBorradorAsesoria = (data) =>
   api.post("/asesores/borradores", data);
 
@@ -17,6 +20,12 @@ export const getAsesorias = (params = {}) =>
 
 export const getAsesoriaPorId = (id) =>
   api.get(`/asesores/servicios/${id}`);
+
+export const getServiciosParaHistorial = (params) =>
+  api.get("/asesores/historial-servicios", { params });
+
+export const getHistorialServicio = (id) =>
+  api.get(`/asesores/historial-servicios/${id}`);
 
 export const updateAsesoria = (id, data) =>
   api.put(`/asesores/servicios/${id}`, data);

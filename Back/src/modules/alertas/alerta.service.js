@@ -24,6 +24,8 @@ export const TIPO_PROPUESTA_CORTE = "PROPUESTA_CORTE";
 export const TIPO_MATERIAL_LISTO = "MATERIAL_LISTO";
 export const TIPO_ASIGNACION_TRABAJO = "ASIGNACION_TRABAJO";
 export const TIPO_INSTALACION_COMPLETA = "INSTALACION_COMPLETA";
+export const TIPO_ACCESORIO_PENDIENTE = "ACCESORIO_PENDIENTE";
+export const TIPO_ROLLO_BAJO = "ROLLO_BAJO";
 
 const TIPOS_STOCK_RESERVA = [
   TIPO_STOCK_RESERVA_UN_ROLLO,
@@ -35,8 +37,30 @@ const TIPOS_INVENTARIO = [
   TIPO_STOCK_RESERVA_DOS_ROLLOS,
   TIPO_RECEPCION_NUEVA,
   TIPO_PROPUESTA_CORTE,
-  TIPO_SERVICIO_ASESOR_NUEVO
+  TIPO_SERVICIO_ASESOR_NUEVO,
+  TIPO_ACCESORIO_PENDIENTE,
+  TIPO_ROLLO_BAJO,
 ];
+
+export const sincronizarAlertasAccesorios = async (asesoria) => {
+  const prefijo = `accesorio-pendiente:${asesoria._id}:`;
+  const clavesActivas = [];
+  for (const item of asesoria.estado === "CANCELADA" ? [] : (asesoria.accesorios || [])) {
+    const faltante = Number(item.cantidadPendiente || 0);
+    if (faltante <= 0) continue;
+    const clave = `${prefijo}${item.accesorioId}`;
+    clavesActivas.push(clave);
+    await Alerta.findOneAndUpdate({ clave }, {
+      tipo: TIPO_ACCESORIO_PENDIENTE,
+      mensaje: `Se deben pedir ${faltante} unidad(es) de ${item.nombre} ${item.marca || ""}${item.referencia ? ` ${item.referencia}` : ""} para la orden ${asesoria.codigo}.`,
+      referenciaId: asesoria._id,
+      accionUrl: "/accesorios",
+      activa: true,
+      atendida: false,
+    }, { new: true, upsert: true, setDefaultsOnInsert: true });
+  }
+  await Alerta.updateMany({ clave: { $regex: `^${prefijo}` }, ...(clavesActivas.length ? { clave: { $regex: `^${prefijo}`, $nin: clavesActivas } } : {}) }, { $set: { activa: false, atendida: true } });
+};
 
 const TIPOS_COORDINACION = [TIPO_COORDINACION_NUEVA, TIPO_MATERIAL_LISTO, TIPO_INSTALACION_COMPLETA];
 
@@ -46,16 +70,7 @@ const TIPOS_VENTAS = [
   TIPO_SERVICIO_LISTO_PAGO
 ];
 
-const rolesConTodasLasAlertas = [
-  "SUPERUSUARIO",
-  "ADMIN"
-];
-
-const tiposPermitidosPorRol = (rol) => {
-  if (rolesConTodasLasAlertas.includes(rol)) {
-    return null;
-  }
-
+export const tiposPermitidosPorRol = (rol) => {
   if (rol === "INVENTARIO") {
     return TIPOS_INVENTARIO;
   }
@@ -66,6 +81,8 @@ const tiposPermitidosPorRol = (rol) => {
 
   if (rol === "COORDINADOR") return TIPOS_COORDINACION;
   if (rol === "INSTALADOR") return [TIPO_ASIGNACION_TRABAJO];
+  if (rol === "ADMIN") return [TIPO_SOLICITUD_NOVEDAD, TIPO_SOLICITUD_GARANTIA, TIPO_ACCESORIO_PENDIENTE];
+  if (rol === "SUPERUSUARIO") return [];
 
   return [];
 };
@@ -78,12 +95,37 @@ const filtroAlertasPorRol = (user) => {
     return {};
   }
 
-  return {
-    tipo: {
-      $in: tiposPermitidos
-    },
-    ...(user?.rol === "INSTALADOR" ? { destinatarioId: user._id } : {}),
+  return { $or: [
+    { tipo: { $in: tiposPermitidos }, ...(user?.rol === "INSTALADOR" ? { destinatarioId: user._id } : {}) },
+    { tipo: { $in: ["RESPUESTA_CLIENTE", "VEHICULO_LISTO_ASESOR", "FIRMA_CLIENTE"] }, destinatarioId: user?._id },
+  ] };
+};
+
+export const accionPredeterminada = (alerta) => {
+  const referencia = alerta.referenciaId ? String(alerta.referenciaId) : "";
+  const conOrden = (ruta) => referencia ? `${ruta}?asesoria=${referencia}` : ruta;
+  const rutas = {
+    RESPUESTA_CLIENTE: conOrden("/asesores"),
+    VEHICULO_LISTO_ASESOR: conOrden("/asesores"),
+    FIRMA_CLIENTE: conOrden("/asesores"),
+    [TIPO_RECEPCION_NUEVA]: "/recepciones",
+    [TIPO_STOCK_RESERVA_UN_ROLLO]: "/reserva",
+    [TIPO_STOCK_RESERVA_DOS_ROLLOS]: "/reserva",
+    [TIPO_ROLLO_BAJO]: "/uso",
+    [TIPO_ACCESORIO_PENDIENTE]: "/accesorios",
+    [TIPO_VENTA_PENDIENTE]: "/ventas",
+    [TIPO_VENTA_REVISION_CORTES]: "/ventas",
+    [TIPO_SERVICIO_LISTO_PAGO]: conOrden("/ventas"),
+    [TIPO_SERVICIO_ASESOR_NUEVO]: conOrden("/cortes"),
+    [TIPO_PROPUESTA_CORTE]: conOrden("/cortes"),
+    [TIPO_COORDINACION_NUEVA]: conOrden("/coordinacion"),
+    [TIPO_MATERIAL_LISTO]: conOrden("/coordinacion"),
+    [TIPO_ASIGNACION_TRABAJO]: conOrden("/coordinacion"),
+    [TIPO_INSTALACION_COMPLETA]: conOrden("/coordinacion"),
+    [TIPO_SOLICITUD_NOVEDAD]: conOrden("/asesores"),
+    [TIPO_SOLICITUD_GARANTIA]: conOrden("/asesores"),
   };
+  return alerta.accionUrl || rutas[alerta.tipo] || "/alertas";
 };
 
 const claveMaterialReserva = ({
@@ -126,7 +168,8 @@ export const crearAlerta =
     tipo,
     mensaje,
     referenciaId,
-    clave
+    clave,
+    accionUrl = ""
   ) => {
     if (clave) {
       return await Alerta.findOneAndUpdate(
@@ -136,7 +179,10 @@ export const crearAlerta =
         {
           tipo,
           mensaje,
-          referenciaId
+          referenciaId,
+          accionUrl,
+          activa: true,
+          atendida: false,
         },
         {
           new: true,
@@ -149,7 +195,8 @@ export const crearAlerta =
     return await Alerta.create({
       tipo,
       mensaje,
-      referenciaId
+      referenciaId,
+      accionUrl,
     });
   };
 
@@ -245,7 +292,8 @@ export const verificarStockReserva =
               : `Quedan solo 2 rollos en reserva de ${detalleMaterial} ancho ${anchoEnPulgadas(item._id.ancho)}${codigos ? `: ${codigos}` : ""}.`,
           referenciaId:
             item.rolloId,
-          activa: true
+          activa: true,
+          accionUrl: "/reserva",
         };
 
         if (alertaExistente) {
@@ -286,7 +334,8 @@ export const crearAlertaRecepcion =
       TIPO_RECEPCION_NUEVA,
       `Nueva entrada ${recepcion.codigoRecepcion} registrada con ${recepcion.cantidadRollos} rollo${Number(recepcion.cantidadRollos) === 1 ? "" : "s"} pendiente${Number(recepcion.cantidadRollos) === 1 ? "" : "s"} de clasificacion.`,
       recepcion._id,
-      `recepcion-nueva:${recepcion._id}`
+      `recepcion-nueva:${recepcion._id}`,
+      "/recepciones"
     );
   };
 
@@ -355,10 +404,10 @@ export const crearAlertasInstaladores = async (asesoria) => {
       { clave: `asignacion:${asesoria._id}:${asignacion._id}` },
       {
         tipo: TIPO_ASIGNACION_TRABAJO,
-        mensaje: `Trabajo asignado: ${asignacion.servicio} para ${asesoria.vehiculo?.placa || ""}.`,
+        mensaje: `Trabajo asignado: ${asignacion.descripcion || asignacion.servicio} para ${asesoria.vehiculo?.placa || ""}.`,
         referenciaId: asesoria._id,
         destinatarioId: asignacion.instaladorId,
-        accionUrl: "/coordinacion",
+        accionUrl: `/coordinacion?asesoria=${asesoria._id}`,
         atendida: false,
         activa: true,
       },
@@ -372,7 +421,7 @@ export const crearAlertaInstalacionCompleta = async (asesoria) =>
     { clave: `instalacion-completa:${asesoria._id}` },
     {
       tipo: TIPO_INSTALACION_COMPLETA,
-      mensaje: `Todos los trabajos de ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}) fueron completados. Puede enviarlo a Ventas.`,
+      mensaje: `Todos los trabajos de ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}) fueron completados. Debe revisar calidad antes de finalizar.`,
       referenciaId: asesoria._id,
       accionUrl: `/coordinacion?asesoria=${asesoria._id}`,
       atendida: false,
@@ -403,9 +452,9 @@ export const crearAlertaSolicitudNovedad = async (asesoria, novedad) =>
     { clave: `solicitud-novedad:${asesoria._id}:${novedad._id}` },
     {
       tipo: TIPO_SOLICITUD_NOVEDAD,
-      mensaje: `Inventario reportó ${String(novedad.tipo || "una novedad").replaceAll("_", " ")} en el servicio ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}.`,
+      mensaje: `${novedad.tipo === "REPETICION_CORTE" ? "Coordinación solicitó" : "Inventario reportó"} ${String(novedad.tipo || "una novedad").replaceAll("_", " ")} en el servicio ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}.`,
       referenciaId: asesoria._id,
-      accionUrl: "/asesores",
+      accionUrl: `/asesores?asesoria=${asesoria._id}`,
       atendida: false,
       activa: true,
     },
@@ -417,9 +466,9 @@ export const crearAlertaSolicitudGarantia = async (asesoria) =>
     { clave: `solicitud-garantia:${asesoria._id}` },
     {
       tipo: TIPO_SOLICITUD_GARANTIA,
-      mensaje: `Revisar garantía ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}: ${asesoria.garantia?.motivo || "SIN MOTIVO"}.`,
+      mensaje: `Revisar garantía ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}${asesoria.garantia?.codigoOrdenOrigen ? `, originada en ${asesoria.garantia.codigoOrdenOrigen}` : ", sin orden anterior vinculada"}: ${asesoria.garantia?.motivo || "SIN MOTIVO"}.`,
       referenciaId: asesoria._id,
-      accionUrl: "/asesores",
+      accionUrl: `/asesores?asesoria=${asesoria._id}`,
       atendida: false,
       activa: true,
     },
@@ -458,6 +507,7 @@ export const crearAlertaVentaPendiente =
           `La venta ${venta.codigoVenta} de ${venta.cliente?.nombre || "cliente"} tiene un saldo pendiente de ${Number(venta.saldoPendiente ?? venta.total ?? 0).toLocaleString("es-CO")} COP.`,
         referenciaId:
           venta._id,
+        accionUrl: "/ventas",
         atendida:
           false,
         activa:
@@ -501,6 +551,7 @@ export const crearAlertaRevisionVenta =
           `Revisar la venta ${venta.codigoVenta}: se guardo, pero falto sincronizar cortes/alertas. ${error?.message || ""}`.trim(),
         referenciaId:
           venta._id,
+        accionUrl: "/ventas",
         atendida:
           false,
         activa:
@@ -515,12 +566,27 @@ export const crearAlertaRevisionVenta =
   };
 
 export const obtenerAlertas =
-  async (user) => {
-    return await Alerta.find(
-      filtroAlertasPorRol(user)
-    ).sort({
-      createdAt: -1,
-    });
+  async (user, { pendientes, month } = {}) => {
+    const filtro = { ...filtroAlertasPorRol(user) };
+    if (String(pendientes) === "true") {
+      filtro.atendida = false;
+      filtro.activa = { $ne: false };
+    }
+    if (/^\d{4}-\d{2}$/.test(String(month || ""))) {
+      const [year, monthNumber] = month.split("-").map(Number);
+      filtro.createdAt = {
+        $gte: new Date(year, monthNumber - 1, 1),
+        $lt: new Date(year, monthNumber, 1),
+      };
+    }
+    const alertas = await Alerta.find(filtro)
+      .sort({ createdAt: -1 })
+      .limit(String(pendientes) === "true" ? 100 : 500)
+      .lean();
+    return alertas.map((alerta) => ({
+      ...alerta,
+      accionUrl: accionPredeterminada(alerta),
+    }));
   };
 
 export const atenderAlerta =

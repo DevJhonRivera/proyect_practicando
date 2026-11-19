@@ -25,6 +25,7 @@ import TablePagination from "../../components/ui/TablePagination";
 import { usePagination } from "../../hooks/usePagination";
 import { anchoLabel } from "../../utils/anchos";
 import { etiquetaDetalle } from "../../utils/materiales";
+import { solicitarBajaMaterial } from "../../utils/bajaMaterial";
 
 function ReservaPage() {
   const navigate = useNavigate();
@@ -480,19 +481,19 @@ function ReservaPage() {
 
       <div
         className="
-        rounded-2xl
+        rounded-lg
         border
         border-slate-200
         bg-white
         shadow-sm
-        p-5"
+        p-3"
       >
 
         <div
           className="
           grid
           md:grid-cols-3
-          gap-4"
+          gap-3"
         >
 
           <div
@@ -505,7 +506,7 @@ function ReservaPage() {
               className="
               absolute
               left-3
-              top-3.5
+              top-2.5
               text-slate-400"
             />
 
@@ -521,10 +522,12 @@ function ReservaPage() {
               className="
               w-full
               border
-              rounded-xl
+              rounded-md
               border-slate-200
-              p-3
-              pl-10"
+              h-9
+              text-sm
+              pl-9
+              pr-3"
             />
 
           </div>
@@ -538,9 +541,11 @@ function ReservaPage() {
             }
             className="
             border
-            rounded-xl
+            rounded-md
             border-slate-200
-            p-3"
+            h-9
+            px-2.5
+            text-sm"
           >
 
             {materiales.map(
@@ -566,9 +571,11 @@ function ReservaPage() {
             }
             className="
             border
-            rounded-xl
+            rounded-md
             border-slate-200
-            p-3"
+            h-9
+            px-2.5
+            text-sm"
           >
 
             {porcentajes.map(
@@ -755,23 +762,20 @@ function ReservaPage() {
                   </td>
 
                   <td className="p-4 text-center">
-
-                    <button
-                      onClick={() =>
-                        pasar(
-                          rollo
-                        )
-                      }
-                      className="
-                      bg-blue-600
-                      hover:bg-blue-700
-                      text-white
-                      px-4
-                      py-2
-                      rounded-lg"
-                    >
-                      Pasar a uso
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => pasar(rollo)}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                      >
+                        Pasar a uso
+                      </button>
+                      <button
+                        onClick={async () => { if (await solicitarBajaMaterial(rollo)) cargar(); }}
+                        className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                      >
+                        Reportar daño
+                      </button>
+                    </div>
 
                   </td>
 
@@ -803,10 +807,10 @@ function ReabastecimientoPanel({ items, onCreateOrder }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 p-5">
-        <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Clock3 size={20} /></div><div><h2 className="font-bold text-slate-900">Plan de reabastecimiento</h2><p className="text-sm text-slate-500">Calculado con consumo de 90 días, tiempo de entrega y 7 días de seguridad.</p></div></div>
+        <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Clock3 size={20} /></div><div><h2 className="font-bold text-slate-900">Plan de reabastecimiento</h2><p className="text-sm text-slate-500">Calculado con consumo de 90 días, tiempo de entrega del proveedor y 7 días de seguridad.</p></div></div>
         <button type="button" onClick={onCreateOrder} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800"><ShoppingCart size={17} />Crear pedido</button>
       </div>
-      {visibles.length === 0 ? <p className="p-6 text-center text-sm font-semibold text-emerald-700">El inventario tiene cobertura suficiente según el consumo registrado.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[920px] text-sm"><thead className="bg-white text-xs uppercase text-slate-500"><tr><th className="p-4 text-left">Material</th><th className="p-4 text-left">Stock</th><th className="p-4 text-left">Consumo diario</th><th className="p-4 text-left">Lead time</th><th className="p-4 text-left">Cobertura</th><th className="p-4 text-left">Sugerencia</th><th className="p-4 text-left">Estado</th></tr></thead><tbody>{visibles.map((item) => <tr key={item.clave} className="border-t border-slate-100"><td className="p-4"><p className="font-bold text-slate-800">{item.tipoPolarizado} {etiquetaDetalle(item)}</p><p className="text-xs text-slate-500">{anchoLabel(item.ancho)} · {item.rollosReserva} en reserva / {item.rollosUso} en uso</p></td><td className="p-4 font-bold">{Number(item.stockMetros).toFixed(2)} m</td><td className="p-4">{Number(item.consumoDiario).toFixed(2)} m/día</td><td className="p-4">{item.leadTimeDias} días{item.leadTimeEstimado ? <span className="block text-xs text-amber-600">Estimado hasta tener historial</span> : null}</td><td className="p-4">{item.coberturaDias === null ? "Sin consumo aún" : `${item.coberturaDias} días`}</td><td className="p-4 font-bold text-blue-700">{item.cantidadSugerida ? `${item.cantidadSugerida} rollo(s)` : "Observar"}</td><td className="p-4"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.estado === "PEDIR_AHORA" ? "bg-red-100 text-red-700" : item.estado === "PEDIR_PRONTO" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{item.estado.replaceAll("_", " ")}</span></td></tr>)}</tbody></table></div>}
+      {visibles.length === 0 ? <p className="p-6 text-center text-sm font-semibold text-emerald-700">El inventario tiene cobertura suficiente según el consumo registrado.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[920px] text-sm"><thead className="bg-white text-xs uppercase text-slate-500"><tr><th className="p-4 text-left">Material</th><th className="p-4 text-left">Stock</th><th className="p-4 text-left">Consumo diario</th><th className="p-4 text-left">Tiempo de entrega</th><th className="p-4 text-left">Cobertura</th><th className="p-4 text-left">Sugerencia</th><th className="p-4 text-left">Estado</th></tr></thead><tbody>{visibles.map((item) => <tr key={item.clave} className="border-t border-slate-100"><td className="p-4"><p className="font-bold text-slate-800">{item.tipoPolarizado} {etiquetaDetalle(item)}</p><p className="text-xs text-slate-500">{anchoLabel(item.ancho)} · {item.rollosReserva} en reserva / {item.rollosUso} en uso</p></td><td className="p-4 font-bold">{Number(item.stockMetros).toFixed(2)} m</td><td className="p-4">{Number(item.consumoDiario).toFixed(2)} m/día</td><td className="p-4">{item.leadTimeDias} días{item.leadTimeEstimado ? <span className="block text-xs text-amber-600">Estimado en 30 días hasta tener pedidos recibidos</span> : <span className="block text-xs text-emerald-600">Promedio de pedidos recibidos</span>}</td><td className="p-4">{item.coberturaDias === null ? "Sin consumo aún" : `${item.coberturaDias} días`}</td><td className="p-4 font-bold text-blue-700">{item.cantidadSugerida ? `${item.cantidadSugerida} rollo(s)` : "Observar"}</td><td className="p-4"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.estado === "PEDIR_AHORA" ? "bg-red-100 text-red-700" : item.estado === "PEDIR_PRONTO" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{item.estado.replaceAll("_", " ")}</span></td></tr>)}</tbody></table></div>}
     </section>
   );
 }

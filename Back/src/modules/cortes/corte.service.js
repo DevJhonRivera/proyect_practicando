@@ -1,11 +1,12 @@
+import { validarFirmasTrabajo } from "../asesores/autorizaciones.utils.js";
 import mongoose from "mongoose";
 import { mongoSoportaTransacciones } from "../../config/db.js";
 import Corte from "./corte.model.js";
 import Rollo from "../rollos/rollo.model.js";
 import PiezaPpf from "../piezasPpf/piezaPpf.model.js";
-import { validarSinNovedadesBloqueantes } from "../asesores/asesoriaWorkflow.utils.js";
+import { novedadesBloqueantes, validarSinNovedadesBloqueantes } from "../asesores/asesoriaWorkflow.utils.js";
 import Asesoria from "../asesores/asesoria.model.js";
-import { crearAlerta }
+import { cerrarAlertaFlujo, crearAlerta }
 from "../alertas/alerta.service.js";
 import {
   REMANENTE_MINIMO_UTIL,
@@ -140,6 +141,8 @@ const resolverPiezasPpf = async ({
   piezas = [],
   marca,
   modelo,
+  catalogoModelo,
+  catalogoAnio,
   session,
 }) => {
   const idsSeleccionados =
@@ -193,11 +196,12 @@ const resolverPiezasPpf = async ({
 
     const pieza = catalogoPorId.get(id);
 
-    if (
-      normalizarMayusculas(pieza.marca) !==
-        normalizarMayusculas(marca) ||
-      soloNumeros(pieza.modelo) !== soloNumeros(modelo)
-    ) {
+    const modeloPieza = normalizarMayusculas(pieza.modelo);
+    const modeloEsperado = normalizarMayusculas(catalogoModelo || modelo);
+    const anioEsperado = soloNumeros(catalogoAnio || modelo);
+    const coincideModelo = modeloPieza === modeloEsperado ||
+      (/^\d{4}$/.test(modeloPieza) && modeloPieza === anioEsperado);
+    if (normalizarMayusculas(pieza.marca) !== normalizarMayusculas(marca) || !coincideModelo) {
       throw new Error(
         `${pieza.pieza} no pertenece a la marca y modelo seleccionados`
       );
@@ -235,6 +239,8 @@ const prepararDetallePpf = async ({
     piezas: corteData.piezasPpf,
     marca: corteData.marca,
     modelo: corteData.modelo,
+    catalogoModelo: corteData.catalogoModelo,
+    catalogoAnio: corteData.catalogoAnio,
     session,
   });
 
@@ -290,14 +296,35 @@ const calcularRentabilidad = ({
 export const registrarCorte =
   async (data, user) => {
     let asesoria = null;
+    let novedadReposicion = null;
+    let lineaOrigen = "";
     if (data.asesoriaId && data.asesoriaLinea) {
       if (!mongoose.Types.ObjectId.isValid(data.asesoriaId)) {
         throw new Error("La orden de servicio no es valida");
       }
       asesoria = await Asesoria.findById(data.asesoriaId).lean();
       if (!asesoria) throw new Error("La orden de servicio no existe");
-      validarSinNovedadesBloqueantes(asesoria);
-      if (!["PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(asesoria.flujo?.etapa)) {
+    validarFirmasTrabajo(asesoria);
+      if (data.novedadId) {
+        novedadReposicion = (asesoria.novedades || []).find(
+          (item) => String(item._id) === String(data.novedadId)
+        );
+        if (!novedadReposicion || novedadReposicion.tipo !== "REPETICION_CORTE") {
+          throw new Error("La solicitud de nuevo corte no existe");
+        }
+        if (novedadReposicion.estado !== "APROBADA") {
+          throw new Error("La solicitud de nuevo corte debe estar aprobada");
+        }
+        const otrasNovedades = novedadesBloqueantes(asesoria).filter(
+          (item) => String(item._id) !== String(novedadReposicion._id)
+        );
+        if (otrasNovedades.length) {
+          throw new Error("La orden tiene otras novedades pendientes de solución");
+        }
+      } else {
+        validarSinNovedadesBloqueantes(asesoria);
+      }
+      if (!novedadReposicion && !["PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(asesoria.flujo?.etapa)) {
         throw new Error("La orden no esta disponible para registrar cortes");
       }
       if (asesoria.garantia?.esGarantia && asesoria.garantia.estado !== "APROBADA") {
@@ -312,13 +339,19 @@ export const registrarCorte =
       if (!lineasValidas.includes(lineaNormalizada)) {
         throw new Error("El corte no pertenece a los materiales solicitados en la orden");
       }
+      lineaOrigen = lineaNormalizada;
+      if (novedadReposicion && !(novedadReposicion.serviciosAfectados || []).includes(lineaOrigen)) {
+        throw new Error("El material no pertenece a la solicitud de nuevo corte aprobada");
+      }
       if (normalizarPlaca(data.placa) !== normalizarPlaca(asesoria.vehiculo?.placa)) {
         throw new Error("La placa del corte no coincide con la orden de servicio");
       }
 
       const corteExistente = await Corte.findOne({
         asesoriaId: data.asesoriaId,
-        asesoriaLinea: lineaNormalizada,
+        ...(novedadReposicion
+          ? { novedadId: novedadReposicion._id, asesoriaLineaOrigen: lineaOrigen }
+          : { asesoriaLinea: lineaNormalizada }),
       }).select("_id");
 
       if (corteExistente) {
@@ -335,10 +368,26 @@ export const registrarCorte =
 
     const corteData = {
       ...data,
-      asesoriaLinea: normalizarMayusculas(data.asesoriaLinea),
+      asesoriaLinea: novedadReposicion
+        ? `REPOSICION ${novedadReposicion._id} ${lineaOrigen}`
+        : normalizarMayusculas(data.asesoriaLinea),
+      asesoriaLineaOrigen: novedadReposicion ? lineaOrigen : "",
+      novedadId: novedadReposicion?._id || null,
       ...datosVehiculo,
+      catalogoModelo: asesoria?.vehiculo?.modelo || data.catalogoModelo || data.modelo,
+      catalogoAnio: asesoria?.vehiculo?.anio || data.catalogoAnio || data.modelo,
+      tipoServicio: novedadReposicion
+        ? "GARANTIA_INSTALADOR"
+        : asesoria?.garantia?.esGarantia
+          ? asesoria.garantia.tipo || "GARANTIA"
+          : data.tipoServicio,
+      valorVenta: novedadReposicion || asesoria?.garantia?.esGarantia ? 0 : data.valorVenta,
       instalador:
-        requiereInstalador(data.tipoServicio)
+        novedadReposicion
+          ? normalizarMayusculas(novedadReposicion.instaladorNombre)
+          : asesoria?.garantia?.esGarantia && asesoria.garantia.responsable === "INSTALADOR"
+            ? normalizarMayusculas(asesoria.garantia.instalador)
+          : requiereInstalador(data.tipoServicio)
           ? normalizarMayusculas(data.instalador)
           : "",
       tipoCorteDetalle:
@@ -536,7 +585,9 @@ export const registrarCorte =
         await crearAlerta(
           "ROLLO_BAJO",
           `El rollo ${rolloConStockBajo.codigoRollo} tiene menos de 3 metros`,
-          rolloConStockBajo._id
+          rolloConStockBajo._id,
+          undefined,
+          "/uso"
         );
       } catch (error) {
         console.error(
@@ -547,6 +598,48 @@ export const registrarCorte =
     }
 
     if (corteCreado?.asesoriaId) {
+      if (novedadReposicion) {
+        const cortesReposicion = await Corte.find({
+          asesoriaId: corteCreado.asesoriaId,
+          novedadId: novedadReposicion._id,
+        }).select("_id asesoriaLineaOrigen costoMaterialCop").lean();
+        const lineasCortadas = new Set(cortesReposicion.map((item) => item.asesoriaLineaOrigen));
+        const completa = (novedadReposicion.serviciosAfectados || []).every((linea) => lineasCortadas.has(linea));
+        const costoMaterialReal = roundMoney(cortesReposicion.reduce(
+          (total, item) => total + Number(item.costoMaterialCop || 0), 0
+        ));
+        await Asesoria.updateOne(
+          { _id: corteCreado.asesoriaId, "novedades._id": novedadReposicion._id },
+          {
+            $set: {
+              "novedades.$.costoMaterialReal": costoMaterialReal,
+              "novedades.$.cortesReposicion": cortesReposicion.map((item) => item._id),
+              ...(completa ? {
+                "novedades.$.estado": "RESUELTA",
+                "novedades.$.fechaResolucion": new Date(),
+                "novedades.$.resueltoPorNombre": normalizarMayusculas(user?.nombre || user?.rol),
+                situacionActual: "NORMAL",
+              } : {}),
+            },
+            ...(completa ? { $push: { auditoria: entradaAuditoria({
+              accion: "REPETICION_CORTE_RESUELTA",
+              descripcion: `Nuevo corte realizado. Costo de material descontable: ${costoMaterialReal}`,
+              user,
+              cambios: { novedadId: String(novedadReposicion._id), costoMaterialReal },
+            }) } } : {}),
+          }
+        );
+        if (completa) {
+          await cerrarAlertaFlujo(`repeticion-corte:${corteCreado.asesoriaId}:${novedadReposicion._id}`);
+          await crearAlerta(
+            "MATERIAL_LISTO",
+            `El nuevo corte de ${asesoria.codigo} está listo. Se registró ${costoMaterialReal.toLocaleString("es-CO")} COP de material a ${novedadReposicion.instaladorNombre}.`,
+            asesoria._id,
+            `repeticion-lista:${asesoria._id}:${novedadReposicion._id}`,
+            `/coordinacion?asesoria=${asesoria._id}`
+          );
+        }
+      }
       await Asesoria.findOneAndUpdate({
         _id: corteCreado.asesoriaId,
         "flujo.etapa": { $in: ["PENDIENTE_INVENTARIO", "EN_PROCESO"] },
@@ -561,15 +654,127 @@ export const registrarCorte =
     return corteCreado;
   };
 
+const tipoCorteDesdePartes = (clase, partes = []) => {
+  if (clase === "PPF") return { tipoCorte: "PIEZAS_PPF", tipoCorteDetalle: "" };
+  const tipos = ["PANORAMICO", "LUNETA", "DELANTERAS", "TRASERAS", "FIJOS", "CUSTODIAS", "SUNROOF", "U", "COMPLETO"];
+  const parte = partes[0] || "";
+  if (partes.length === 1 && tipos.includes(parte)) return { tipoCorte: parte, tipoCorteDetalle: "" };
+  return { tipoCorte: partes.length ? "OTROS" : "COMPLETO", tipoCorteDetalle: partes.join(" + ") };
+};
 
-export const obtenerCortes =async () => {
-    return await Corte.find()
+const coincideRolloOrden = (rollo, linea) => {
+  const tipo = normalizarMayusculas(rollo.tipoPolarizado);
+  const material = normalizarMayusculas(linea.material);
+  const coincideMaterial = tipo === material || tipo.includes(material) || material.includes(tipo);
+  if (!coincideMaterial) return false;
+  if (linea.clase === "PPF") return (rollo.unidadMedida || "PORCENTAJE") === "NINGUNA" || tipo.includes("PPF");
+  const unidad = normalizarMayusculas(linea.porcentaje).includes("MICRAS") ? "MICRAS" : "PORCENTAJE";
+  const clasificacion = Number(String(linea.porcentaje || "").match(/[\d.]+/)?.[0] || 0);
+  return (rollo.unidadMedida || "PORCENTAJE") === unidad && Number(rollo.porcentaje || 0) === clasificacion;
+};
+
+export const registrarPropuestaCompleta = async (asesoriaId, user) => {
+  if (!mongoose.Types.ObjectId.isValid(asesoriaId)) throw new Error("La orden de servicio no es valida");
+  const asesoria = await Asesoria.findById(asesoriaId).lean();
+  if (!asesoria) throw new Error("La orden de servicio no existe");
+    validarFirmasTrabajo(asesoria);
+  validarSinNovedadesBloqueantes(asesoria);
+  if (!['PENDIENTE_INVENTARIO', 'EN_PROCESO'].includes(asesoria.flujo?.etapa)) throw new Error("La propuesta debe estar aprobada por Inventario");
+  if (asesoria.garantia?.esGarantia && asesoria.garantia.estado !== "APROBADA") throw new Error("La garantia debe estar aprobada antes de consumir material");
+
+  const lineas = [
+    ...(asesoria.polarizados || []).map((item, index) => ({ ...item, clase: "POLARIZADO", etiqueta: `POLARIZADO ${index + 1}`, material: item.material, partes: item.partes || [] })),
+    ...(asesoria.ppf || []).map((item, index) => ({ ...item, clase: "PPF", etiqueta: `PPF ${index + 1}`, material: item.referencia, partes: item.piezas?.length ? item.piezas : [item.aplicacion] })),
+  ];
+  if (!lineas.length) throw new Error("La orden no contiene materiales que requieran corte");
+  const existentes = await Corte.find({ asesoriaId }).select("asesoriaLinea").lean();
+  const registradas = new Set(existentes.map((item) => item.asesoriaLinea));
+  const pendientes = lineas.filter((item) => !registradas.has(item.etiqueta));
+  if (!pendientes.length) throw new Error("Todos los cortes de esta propuesta ya fueron registrados");
+
+  const rollos = await Rollo.find({ estado: "USO" }).sort({ largoDisponible: 1 }).lean();
+  const nombresPiezasPpf = [...new Set(
+    lineas.filter((item) => item.clase === "PPF").flatMap((item) => item.partes || [])
+  )];
+  const catalogoPpf = nombresPiezasPpf.length
+    ? await PiezaPpf.find({
+        activa: { $ne: false },
+        marca: normalizarMayusculas(asesoria.vehiculo?.marca),
+        pieza: { $in: nombresPiezasPpf },
+      }).select("pieza ubicacion").lean()
+    : [];
+  const ubicacionPorPieza = new Map(catalogoPpf.map((item) => [normalizarMayusculas(item.pieza), item.ubicacion]));
+  const disponibleVirtual = new Map(rollos.map((item) => [String(item._id), Number(item.largoDisponible || 0)]));
+  const preparados = pendientes.map((linea) => {
+    const propuesta = (asesoria.coordinacion?.propuesta || []).find((item) => item.linea === linea.etiqueta);
+    const metros = roundMeters(Number(propuesta?.metrosPropuestos || 0));
+    if (metros < 0.05) throw new Error(`Faltan metros propuestos para ${linea.etiqueta}`);
+    const rollo = rollos.find((item) => coincideRolloOrden(item, linea) && Number(disponibleVirtual.get(String(item._id)) || 0) >= metros);
+    if (!rollo) throw new Error(`No hay un rollo en uso compatible con stock suficiente para ${linea.etiqueta}: ${linea.material}`);
+    disponibleVirtual.set(String(rollo._id), roundMeters(disponibleVirtual.get(String(rollo._id)) - metros));
+    const detalle = tipoCorteDesdePartes(linea.clase, linea.partes);
+    const piezasPpf = linea.clase === "PPF" ? linea.partes.map((pieza) => {
+      const medida = (propuesta?.medidasPiezas || []).find((item) => item.pieza === pieza);
+      return {
+        pieza,
+        ubicacion: linea.aplicacion === "INTERIOR"
+          ? "INTERIOR"
+          : linea.aplicacion === "EXTERIOR"
+            ? "EXTERIOR"
+            : ubicacionPorPieza.get(normalizarMayusculas(pieza)) || "EXTERIOR",
+        cantidad: Math.max(Number(medida?.cantidad || (linea.partes.length === 1 ? propuesta?.cantidad : 1) || 1), 1),
+        anchoCm: Number(medida?.anchoCm || propuesta?.anchoCm || 0),
+        largoCm: Number(medida?.largoCm || propuesta?.largoCm || 0),
+        rotada: false,
+      };
+    }) : [];
+    return {
+      asesoriaId: asesoria._id,
+      asesoriaLinea: linea.etiqueta,
+      partesServicio: linea.partes,
+      placa: asesoria.vehiculo?.placa,
+      marca: asesoria.vehiculo?.marca,
+      modelo: asesoria.vehiculo?.anio || String(asesoria.vehiculo?.modelo || "").replace(/\D/g, ""),
+      tipoServicio: asesoria.garantia?.esGarantia ? asesoria.garantia.tipo || "GARANTIA" : "VENTA",
+      instalador: asesoria.garantia?.instalador || "",
+      ...detalle,
+      rolloId: rollo._id,
+      origenMaterial: "ROLLO",
+      piezasPpf,
+      metrosUtilizados: metros,
+    };
+  });
+
+  const creados = [];
+  try {
+    for (const data of preparados) creados.push(await registrarCorte(data, user));
+  } catch (error) {
+    error.message = `${error.message}. Se guardaron ${creados.length} de ${preparados.length} cortes; revise la orden antes de reintentar`;
+    throw error;
+  }
+  return { creados, cantidad: creados.length };
+};
+
+
+export const obtenerCortes =async ({ desde, hasta, asesoriaId, limite } = {}) => {
+    const query = {};
+    if (asesoriaId && mongoose.Types.ObjectId.isValid(asesoriaId)) query.asesoriaId = asesoriaId;
+    if (desde || hasta) {
+      query.createdAt = {};
+      if (desde) query.createdAt.$gte = new Date(`${desde}T00:00:00`);
+      if (hasta) query.createdAt.$lte = new Date(`${hasta}T23:59:59.999`);
+    }
+    const maximo = Math.min(Math.max(Number(limite) || 1000, 1), 3000);
+    return await Corte.find(query)
       .populate("rolloId")
       .populate("retazoId")
       .populate("ventaId")
+      .populate("asesoriaId", "coordinacion.asignaciones polarizados ppf cliente vehiculo codigo")
       .sort({
         createdAt: -1,
-      });
+      })
+      .limit(maximo)
+      .lean();
   };
 
 export const actualizarCorte = async (id, data, user) => {

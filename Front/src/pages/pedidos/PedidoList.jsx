@@ -3,7 +3,7 @@ import Swal from "sweetalert2";
 
 import { getPedidos } from "../../api/pedidos.api";
 import MonthFilter from "../../components/ui/MonthFilter";
-import { useMonthFilter } from "../../hooks/useMonthFilter";
+import { monthValueRange, useMonthFilter } from "../../hooks/useMonthFilter";
 
 import PedidoHeader from "./componentsList/PedidoHeader";
 import PedidoStats from "./componentsList/PedidoStats";
@@ -28,7 +28,7 @@ function PedidoList() {
 
   const cargarPedidos = async () => {
     try {
-      const res = await getPedidos();
+      const res = await getPedidos({ ...monthValueRange(mesPedidos), limite: 500 });
 
       setPedidos(res.data || []);
     } catch (error) {
@@ -47,7 +47,7 @@ function PedidoList() {
 
     const cargarInicial = async () => {
       try {
-        const res = await getPedidos();
+        const res = await getPedidos({ ...monthValueRange(mesPedidos), limite: 500 });
 
         if (active) {
           setPedidos(res.data || []);
@@ -73,7 +73,7 @@ function PedidoList() {
       active = false;
     };
 
-  }, []);
+  }, [mesPedidos]);
 
   const pedidosFiltrados = pedidosDelMes.filter((pedido) => {
 

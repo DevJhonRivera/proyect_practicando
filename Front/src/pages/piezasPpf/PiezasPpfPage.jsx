@@ -51,8 +51,10 @@ const piezasInteriores = [
 ];
 
 const formInicial = {
+  tipoVehiculo: "CARRO",
   marca: "",
   modelo: "",
+  anio: "",
   ubicacion: "EXTERIOR",
   pieza: "",
   piezaPersonalizada: "",
@@ -145,7 +147,8 @@ function PiezasPpfPage() {
   const actualizarForm = (field, value) => {
     const normalizers = {
       marca: mayusculas,
-      modelo: soloNumeros,
+      modelo: mayusculas,
+      anio: (value) => soloNumeros(value).slice(0, 4),
       piezaPersonalizada: mayusculas,
     };
     const normalizar =
@@ -176,10 +179,13 @@ function PiezasPpfPage() {
   const limpiarPiezaManteniendoCarro = () => {
     setForm((actual) => ({
       ...formInicial,
+      tipoVehiculo: actual.tipoVehiculo || "CARRO",
       marca:
         actual.marca,
       modelo:
         actual.modelo,
+      anio:
+        actual.anio,
       ubicacion:
         actual.ubicacion || "EXTERIOR",
     }));
@@ -270,10 +276,13 @@ function PiezasPpfPage() {
 
     setEditingId(pieza._id);
     setForm({
+      tipoVehiculo: pieza.tipoVehiculo || "CARRO",
       marca:
         pieza.marca || "",
       modelo:
         pieza.modelo || "",
+      anio:
+        pieza.anio || (/^\d{4}$/.test(pieza.modelo || "") ? pieza.modelo : ""),
       ubicacion:
         pieza.ubicacion || "EXTERIOR",
       pieza:
@@ -504,7 +513,12 @@ function PiezasPpfPage() {
               )}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Tipo de vehículo">
+                <select value={form.tipoVehiculo} onChange={(event) => actualizarForm("tipoVehiculo", event.target.value)} className={inputClass}>
+                  <option value="CARRO">Carro, SUV o camioneta</option><option value="MOTO">Moto</option>
+                </select>
+              </Field>
               <Field label="Marca">
                 <input
                   value={form.marca}
@@ -523,10 +537,20 @@ function PiezasPpfPage() {
                   onChange={(event) =>
                     actualizarForm("modelo", event.target.value)
                   }
-                  placeholder="Ej: 2024"
-                  inputMode="numeric"
+                  placeholder="Ej: MODEL Y"
                   className={inputClass}
                   required
+                />
+              </Field>
+
+              <Field label="Año (opcional)">
+                <input
+                  value={form.anio}
+                  onChange={(event) => actualizarForm("anio", event.target.value)}
+                  placeholder="Ej: 2025"
+                  inputMode="numeric"
+                  maxLength={4}
+                  className={inputClass}
                 />
               </Field>
             </div>
@@ -695,17 +719,17 @@ function PiezasPpfPage() {
             />
           </div>
 
-          <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[1fr_160px_150px_150px]">
+          <div className="grid gap-3 border-b border-slate-200 bg-slate-50/70 p-3 md:grid-cols-[1fr_160px_150px_150px] md:items-end">
             <div className="relative">
               <Search
                 size={18}
-                className="absolute left-3 top-3.5 text-slate-400"
+                className="absolute left-2.5 top-2.5 text-slate-400"
               />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar por marca, modelo, pieza u observacion..."
-                className="w-full rounded-xl border border-slate-200 bg-white p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                className="h-9 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -715,7 +739,7 @@ function PiezasPpfPage() {
                 setFiltroMarca(event.target.value);
                 setFiltroModelo("TODOS");
               }}
-              className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+              className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="TODAS">
                 Todas las marcas
@@ -732,7 +756,7 @@ function PiezasPpfPage() {
               onChange={(event) =>
                 setFiltroModelo(event.target.value)
               }
-              className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+              className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="TODOS">
                 Todos modelos
@@ -749,7 +773,7 @@ function PiezasPpfPage() {
               onChange={(event) =>
                 setFiltroUbicacion(event.target.value)
               }
-              className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+              className="h-9 rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="TODAS">
                 Todas
@@ -793,7 +817,7 @@ function PiezasPpfPage() {
                           {pieza.marca}
                         </p>
                         <p className="text-xs text-slate-500">
-                          Modelo {pieza.modelo}
+                          Modelo {pieza.modelo}{pieza.anio ? ` · ${pieza.anio}` : ""}
                         </p>
                       </td>
                       <td className="p-4">

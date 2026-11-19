@@ -22,20 +22,20 @@ import { useCorteSuggestions } from "./useCorteSuggestions";
 import { useCortesData } from "./useCortesData";
 
 export function useCortesPage() {
-  const {
-    cargar,
-    cortes,
-    loading,
-    retazos,
-    rollos,
-  } = useCortesData();
-  const [search, setSearch] = useState("");
   const [fechaDesde, setFechaDesde] = useState(
     () => currentMonthRange().from
   );
   const [fechaHasta, setFechaHasta] = useState(
     () => currentMonthRange().to
   );
+  const {
+    cargar,
+    cortes,
+    loading,
+    retazos,
+    rollos,
+  } = useCortesData({ desde: fechaDesde, hasta: fechaHasta });
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState(initialCorteForm);
   const [mantenerDatosCarro, setMantenerDatosCarro] =
     useState(false);

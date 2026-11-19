@@ -7,6 +7,7 @@ import {
     obtenerRollosPorEstado,
     cerrarRolloAgotado,
     obtenerReabastecimiento,
+    registrarBajaMaterial,
 } from "./rollo.service.js";
 
 export const getReabastecimiento = async (req, res) => {
@@ -149,6 +150,19 @@ async (req,res) => {
       message:
         error.message
     });
+  }
+};
+
+export const darBajaMaterial = async (req, res) => {
+  try {
+    const resultado = await registrarBajaMaterial(req.params.id, req.body, req.user);
+    res.status(200).json({
+      success: true,
+      message: resultado.rollo.estado === "AGOTADO" ? "Rollo dado de baja" : "Material dañado descontado",
+      data: resultado,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 

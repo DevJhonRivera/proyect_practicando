@@ -4,6 +4,7 @@ export const TIPOS_NOVEDAD_BLOQUEANTE = new Set([
   "ROLLO_EQUIVOCADO",
   "ERROR_REGISTRO",
   "TRABAJO_PENDIENTE",
+  "REPETICION_CORTE",
 ]);
 
 export const novedadesBloqueantes = (asesoria = {}) =>
@@ -28,6 +29,7 @@ export const recalcularComercial = (asesoria = {}) => {
     ...(asesoria.polarizados || []),
     ...(asesoria.ppf || []),
     ...(asesoria.serviciosAdicionales || []),
+    ...(asesoria.accesorios || []),
   ].reduce((total, item) => total + Number(item.valor || 0), 0);
   const descuento = Math.min(Number(asesoria.comercial?.descuento || 0), valorVenta);
   return {

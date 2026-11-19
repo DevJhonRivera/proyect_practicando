@@ -242,6 +242,9 @@ ventaSchema.index(
   { asesoriaId: 1 },
   { unique: true, sparse: true }
 );
+ventaSchema.index({ createdAt: -1 });
+ventaSchema.index({ estado: 1, createdAt: -1 });
+ventaSchema.index({ "vehiculo.placa": 1, createdAt: -1 });
 
 export default mongoose.model(
   "Venta",

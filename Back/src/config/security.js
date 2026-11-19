@@ -17,13 +17,15 @@ export const isPublicRegistrationEnabled =
 export const defaultDevOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
   "http://192.168.1.29:5173",
 ];
 
 export const getCorsOrigins = () => {
-  if (allowedOrigins.length > 0) {
+  if (isProduction) {
     return allowedOrigins;
   }
 
-  return isProduction ? [] : defaultDevOrigins;
+  return [...new Set([...allowedOrigins, ...defaultDevOrigins])];
 };

@@ -21,6 +21,7 @@ import {
   normalizarAncho,
 } from "../../utils/anchos";
 import { etiquetaDetalle } from "../../utils/materiales";
+import { solicitarBajaMaterial } from "../../utils/bajaMaterial";
 
 function UsoPage() {
   const [rollos, setRollos] = useState([]);
@@ -388,15 +389,15 @@ function UsoPage() {
       </div>
 
       {/* FILTROS */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="text-slate-600" />
-          <h2 className="text-lg font-bold">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md border bg-white text-slate-600"><Filter size={15}/></span>
+          <h2 className="text-sm font-bold text-slate-700">
             Filtros de análisis
           </h2>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-6">
+        <div className="grid gap-3 p-3 md:grid-cols-6 md:items-end">
           <div className="relative md:col-span-2">
             <Search
               size={18}
@@ -408,7 +409,7 @@ function UsoPage() {
               placeholder="Buscar código o material..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 p-3 pl-10 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+              className="h-9 w-full rounded-md border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
@@ -439,7 +440,7 @@ function UsoPage() {
           />
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-3 py-2">
           <p className="text-sm text-slate-500">
             Mostrando <strong>{filtrados.length}</strong> de{" "}
             <strong>{rollos.length}</strong> rollos
@@ -447,7 +448,7 @@ function UsoPage() {
 
           <button
             onClick={limpiarFiltros}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100"
           >
             <X size={16} />
             Limpiar filtros
@@ -496,6 +497,7 @@ function UsoPage() {
                   <th className="p-4 text-left">Disponible</th>
                   <th className="p-4 text-left">Consumido</th>
                   <th className="p-4 text-left">Utilización</th>
+                  <th className="p-4 text-center">Acción</th>
                 </tr>
               </thead>
 
@@ -566,6 +568,15 @@ function UsoPage() {
                             {uso.toFixed(1)}%
                           </span>
                         </div>
+                      </td>
+                      <td className="p-4 text-center">
+                        <button
+                          type="button"
+                          onClick={async () => { if (await solicitarBajaMaterial(rollo)) cargar(); }}
+                          className="whitespace-nowrap rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                        >
+                          Reportar daño
+                        </button>
                       </td>
                     </tr>
                   );
@@ -657,7 +668,7 @@ function SelectFiltro({
     <select
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      className="rounded-xl border border-slate-200 bg-white p-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+      className="h-9 min-w-0 rounded-md border border-slate-200 bg-white px-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
     >
       {options.map((item) => (
         <option key={item} value={item}>

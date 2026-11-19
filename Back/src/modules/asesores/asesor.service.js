@@ -1,8 +1,14 @@
+import { emitirDocumento } from "./autorizaciones.service.js";
+import { coincideHuellaDocumento, huellaDatos, validarFirmasTrabajo } from "./autorizaciones.utils.js";
 import Rollo from "../rollos/rollo.model.js";
 import Retazo from "../retazos/retazo.model.js";
 import Asesoria from "./asesoria.model.js";
 import Corte from "../cortes/corte.model.js";
 import Venta from "../ventas/venta.model.js";
+import User from "../users/user.model.js";
+import Accesorio from "../accesorios/accesorio.model.js";
+import { aplicarPreciosAsesoria } from "../preciosVenta/cotizacionPrecios.service.js";
+import { sincronizarPiezasDesdeAsesoria } from "../piezasPpf/piezaPpf.service.js";
 import mongoose from "mongoose";
 import { recalcularComercial, validarSinNovedadesBloqueantes } from "./asesoriaWorkflow.utils.js";
 import {
@@ -12,6 +18,9 @@ import {
   crearAlertaSolicitudNovedad,
   crearAlertaSolicitudGarantia,
   cerrarAlertaSolicitudGarantia,
+  cerrarAlertaVentaPendiente,
+  sincronizarAlertasAccesorios,
+  crearAlerta,
 } from "../alertas/alerta.service.js";
 
 const redondearMetros = (value) =>
@@ -20,6 +29,25 @@ const redondearMetros = (value) =>
 const texto = (value) => String(value || "").trim();
 const mayusculas = (value) => texto(value).toUpperCase();
 const soloDigitos = (value) => texto(value).replace(/\D/g, "");
+const PARTES_POLARIZADO = new Set([
+  "PANORAMICO", "DELANTERAS", "TRASERAS", "LUNETA", "FIJOS",
+  "CUSTODIAS", "SUNROOF", "U", "COMPLETO",
+]);
+const PARTES_U = new Set(["DELANTERAS", "TRASERAS", "LUNETA", "FIJOS", "CUSTODIAS"]);
+
+const normalizarPartesPolarizado = (partes = []) => {
+  const normalizadas = [...new Set(partes.map(mayusculas).filter(Boolean))];
+  if (normalizadas.some((parte) => !PARTES_POLARIZADO.has(parte))) {
+    throw new Error("Una de las partes seleccionadas para polarizado no es valida");
+  }
+  if (normalizadas.includes("COMPLETO") && normalizadas.length > 1) {
+    throw new Error("Carro completo no se puede combinar con otras partes");
+  }
+  if (normalizadas.includes("U") && normalizadas.some((parte) => PARTES_U.has(parte))) {
+    throw new Error("La opcion U ya incluye delanteras, traseras, luneta, fijos y custodias");
+  }
+  return normalizadas;
+};
 
 const agruparPpfPorReferencia = (items = []) => {
   const grupos = new Map();
@@ -48,6 +76,94 @@ const agruparPpfPorReferencia = (items = []) => {
 
 const escaparRegex = (value) =>
   texto(value).slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const prepararAccesorios = async (items = [], anteriores = []) => {
+  const agrupados = new Map();
+  items.forEach((item) => {
+    const id = texto(item.accesorioId);
+    if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Seleccione un accesorio valido");
+    const cantidad = Math.max(1, Math.floor(Number(item.cantidad || 1)));
+    const precioUnitario = Math.max(0, Math.round(Number(item.precioUnitario || 0)));
+    const actual = agrupados.get(id) || { accesorioId: id, cantidad: 0, precioUnitario, tarifasVenta: item.tarifasVenta || [] };
+    actual.cantidad += cantidad;
+    actual.precioUnitario = precioUnitario;
+    agrupados.set(id, actual);
+  });
+  const ids = [...agrupados.keys()];
+  const productos = await Accesorio.find({ _id: { $in: ids }, activo: { $ne: false } }).lean();
+  if (productos.length !== ids.length) throw new Error("Uno de los accesorios ya no esta disponible");
+  const porId = new Map(productos.map((item) => [String(item._id), item]));
+  const descontadoAnterior = anteriores.reduce((mapa, item) => {
+    const id = String(item.accesorioId);
+    mapa.set(id, (mapa.get(id) || 0) + Number(item.cantidadDescontada ?? item.cantidad ?? 0));
+    return mapa;
+  }, new Map());
+  return [...agrupados.values()].map((item) => {
+    const producto = porId.get(item.accesorioId);
+    const disponible = Number(producto.stock || 0) + Number(descontadoAnterior.get(item.accesorioId) || 0);
+    const cantidadDescontada = Math.min(item.cantidad, disponible);
+    const cantidadPendiente = item.cantidad - cantidadDescontada;
+    return {
+      accesorioId: producto._id,
+      codigo: producto.codigo,
+      categoria: producto.categoria,
+      nombre: producto.nombre,
+      marca: producto.marca,
+      referencia: producto.referencia,
+      cantidad: item.cantidad,
+      cantidadDescontada,
+      cantidadPendiente,
+      estadoInventario: cantidadPendiente > 0 ? "PENDIENTE_STOCK" : "RESERVADO",
+      costoUnitario: producto.costoUnitario || 0,
+      precioUnitario: item.precioUnitario,
+      tarifasVenta: item.tarifasVenta,
+      valor: item.cantidad * item.precioUnitario,
+    };
+  });
+};
+
+const conciliarStockAccesorios = async (anteriores = [], nuevos = [], contexto = {}) => {
+  const cantidades = (items) => items.reduce((mapa, item) => {
+    const id = String(item.accesorioId);
+    mapa.set(id, (mapa.get(id) || 0) + Number(item.cantidadDescontada ?? item.cantidad ?? 0));
+    return mapa;
+  }, new Map());
+  const antes = cantidades(anteriores);
+  const despues = cantidades(nuevos);
+  const cambios = [...new Set([...antes.keys(), ...despues.keys()])]
+    .map((id) => ({ id, delta: (despues.get(id) || 0) - (antes.get(id) || 0) }))
+    .filter((item) => item.delta !== 0);
+  const aplicados = [];
+  try {
+    for (const cambio of cambios) {
+      const salida = cambio.delta > 0;
+      const cantidad = Math.abs(cambio.delta);
+      const filtro = { _id: cambio.id, activo: { $ne: false }, ...(salida ? { stock: { $gte: cantidad } } : {}) };
+      const producto = await Accesorio.findOneAndUpdate(filtro, {
+        $inc: { stock: salida ? -cantidad : cantidad },
+        $push: { movimientos: {
+          tipo: salida ? "SALIDA" : "ENTRADA",
+          cantidad,
+          motivo: salida ? "ASIGNADO A SERVICIO" : "DEVOLUCION POR EDICION DE SERVICIO",
+          asesoriaId: contexto.asesoriaId || null,
+          codigoOrden: contexto.codigo || "",
+          usuarioId: contexto.user?._id || null,
+          usuarioNombre: contexto.user?.nombre || "",
+        } },
+      }, { new: true });
+      if (!producto) throw new Error("Stock insuficiente para uno de los accesorios seleccionados");
+      aplicados.push(cambio);
+    }
+  } catch (error) {
+    for (const cambio of aplicados.reverse()) {
+      await Accesorio.updateOne({ _id: cambio.id }, { $inc: { stock: cambio.delta } });
+    }
+    throw error;
+  }
+  return async () => {
+    for (const cambio of [...aplicados].reverse()) await Accesorio.updateOne({ _id: cambio.id }, { $inc: { stock: cambio.delta } });
+  };
+};
 
 export const listarAsesorias = async (filtros, user) => {
   const query = {};
@@ -103,6 +219,7 @@ export const listarAsesorias = async (filtros, user) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .select("-trazabilidad")
       .lean(),
     Asesoria.countDocuments(query),
     esAccesoTotal
@@ -154,6 +271,7 @@ export const listarAsesorias = async (filtros, user) => {
 const prepararDatosAsesoria = (data) => {
   const cedula = soloDigitos(data.cliente?.cedula);
   const placa = mayusculas(data.vehiculo?.placa).replace(/\s+/g, "");
+  const esGarantia = Boolean(data.garantia?.esGarantia);
   const recepcion = {
     tieneRayones: Boolean(data.recepcion?.tieneRayones),
     detalleRayones: mayusculas(data.recepcion?.detalleRayones),
@@ -161,8 +279,8 @@ const prepararDatosAsesoria = (data) => {
     detalleObjetos: mayusculas(data.recepcion?.detalleObjetos),
     observaciones: mayusculas(data.recepcion?.observaciones),
   };
-  let valorVenta = Math.round(Number(data.comercial?.valorVenta || 0));
-  const aplicaDescuento = Boolean(data.comercial?.aplicaDescuento);
+  let valorVenta = esGarantia ? 0 : Math.round(Number(data.comercial?.valorVenta || 0));
+  const aplicaDescuento = !esGarantia && Boolean(data.comercial?.aplicaDescuento);
   const descuento = aplicaDescuento
     ? Math.round(Number(data.comercial?.descuento || 0))
     : 0;
@@ -175,39 +293,66 @@ const prepararDatosAsesoria = (data) => {
     "CREDITO",
     "MIXTO",
   ];
-  const metodoPagoPrevisto = metodosPago.includes(data.comercial?.metodoPagoPrevisto)
+  const metodoPagoPrevisto = !esGarantia && metodosPago.includes(data.comercial?.metodoPagoPrevisto)
     ? data.comercial.metodoPagoPrevisto
     : "POR_DEFINIR";
   const polarizados = (data.polarizados || []).map((item) => ({
+    tarifasVenta: item.tarifasVenta || [],
     material: mayusculas(item.material),
     porcentaje: mayusculas(item.porcentaje),
-    partes: (item.partes || []).map(mayusculas).filter(Boolean),
-    valor: Math.round(Number(item.valor || 0)),
+    partes: normalizarPartesPolarizado(item.partes || []),
+    valor: esGarantia ? 0 : Math.round(Number(item.valor || 0)),
   })).filter((item) => item.material && item.porcentaje && item.partes.length);
   const ppf = agruparPpfPorReferencia((data.ppf || []).map((item) => ({
+    tarifasVenta: item.tarifasVenta || [],
     referencia: mayusculas(item.referencia),
     aplicacion: ["INTERIOR", "EXTERIOR", "COMPLETO", "PIEZAS"].includes(item.aplicacion)
       ? item.aplicacion
       : "EXTERIOR",
-    piezas: (item.piezas || []).map(mayusculas).filter(Boolean),
-    valor: Math.round(Number(item.valor || 0)),
+    piezas: [...new Set((item.piezas || []).map(mayusculas).filter(Boolean))],
+    comboPpfId: mongoose.Types.ObjectId.isValid(item.comboPpfId) ? item.comboPpfId : null,
+    comboNombre: mayusculas(item.comboNombre),
+    comboPrecioIndividual: Math.max(Number(item.comboPrecioIndividual || 0), 0),
+    comboPrecioMinimo: Math.max(Number(item.comboPrecioMinimo || 0), 0),
+    comboPermiteDescuento: Boolean(item.comboPermiteDescuento),
+    comboDescuentoMaximoPorcentaje: Math.max(Number(item.comboDescuentoMaximoPorcentaje || 0), 0),
+    cotizacionModo: ["TARIFA", "COMBO", "MEDIDAS", "PIEZAS"].includes(item.cotizacionModo) ? item.cotizacionModo : (item.comboPpfId ? "COMBO" : "TARIFA"),
+    medidasPiezas: (item.medidasPiezas || []).map((medida) => ({ pieza: mayusculas(medida.pieza), ubicacion: medida.ubicacion === "INTERIOR" ? "INTERIOR" : item.aplicacion === "INTERIOR" ? "INTERIOR" : "EXTERIOR", anchoCm: Number(medida.anchoCm || 0), largoCm: Number(medida.largoCm || 0), cantidad: Number(medida.cantidad || 1) })),
+    margenTecnicoPorcentaje: Number(item.margenTecnicoPorcentaje || 0),
+    margenTecnicoCm: 0,
+    dificultad: mayusculas(item.dificultad),
+    costoPromedioM2: Math.max(Number(item.costoPromedioM2 || 0), 0),
+    areaRealM2: Math.max(Number(item.areaRealM2 || 0), 0),
+    areaFacturableM2: Math.max(Number(item.areaFacturableM2 || 0), 0),
+    costoMaterialEstimado: Math.max(Number(item.costoMaterialEstimado || 0), 0),
+    valor: esGarantia ? 0 : Math.round(Number(item.valor || 0)),
   })).filter((item) => item.referencia && item.piezas.length));
   const serviciosAdicionales = (data.serviciosAdicionales || []).map((item) => ({
+    tarifasVenta: item.tarifasVenta || [],
     tipo: mayusculas(item.tipo),
     detalle: mayusculas(item.detalle),
-    valor: Math.round(Number(item.valor || 0)),
+    valor: esGarantia ? 0 : Math.round(Number(item.valor || 0)),
   })).filter((item) => item.tipo);
+  const accesoriosEntrada = Array.isArray(data.accesorios) ? data.accesorios : [];
   const garantia = {
-    esGarantia: Boolean(data.garantia?.esGarantia),
+    esGarantia,
     tipo: mayusculas(data.garantia?.tipo),
     motivo: mayusculas(data.garantia?.motivo),
     instalador: mayusculas(data.garantia?.instalador),
+    instaladorId: mongoose.Types.ObjectId.isValid(data.garantia?.instaladorId) ? data.garantia.instaladorId : null,
+    ordenOrigenId: mongoose.Types.ObjectId.isValid(data.garantia?.ordenOrigenId) ? data.garantia.ordenOrigenId : null,
+    costoMaterial: Math.max(Number(data.garantia?.costoMaterial || 0), 0),
     estado: data.garantia?.esGarantia ? "PENDIENTE" : "NO_APLICA",
     responsable: "POR_DEFINIR",
   };
+  const valorAccesoriosEntrada = accesoriosEntrada.reduce(
+    (total, item) => total + Number(item.cantidad || 0) * Number(item.precioUnitario || 0),
+    0
+  );
   valorVenta = [...polarizados, ...ppf, ...serviciosAdicionales]
-    .reduce((total, item) => total + Number(item.valor || 0), 0);
-  totalAcordado = Math.max(valorVenta - descuento, 0);
+    .reduce((total, item) => total + Number(item.valor || 0), 0) +
+    (esGarantia ? 0 : valorAccesoriosEntrada);
+  totalAcordado = esGarantia ? 0 : Math.max(valorVenta - descuento, 0);
 
   if (cedula.length < 5 || cedula.length > 15) {
     throw new Error("La cedula debe tener entre 5 y 15 numeros");
@@ -236,17 +381,43 @@ const prepararDatosAsesoria = (data) => {
   if (!Number.isFinite(descuento) || descuento < 0 || descuento > valorVenta) {
     throw new Error("El descuento no puede superar el valor de la venta");
   }
-  if (!polarizados.length && !ppf.length && !serviciosAdicionales.length) {
+  const combos = ppf.filter((item) => item.comboPpfId);
+  const valorCombos = combos.reduce((total, item) => total + Number(item.valor || 0), 0);
+  const descuentoMaximoCombos = combos.reduce((total, item) => total + (item.comboPermiteDescuento ? Math.min(
+    Number(item.valor || 0) * Number(item.comboDescuentoMaximoPorcentaje || 0) / 100,
+    Math.max(Number(item.valor || 0) - Number(item.comboPrecioMinimo || 0), 0)
+  ) : 0), 0);
+  const descuentoMaximoOrden = Math.max(valorVenta - valorCombos, 0) + descuentoMaximoCombos;
+  if (combos.length && descuento > descuentoMaximoOrden) {
+    throw new Error(`El descuento supera el límite de la orden. Máximo permitido: $${Math.floor(descuentoMaximoOrden).toLocaleString("es-CO")}`);
+  }
+  if (!polarizados.length && !ppf.length && !serviciosAdicionales.length && !accesoriosEntrada.length) {
     throw new Error("Agregue al menos un servicio para el vehiculo");
   }
-  if (!garantia.esGarantia && [...polarizados, ...ppf, ...serviciosAdicionales].some((item) => item.valor <= 0)) {
+  if (!garantia.esGarantia && [...polarizados, ...ppf, ...serviciosAdicionales, ...accesoriosEntrada].some((item) => Number(item.valor || (Number(item.cantidad || 0) * Number(item.precioUnitario || 0))) <= 0)) {
     throw new Error("Ingrese el precio de cada servicio");
   }
   if (garantia.esGarantia && !garantia.motivo) {
     throw new Error("Indique el motivo de la garantia");
   }
+  if (garantia.esGarantia && garantia.tipo === "GARANTIA_INSTALADOR" && !garantia.instaladorId) {
+    throw new Error("Seleccione el instalador responsable de la garantia");
+  }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(texto(data.cliente?.correo))) {
+    throw new Error("Registre un correo valido del cliente para las autorizaciones");
+  }
+  const seguro = data.seguroVehiculo || {};
+  const estadoSeguro = ["SI", "NO", "SIN_CONFIRMAR"].includes(seguro.estado) ? seguro.estado : "SIN_CONFIRMAR";
+
+  if (seguro.vigenciaHasta && !/^\d{4}-\d{2}-\d{2}$/.test(seguro.vigenciaHasta)) throw new Error("Vigencia de poliza no valida");
   return {
+    seguroVehiculo: {
+      estado: estadoSeguro,
+      aseguradora: estadoSeguro === "SI" ? texto(seguro.aseguradora) : "",
+      numeroPoliza: estadoSeguro === "SI" ? texto(seguro.numeroPoliza) : "",
+      vigenciaHasta: estadoSeguro === "SI" ? texto(seguro.vigenciaHasta) : "",
+    },
     cliente: {
       cedula,
       nombre: mayusculas(data.cliente.nombre),
@@ -254,6 +425,7 @@ const prepararDatosAsesoria = (data) => {
       correo: texto(data.cliente.correo).toLowerCase(),
     },
     vehiculo: {
+      tipo: data.vehiculo?.tipo === "MOTO" ? "MOTO" : "CARRO",
       placa,
       marca: mayusculas(data.vehiculo.marca),
       modelo: mayusculas(data.vehiculo.modelo),
@@ -264,6 +436,7 @@ const prepararDatosAsesoria = (data) => {
     polarizados,
     ppf,
     serviciosAdicionales,
+    accesoriosEntrada,
     garantia,
     comercial: {
       valorVenta,
@@ -276,24 +449,91 @@ const prepararDatosAsesoria = (data) => {
 };
 
 export const crearBorradorAsesoria = async (data, user) => {
-  const datosAsesoria = prepararDatosAsesoria(data);
-  const asesoria = await Asesoria.create({
+  const datosAsesoria = prepararDatosAsesoria(await aplicarPreciosAsesoria(data));
+  if (datosAsesoria.garantia.esGarantia) {
+    const filtroOrigen = {
+      "cliente.cedula": datosAsesoria.cliente.cedula,
+      "vehiculo.placa": datosAsesoria.vehiculo.placa,
+      "garantia.esGarantia": { $ne: true },
+      "flujo.etapa": "FINALIZADA",
+    };
+    if (datosAsesoria.garantia.ordenOrigenId) {
+      filtroOrigen._id = datosAsesoria.garantia.ordenOrigenId;
+    }
+    const ordenOrigen = await Asesoria.findOne(filtroOrigen)
+      .sort({ createdAt: -1 }).select("codigo createdAt coordinacion.asignaciones.instaladorId").lean();
+    if (datosAsesoria.garantia.ordenOrigenId && !ordenOrigen) {
+      throw new Error("El servicio original seleccionado no corresponde a este cliente y vehículo");
+    }
+    if (ordenOrigen) {
+      datosAsesoria.garantia.ordenOrigenId = ordenOrigen._id;
+      datosAsesoria.garantia.codigoOrdenOrigen = ordenOrigen.codigo;
+      datosAsesoria.garantia.fechaOrdenOrigen = ordenOrigen.createdAt;
+      const instaladoresOrigen = new Set(
+        (ordenOrigen.coordinacion?.asignaciones || [])
+          .map((item) => String(item.instaladorId || ""))
+          .filter(Boolean)
+      );
+      if (
+        datosAsesoria.garantia.tipo === "GARANTIA_INSTALADOR" &&
+        instaladoresOrigen.size &&
+        !instaladoresOrigen.has(String(datosAsesoria.garantia.instaladorId || ""))
+      ) {
+        throw new Error("El instalador responsable no participó en el servicio original seleccionado");
+      }
+    }
+  }
+  const accesorios = await prepararAccesorios(datosAsesoria.accesoriosEntrada);
+  delete datosAsesoria.accesoriosEntrada;
+  if (datosAsesoria.garantia.esGarantia) {
+    accesorios.forEach((item) => {
+      item.precioUnitario = 0;
+      item.valor = 0;
+    });
+  }
+  datosAsesoria.accesorios = accesorios;
+  datosAsesoria.comercial = recalcularComercial(datosAsesoria);
+  if (datosAsesoria.garantia?.tipo === "GARANTIA_INSTALADOR") {
+    const instalador = await User.findOne({ _id: datosAsesoria.garantia.instaladorId, rol: "INSTALADOR", suspendido: { $ne: true } }).select("nombre").lean();
+    if (!instalador) throw new Error("El instalador seleccionado no esta disponible");
+    datosAsesoria.garantia.instalador = mayusculas(instalador.nombre);
+  }
+  const codigo = `ASE-${Date.now()}`;
+  const revertirStock = await conciliarStockAccesorios([], accesorios, { codigo, user });
+  let asesoria;
+  try { asesoria = await Asesoria.create({
     ...datosAsesoria,
-    codigo: `ASE-${Date.now()}`,
+    codigo,
     pago: {
-      estado: "PENDIENTE",
+      estado: datosAsesoria.garantia.esGarantia ? "NO_APLICA" : "PENDIENTE",
       valorRecibido: 0,
     },
     creadoPor: user._id,
     asesorNombre: mayusculas(user.nombre || "ASESOR"),
     asesorRol: user.rol || "ASESOR",
-    estado: "APROBADA",
+    estado: "COTIZACION",
+    autorizaciones: { requeridas: true, documentos: [] },
     flujo: {
-      etapa: datosAsesoria.garantia.esGarantia ? "PENDIENTE_GARANTIA" : "PENDIENTE_COORDINACION",
+      etapa: "PENDIENTE_FIRMA_COTIZACION",
       fechaEnvioInventario: null,
     },
-  });
+  }); } catch (error) { await revertirStock(); throw error; }
+  if (accesorios.length) {
+    await Accesorio.updateMany({ "movimientos.codigoOrden": codigo }, { $set: { "movimientos.$[mov].asesoriaId": asesoria._id } }, { arrayFilters: [{ "mov.codigoOrden": codigo }] });
+  }
+  try { await sincronizarAlertasAccesorios(asesoria); } catch (error) { console.error("No se pudo crear la alerta de accesorios:", error.message); }
+  try { await sincronizarPiezasDesdeAsesoria(asesoria, user); } catch (error) { console.error("No se pudieron guardar las medidas PPF:", error.message); }
 
+  if (asesoria.autorizaciones?.requeridas) {
+    let solicitudFirma;
+    try {
+      await emitirDocumento(String(asesoria._id), "COTIZACION", user);
+      solicitudFirma = { enviado: true, mensaje: "Cotizacion enviada al correo del cliente para firma" };
+    } catch (error) {
+      solicitudFirma = { enviado: false, mensaje: error.message };
+    }
+    return { ...asesoria.toObject(), solicitudFirma };
+  }
   try {
     if (asesoria.garantia.esGarantia) {
       await crearAlertaSolicitudGarantia(asesoria);
@@ -310,20 +550,41 @@ export const actualizarAsesoria = async (id, data, user) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error("Servicio no valido");
   }
-  if (!["ADMIN", "SUPERUSUARIO"].includes(user.rol)) {
-    throw new Error("Solo un administrador puede editar el servicio");
-  }
-
   const actual = await Asesoria.findById(id);
   if (!actual) throw new Error("Servicio no encontrado");
+  const esAdmin = ["ADMIN", "SUPERUSUARIO"].includes(user.rol);
+  const revision = [...(actual.autorizaciones?.documentos || [])].reverse().find((d) => d.tipo === "COTIZACION");
+  const puedeCorregir = String(actual.creadoPor) === String(user._id)
+    && revision?.gestionRespuesta?.accion === "PREPARAR_REVISION"
+    && ["RECHAZADO", "CORRECCION_SOLICITADA"].includes(revision.estado)
+    && actual.flujo.etapa === "PENDIENTE_FIRMA_COTIZACION" && !actual.autorizaciones.bloqueoCliente;
+  if (!esAdmin && !puedeCorregir) throw new Error("Solo puede editar su cotizacion cuando exista una revision del cliente en preparacion");
+  if (actual.estado === "CANCELADA" || actual.autorizaciones?.bloqueoCliente) throw new Error("Gestione la respuesta del cliente antes de editar");
 
-  const datosAsesoria = prepararDatosAsesoria(data);
+  const datosAsesoria = prepararDatosAsesoria(await aplicarPreciosAsesoria(data, actual));
+  datosAsesoria.recepcion.fotos = (actual.recepcion?.fotos || []).map((foto) => foto.toObject ? foto.toObject() : foto);
+  const accesorios = await prepararAccesorios(datosAsesoria.accesoriosEntrada, actual.accesorios || []);
+  delete datosAsesoria.accesoriosEntrada;
+  if (datosAsesoria.garantia.esGarantia) {
+    accesorios.forEach((item) => {
+      item.precioUnitario = 0;
+      item.valor = 0;
+    });
+  }
+  datosAsesoria.accesorios = accesorios;
+  datosAsesoria.comercial = recalcularComercial(datosAsesoria);
+  if (datosAsesoria.garantia?.tipo === "GARANTIA_INSTALADOR") {
+    const instalador = await User.findOne({ _id: datosAsesoria.garantia.instaladorId, rol: "INSTALADOR", suspendido: { $ne: true } }).select("nombre").lean();
+    if (!instalador) throw new Error("El instalador seleccionado no esta disponible");
+    datosAsesoria.garantia.instalador = mayusculas(instalador.nombre);
+  }
   const cortesExistentes = await Corte.exists({ asesoriaId: actual._id });
   const firmaMateriales = (origen) => JSON.stringify({
     polarizados: (origen.polarizados || []).map((item) => ({ material: item.material, porcentaje: item.porcentaje, partes: item.partes })),
     ppf: (origen.ppf || []).map((item) => ({ referencia: item.referencia, aplicacion: item.aplicacion, piezas: item.piezas })),
   });
-  if (cortesExistentes && firmaMateriales(actual) !== firmaMateriales(datosAsesoria)) {
+  const cambioMateriales = firmaMateriales(actual) !== firmaMateriales(datosAsesoria);
+  if (cortesExistentes && cambioMateriales) {
     throw new Error("No se pueden cambiar materiales o piezas porque la orden ya tiene cortes. Registre una novedad administrativa");
   }
   const ventaExistente = await Venta.exists({ asesoriaId: actual._id });
@@ -331,6 +592,7 @@ export const actualizarAsesoria = async (id, data, user) => {
     polarizados: (origen.polarizados || []).map((item) => Number(item.valor || 0)),
     ppf: (origen.ppf || []).map((item) => Number(item.valor || 0)),
     adicionales: (origen.serviciosAdicionales || []).map((item) => ({ tipo: item.tipo, valor: Number(item.valor || 0) })),
+    accesorios: (origen.accesorios || []).map((item) => ({ id: String(item.accesorioId), cantidad: item.cantidad, precio: item.precioUnitario })),
     descuento: Number(origen.comercial?.descuento || 0),
   });
   if (ventaExistente && firmaComercial(actual) !== firmaComercial(datosAsesoria)) {
@@ -339,6 +601,10 @@ export const actualizarAsesoria = async (id, data, user) => {
   if (datosAsesoria.garantia.esGarantia && actual.garantia?.esGarantia) {
     datosAsesoria.garantia = {
       ...datosAsesoria.garantia,
+      ...(String(datosAsesoria.garantia.ordenOrigenId || "") === String(actual.garantia.ordenOrigenId || "") ? {
+        codigoOrdenOrigen: actual.garantia.codigoOrdenOrigen,
+        fechaOrdenOrigen: actual.garantia.fechaOrdenOrigen,
+      } : {}),
       estado: actual.garantia.estado || datosAsesoria.garantia.estado,
       responsable: actual.garantia.responsable || datosAsesoria.garantia.responsable,
       observacionRevision: actual.garantia.observacionRevision || "",
@@ -347,14 +613,37 @@ export const actualizarAsesoria = async (id, data, user) => {
       fechaRevision: actual.garantia.fechaRevision || null,
     };
   }
-  const actualizada = await Asesoria.findByIdAndUpdate(
+  if (actual.autorizaciones?.requeridas) {
+    const candidato = { ...actual.toObject(), ...datosAsesoria };
+    const cambioCotizacion = huellaDatos(actual, "COTIZACION") !== huellaDatos(candidato, "COTIZACION");
+    const cambioDiagnostico = huellaDatos(actual, "DIAGNOSTICO") !== huellaDatos(candidato, "DIAGNOSTICO");
+    if (cambioCotizacion || cambioDiagnostico) {
+      if (!["PENDIENTE_FIRMA_COTIZACION", "PENDIENTE_FIRMA_DIAGNOSTICO", "PENDIENTE_COORDINACION", "PENDIENTE_GARANTIA"].includes(actual.flujo.etapa)) throw new Error("El trabajo ya avanzo; registre una novedad en lugar de modificar el documento firmado");
+      datosAsesoria["flujo.etapa"] = cambioCotizacion ? "PENDIENTE_FIRMA_COTIZACION" : "PENDIENTE_FIRMA_DIAGNOSTICO";
+      datosAsesoria.estado = "COTIZACION";
+    }
+  }
+  const revertirStock = await conciliarStockAccesorios(actual.accesorios || [], accesorios, { asesoriaId: actual._id, codigo: actual.codigo, user });
+  let actualizada;
+  try { actualizada = await Asesoria.findByIdAndUpdate(
     id,
     {
-      $set: datosAsesoria,
+      $set: {
+        ...datosAsesoria,
+        ...(cambioMateriales ? {
+          "coordinacion.propuesta": [],
+          "coordinacion.asignaciones": [],
+          "coordinacion.estadoPropuesta": "PENDIENTE",
+          "flujo.etapa": datosAsesoria["flujo.etapa"] || (datosAsesoria.garantia.esGarantia && datosAsesoria.garantia.estado !== "APROBADA"
+            ? "PENDIENTE_GARANTIA"
+            : "PENDIENTE_COORDINACION"),
+          "flujo.fechaEnvioInventario": null,
+        } : {}),
+      },
       $push: {
         auditoria: {
-          accion: "EDICION_ADMINISTRATIVA",
-          descripcion: "Servicio del asesor corregido por administracion",
+          accion: esAdmin ? "EDICION_ADMINISTRATIVA" : "CORRECCION_COTIZACION",
+          descripcion: esAdmin ? "Servicio del asesor corregido por administracion" : "Cotizacion corregida ante la respuesta del cliente",
           usuarioId: user._id,
           usuarioNombre: mayusculas(user.nombre || user.rol),
           fecha: new Date(),
@@ -362,7 +651,17 @@ export const actualizarAsesoria = async (id, data, user) => {
       },
     },
     { new: true, runValidators: true }
-  );
+  ); } catch (error) { await revertirStock(); throw error; }
+
+  if (cambioMateriales && actualizada.flujo?.etapa === "PENDIENTE_COORDINACION") {
+    try {
+      await crearAlertaServicioAsesor(actualizada);
+    } catch (error) {
+      console.error("No se pudo notificar el cambio de material:", error.message);
+    }
+  }
+  try { await sincronizarAlertasAccesorios(actualizada); } catch (error) { console.error("No se pudo actualizar la alerta de accesorios:", error.message); }
+  try { await sincronizarPiezasDesdeAsesoria(actualizada, user); } catch (error) { console.error("No se pudieron actualizar las medidas PPF:", error.message); }
 
   return actualizada;
 };
@@ -407,7 +706,8 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Servicio no valido");
   const esAdministrador = ["ADMIN", "SUPERUSUARIO"].includes(user.rol);
   const esInventario = user.rol === "INVENTARIO";
-  if (!esAdministrador && !esInventario) throw new Error("No tiene permiso para reportar esta novedad");
+  const esCoordinador = user.rol === "COORDINADOR";
+  if (!esAdministrador && !esInventario && !esCoordinador) throw new Error("No tiene permiso para reportar esta novedad");
 
   const asesoria = await Asesoria.findById(id);
   if (!asesoria) throw new Error("Servicio no encontrado");
@@ -423,6 +723,9 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
   if (esInventario && !TIPOS_NOVEDAD_INVENTARIO.includes(tipo)) {
     throw new Error("Inventario solo puede reportar novedades operativas");
   }
+  if (esCoordinador && tipo !== "REPETICION_CORTE") {
+    throw new Error("Coordinacion solo puede solicitar repeticiones de corte");
+  }
   if (descripcion.length < 5) throw new Error("Describa la novedad con al menos 5 caracteres");
   if (!Number.isFinite(valorImpacto) || valorImpacto < 0) throw new Error("El valor del impacto no es valido");
 
@@ -437,14 +740,25 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
     TRABAJO_PENDIENTE: "TRABAJO_PENDIENTE",
   };
   const situacionActual = situacionPorTipo[tipo] || "NOVEDAD_ABIERTA";
+  let instaladorResponsable = null;
+  if (esCoordinador) {
+    if (!mongoose.Types.ObjectId.isValid(data.instaladorId)) throw new Error("Seleccione el instalador responsable del material");
+    instaladorResponsable = await User.findOne({ _id: data.instaladorId, rol: "INSTALADOR" }).select("nombre").lean();
+    if (!instaladorResponsable) throw new Error("El instalador seleccionado no esta disponible");
+    const asignado = (asesoria.coordinacion?.asignaciones || []).some((item) => String(item.instaladorId) === String(instaladorResponsable._id));
+    if (!asignado) throw new Error("El instalador seleccionado no esta asignado a esta orden");
+    if (!(data.serviciosAfectados || []).length) throw new Error("Seleccione el servicio que necesita el nuevo corte");
+  }
   const novedad = {
     tipo,
     descripcion,
-    responsableCosto,
-    afectaMaterial: Boolean(data.afectaMaterial),
+    responsableCosto: esCoordinador ? "INSTALADOR" : responsableCosto,
+    afectaMaterial: esCoordinador ? true : Boolean(data.afectaMaterial),
     afectaPrecio: Boolean(data.afectaPrecio),
     valorImpacto,
     serviciosAfectados: (data.serviciosAfectados || []).map(mayusculas).filter(Boolean),
+    instaladorId: instaladorResponsable?._id || null,
+    instaladorNombre: mayusculas(instaladorResponsable?.nombre),
     estado: esAdministrador ? "APROBADA" : "PENDIENTE",
     usuarioId: user._id,
     usuarioNombre: mayusculas(user.nombre || user.rol),
@@ -454,8 +768,10 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
   const set = {
     situacionActual: esAdministrador ? situacionActual : "NOVEDAD_ABIERTA",
   };
+  let revertirStockCancelacion = async () => {};
 
   if (tipo === "CANCELACION_TOTAL" && esAdministrador) {
+    revertirStockCancelacion = await conciliarStockAccesorios(asesoria.accesorios || [], [], { asesoriaId: asesoria._id, codigo: asesoria.codigo, user });
     set.estado = "CANCELADA";
     set["flujo.etapa"] = "CANCELADA";
     set["flujo.fechaFinalizacion"] = new Date();
@@ -471,6 +787,12 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
         usuarioRol: user.rol,
       });
       await venta.save();
+      await Corte.updateMany({ ventaId: venta._id }, { $set: { ventaEstado: "ANULADA" } });
+      try {
+        await cerrarAlertaVentaPendiente(venta._id);
+      } catch (error) {
+        console.error("No se pudo cerrar la alerta de la venta anulada:", error.message);
+      }
     }
   }
 
@@ -485,9 +807,12 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
     asesoria.polarizados = asesoria.polarizados.filter((_, index) => !seleccionados.has(`POLARIZADO ${index + 1}`));
     asesoria.ppf = asesoria.ppf.filter((_, index) => !seleccionados.has(`PPF ${index + 1}`));
     asesoria.serviciosAdicionales = asesoria.serviciosAdicionales.filter((_, index) => !seleccionados.has(`ADICIONAL ${index + 1}`));
-    if (!asesoria.polarizados.length && !asesoria.ppf.length && !asesoria.serviciosAdicionales.length) {
+    const accesoriosRetirados = asesoria.accesorios.filter((_, index) => seleccionados.has(`ACCESORIO ${index + 1}`));
+    asesoria.accesorios = asesoria.accesorios.filter((_, index) => !seleccionados.has(`ACCESORIO ${index + 1}`));
+    if (!asesoria.polarizados.length && !asesoria.ppf.length && !asesoria.serviciosAdicionales.length && !asesoria.accesorios.length) {
       throw new Error("Para retirar todos los servicios use cancelacion total");
     }
+    const revertirAccesorios = await conciliarStockAccesorios(accesoriosRetirados, [], { asesoriaId: asesoria._id, codigo: asesoria.codigo, user });
     asesoria.coordinacion.propuesta = [];
     asesoria.coordinacion.asignaciones = [];
     asesoria.coordinacion.estadoPropuesta = "PENDIENTE";
@@ -502,11 +827,18 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
       usuarioNombre: mayusculas(user.nombre || user.rol),
       fecha: new Date(),
     });
-    await asesoria.save();
+    try { await asesoria.save(); } catch (error) { await revertirAccesorios(); throw error; }
+    try {
+      await sincronizarAlertasAccesorios(asesoria);
+      await crearAlertaServicioAsesor(asesoria);
+    } catch (error) {
+      console.error("No se pudo notificar la cancelacion parcial:", error.message);
+    }
     return asesoria;
   }
 
-  const actualizada = await Asesoria.findByIdAndUpdate(
+  let actualizada;
+  try { actualizada = await Asesoria.findByIdAndUpdate(
     id,
     {
       $set: set,
@@ -522,15 +854,19 @@ export const registrarNovedadAsesoria = async (id, data, user) => {
       },
     },
     { new: true, runValidators: true }
-  );
+  ); } catch (error) { await revertirStockCancelacion(); throw error; }
 
-  if (esInventario) {
+  if (esInventario || esCoordinador) {
     const novedadGuardada = actualizada.novedades.at(-1);
     try {
       await crearAlertaSolicitudNovedad(actualizada, novedadGuardada);
     } catch (error) {
       console.error("No se pudo crear la alerta de novedad:", error.message);
     }
+  }
+
+  if (tipo === "CANCELACION_TOTAL" && esAdministrador) {
+    try { await sincronizarAlertasAccesorios(actualizada); } catch (error) { console.error("No se pudo cerrar la alerta de accesorios:", error.message); }
   }
 
   return actualizada;
@@ -585,6 +921,15 @@ export const revisarNovedadAsesoria = async (id, novedadId, data, user) => {
   await asesoria.save();
   try {
     await cerrarAlertaSolicitudNovedad(asesoria._id, novedad._id);
+    if (decision === "APROBAR" && novedad.tipo === "REPETICION_CORTE") {
+      await crearAlerta(
+        "PROPUESTA_CORTE",
+        `Nuevo corte aprobado para ${asesoria.codigo} (${asesoria.vehiculo?.placa || ""}). Material a descontar a ${novedad.instaladorNombre || "INSTALADOR"}.`,
+        asesoria._id,
+        `repeticion-corte:${asesoria._id}:${novedad._id}`,
+        `/cortes?asesoria=${asesoria._id}&novedad=${novedad._id}`
+      );
+    }
   } catch (error) {
     console.error("No se pudo cerrar la alerta de novedad:", error.message);
   }
@@ -627,24 +972,35 @@ export const revisarGarantiaAsesoria = async (id, data, user) => {
 
   const decision = mayusculas(data.decision);
   const responsable = mayusculas(data.responsable);
-  const responsables = ["EMPRESA", "INSTALADOR", "PROVEEDOR", "CLIENTE"];
+  const responsables = ["EMPRESA", "INSTALADOR", "PROVEEDOR"];
   if (!["APROBAR", "RECHAZAR"].includes(decision)) throw new Error("Seleccione una decision valida");
   if (decision === "APROBAR" && !responsables.includes(responsable)) throw new Error("Seleccione quien responde por la garantia");
-  if (responsable === "INSTALADOR" && !texto(data.instalador || asesoria.garantia.instalador)) {
-    throw new Error("Ingrese el instalador responsable");
+  if (responsable === "INSTALADOR" && !data.instaladorId && !asesoria.garantia.instaladorId && !texto(data.instalador || asesoria.garantia.instalador)) {
+    throw new Error("Seleccione el instalador responsable");
+  }
+  let instaladorGarantia = null;
+  if (decision === "APROBAR" && responsable === "INSTALADOR") {
+    const instaladorId = data.instaladorId || asesoria.garantia.instaladorId;
+    if (!mongoose.Types.ObjectId.isValid(instaladorId)) throw new Error("Seleccione el instalador responsable");
+    instaladorGarantia = await User.findOne({ _id: instaladorId, rol: "INSTALADOR", suspendido: { $ne: true } }).select("nombre").lean();
+    if (!instaladorGarantia) throw new Error("El instalador seleccionado no esta disponible");
   }
   if (decision === "RECHAZAR" && texto(data.observacion).length < 5) {
     throw new Error("Indique el motivo del rechazo");
   }
+  const revertirStockGarantia = decision === "RECHAZAR"
+    ? await conciliarStockAccesorios(asesoria.accesorios || [], [], { asesoriaId: asesoria._id, codigo: asesoria.codigo, user })
+    : async () => {};
 
   asesoria.garantia.estado = decision === "APROBAR" ? "APROBADA" : "RECHAZADA";
   asesoria.garantia.responsable = decision === "APROBAR" ? responsable : "CLIENTE";
   if (decision === "APROBAR") {
-    asesoria.garantia.tipo = responsable === "CLIENTE" ? "GARANTIA" : `GARANTIA_${responsable}`;
+    asesoria.garantia.tipo = `GARANTIA_${responsable}`;
   }
   asesoria.garantia.instalador = responsable === "INSTALADOR"
-    ? mayusculas(data.instalador || asesoria.garantia.instalador)
+    ? mayusculas(instaladorGarantia?.nombre || data.instalador || asesoria.garantia.instalador)
     : asesoria.garantia.instalador;
+  asesoria.garantia.instaladorId = responsable === "INSTALADOR" ? instaladorGarantia?._id : null;
   asesoria.garantia.observacionRevision = mayusculas(data.observacion);
   asesoria.garantia.revisadoPorId = user._id;
   asesoria.garantia.revisadoPorNombre = mayusculas(user.nombre || user.rol);
@@ -659,10 +1015,11 @@ export const revisarGarantiaAsesoria = async (id, data, user) => {
     usuarioNombre: mayusculas(user.nombre || user.rol),
     fecha: new Date(),
   });
-  await asesoria.save();
+  try { await asesoria.save(); } catch (error) { await revertirStockGarantia(); throw error; }
 
   try {
     await cerrarAlertaSolicitudGarantia(asesoria._id);
+    await sincronizarAlertasAccesorios(asesoria);
     if (decision === "APROBAR") await crearAlertaServicioAsesor(asesoria);
   } catch (error) {
     console.error("No se pudo sincronizar la alerta de garantia:", error.message);
@@ -670,18 +1027,44 @@ export const revisarGarantiaAsesoria = async (id, data, user) => {
   return asesoria;
 };
 
-export const obtenerAsesoriaPorId = async (id) => {
+export const obtenerAsesoriaPorId = async (id, user) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error("Servicio no valido");
   }
-  const asesoria = await Asesoria.findById(id).lean();
+  const asesoria = await Asesoria.findById(id).select("-trazabilidad +autorizaciones.documentos.firma.evidenciaEntrega").lean();
   if (!asesoria) throw new Error("Servicio no encontrado");
+  const puedeVerEvidencia = ["ADMIN", "SUPERUSUARIO", "COORDINADOR"].includes(user?.rol)
+    || (user?._id && String(asesoria.creadoPor) === String(user._id));
+  if (asesoria.autorizaciones?.documentos) {
+    asesoria.autorizaciones.documentos = asesoria.autorizaciones.documentos.map((d) => {
+      if (d.firma && !puedeVerEvidencia) {
+        delete d.firma.evidenciaEntrega;
+        delete d.firma.observacionEntrega;
+      }
+      return { ...d, contenidoVigente: coincideHuellaDocumento(asesoria, d) };
+    });
+  }
   return asesoria;
+};
+
+export const obtenerHistorialServicio = async (id) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Servicio no valido");
+  const servicio = await Asesoria.findById(id)
+    .select("codigo vehiculo.placa asesorNombre flujo.etapa seguroVehiculo.estado trazabilidad auditoria.accion auditoria.descripcion auditoria.fecha auditoria.usuarioNombre novedades.tipo novedades.estado novedades.descripcion novedades.fecha novedades.usuarioNombre autorizaciones.documentos.tipo autorizaciones.documentos.respuestaCliente.motivo autorizaciones.documentos.respuestaCliente.fecha")
+    .lean();
+  if (!servicio) throw new Error("Servicio no encontrado");
+  return servicio;
 };
 
 export const enviarAsesoriaAVentas = async (id) => {
   const asesoria = await obtenerAsesoriaPorId(id);
+  validarFirmasTrabajo(asesoria);
   validarSinNovedadesBloqueantes(asesoria);
+  const accesoriosPendientes = (asesoria.accesorios || []).filter((item) => Number(item.cantidadPendiente || 0) > 0);
+  if (accesoriosPendientes.length) {
+    const detalle = accesoriosPendientes.map((item) => `${item.nombre}: faltan ${item.cantidadPendiente}`).join(", ");
+    throw new Error(`No se puede finalizar. Faltan accesorios por recibir: ${detalle}`);
+  }
   if (asesoria.coordinacion?.propuesta?.length || asesoria.coordinacion?.asignaciones?.length) {
     throw new Error("La orden debe terminar primero el flujo de coordinacion e instalacion");
   }
@@ -695,7 +1078,7 @@ export const enviarAsesoriaAVentas = async (id) => {
     throw new Error("La orden tiene una solicitud pendiente de revision administrativa");
   }
   const cortes = await Corte.find({ asesoriaId: id })
-    .select("asesoriaLinea tipoCorte tipoCorteDetalle")
+    .select("asesoriaLinea tipoCorte tipoCorteDetalle costoMaterialCop")
     .lean();
   const faltantes = [];
   (asesoria.polarizados || []).forEach((linea, index) => {
@@ -711,12 +1094,17 @@ export const enviarAsesoriaAVentas = async (id) => {
     throw new Error(`Faltan cortes por registrar: ${faltantes.join(", ")}`);
   }
   const esGarantiaSinCobro = Boolean(asesoria.garantia?.esGarantia) && Number(asesoria.comercial?.totalAcordado || 0) <= 0;
+  const costoMaterialGarantia = cortes.reduce(
+    (total, corte) => total + Number(corte.costoMaterialCop || 0), 0
+  );
   const actualizada = await Asesoria.findByIdAndUpdate(
     id,
     { $set: esGarantiaSinCobro ? {
-      "garantia.estado": "FINALIZADA",
-      "flujo.etapa": "FINALIZADA",
-      "flujo.fechaFinalizacion": new Date(),
+      "garantia.estado": asesoria.autorizaciones?.requeridas ? "APROBADA" : "FINALIZADA",
+      "garantia.costoMaterial": costoMaterialGarantia,
+      "pago.estado": "NO_APLICA",
+      "flujo.etapa": asesoria.autorizaciones?.requeridas ? "PENDIENTE_PAGO" : "FINALIZADA",
+      "flujo.fechaFinalizacion": asesoria.autorizaciones?.requeridas ? null : new Date(),
     } : {
       "flujo.etapa": "PENDIENTE_PAGO",
       "flujo.fechaEnvioVentas": new Date(),
@@ -739,6 +1127,23 @@ export const buscarClienteAsesoria = async (cedula) => {
     .lean();
 
   return ultima;
+};
+
+export const listarOrigenesGarantia = async ({ cedula, placa }) => {
+  const cedulaNormalizada = soloDigitos(cedula);
+  const placaNormalizada = mayusculas(placa).replace(/\s+/g, "");
+  if (cedulaNormalizada.length < 5 || placaNormalizada.length < 5) return [];
+
+  return Asesoria.find({
+    "cliente.cedula": cedulaNormalizada,
+    "vehiculo.placa": placaNormalizada,
+    "garantia.esGarantia": { $ne: true },
+    "flujo.etapa": "FINALIZADA",
+  })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .select("codigo createdAt polarizados ppf serviciosAdicionales coordinacion.asignaciones.instaladorId coordinacion.asignaciones.instaladorNombre")
+    .lean();
 };
 
 export const buscarClientesAsesoria = async (termino) => {
@@ -768,13 +1173,13 @@ export const obtenerCatalogoDisponible = async () => {
       estado: { $in: ["RESERVA", "USO"] },
       largoDisponible: { $gt: 0 },
     })
-      .select("tipoPolarizado porcentaje unidadMedida ancho largoDisponible estado")
+      .select("tipoPolarizado porcentaje unidadMedida ancho largoDisponible estado costoPorMetroCop")
       .lean(),
     Retazo.find({
       estado: "DISPONIBLE",
       largoDisponible: { $gt: 0 },
     })
-      .select("tipoPolarizado porcentaje unidadMedida ancho largoDisponible")
+      .select("tipoPolarizado porcentaje unidadMedida ancho largoDisponible costoPorMetroCop")
       .lean(),
   ]);
 
@@ -797,6 +1202,8 @@ export const obtenerCatalogoDisponible = async () => {
       metrosDisponibles: 0,
       enReserva: 0,
       enUso: 0,
+      areaDisponibleM2: 0,
+      costoDisponibleCop: 0,
     };
 
     if (tipo === "ROLLO") {
@@ -807,6 +1214,13 @@ export const obtenerCatalogoDisponible = async () => {
       actual.cantidadRetazos += 1;
     }
     actual.metrosDisponibles += Number(rollo.largoDisponible || 0);
+    const ancho = Number(rollo.ancho || 0);
+    const largo = Number(rollo.largoDisponible || 0);
+    const costoMetro = Number(rollo.costoPorMetroCop || 0);
+    if (ancho > 0 && largo > 0 && costoMetro > 0) {
+      actual.areaDisponibleM2 += ancho * largo;
+      actual.costoDisponibleCop += costoMetro * largo;
+    }
     grupos.set(key, actual);
   };
 
@@ -817,6 +1231,8 @@ export const obtenerCatalogoDisponible = async () => {
     .map((grupo) => ({
       ...grupo,
       metrosDisponibles: redondearMetros(grupo.metrosDisponibles),
+      areaDisponibleM2: Number(grupo.areaDisponibleM2.toFixed(4)),
+      costoPromedioM2: grupo.areaDisponibleM2 > 0 ? Math.round(grupo.costoDisponibleCop / grupo.areaDisponibleM2) : 0,
     }))
     .sort((a, b) =>
       String(a.tipoPolarizado).localeCompare(String(b.tipoPolarizado))

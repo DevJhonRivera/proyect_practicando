@@ -92,6 +92,17 @@ const corteSchema = new mongoose.Schema(
             trim: true
         },
 
+        asesoriaLineaOrigen: {
+            type: String,
+            default: "",
+            trim: true
+        },
+
+        novedadId: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null
+        },
+
         partesServicio: {
             type: [String],
             default: []
@@ -165,7 +176,9 @@ const corteSchema = new mongoose.Schema(
                 "DELANTERAS",
                 "TRASERAS",
                 "FIJOS",
+                "CUSTODIAS",
                 "SUNROOF", 
+                "U",
                 "COMPLETO",
                 "PIEZAS_PPF",
                 "OTROS"
@@ -230,6 +243,7 @@ const corteSchema = new mongoose.Schema(
                 "PENDIENTE",
                 "PARCIAL",
                 "PAGADA",
+                "RECHAZADA",
                 "ANULADA",
                 ""
             ],
@@ -256,6 +270,9 @@ corteSchema.index({
     modelo: 1,
     createdAt: -1
 });
+
+corteSchema.index({ createdAt: -1 });
+corteSchema.index({ ventaId: 1 });
 
 corteSchema.index(
     { asesoriaId: 1, asesoriaLinea: 1 },
