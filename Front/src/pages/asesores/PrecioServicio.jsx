@@ -40,6 +40,15 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
   }
   const cambiar = (indice, cambios) => onChange(selecciones.map((fila, posicion) => posicion === indice ? { ...fila, ...cambios } : fila));
   const seleccionar = (codigo) => seleccionarTarifaVenta(codigo, lista, basesVigentes);
+  const seleccionarParaVehiculo = (descripcion) => {
+    const basesDisponibles = compatibles.filter((fila) => esVehiculo(fila)
+      && correspondeTipo(fila) && fila.descripcion === descripcion && !fila.requiereRevision);
+    const aplicaciones = compatibles.filter((fila) => fila.modalidad === "PORCENTAJE"
+      && !fila.requiereRevision
+      && (familia !== "POLARIZADO" || tarifaCompatibleConPartes(fila, partes)));
+    const elegida = aplicaciones.length === 1 ? aplicaciones[0] : basesDisponibles.length === 1 ? basesDisponibles[0] : null;
+    return elegida ? [{ ...seleccionarTarifaVenta(elegida.codigo, lista, basesDisponibles), cantidad: 1 }] : [];
+  };
   const niveles = (fila, { mostrarNivel = true } = {}) => (fila?.precios || []).map((precio, indice) => precio == null ? null : <option key={indice} value={indice}>
     {mostrarNivel ? `Nivel ${indice + 1} · ` : ""}{fila.modalidad === "PORCENTAJE" ? `${precio} %` : cop(precio)}{fila.condiciones[indice] ? ` · ${fila.condiciones[indice]}` : ""}
   </option>);
@@ -62,8 +71,7 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
       <select value={categoriaVehiculo} onChange={(e) => {
         setVehiculo(e.target.value);
         setBuscar("");
-        const disponibles = compatibles.filter((fila) => esVehiculo(fila) && fila.descripcion === e.target.value);
-        onChange(disponibles.length === 1 && !disponibles[0].requiereRevision ? [{ ...seleccionar(disponibles[0].codigo), cantidad: 1 }] : []);
+        onChange(seleccionarParaVehiculo(e.target.value));
       }} className={campo}>
         <option value="">{tipoVehiculo === "MOTO" ? "Selecciona una tarifa para moto…" : "Selecciona automóvil, SUV o camioneta…"}</option>{categorias.map((nombre) => <option key={nombre}>{nombre}</option>)}
       </select>
