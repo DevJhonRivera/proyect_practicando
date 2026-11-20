@@ -7,8 +7,8 @@ import ListaPreciosVenta from "../src/modules/preciosVenta/precioVenta.model.js"
 import ComboPpf from "../src/modules/combosPpf/comboPpf.model.js";
 import Rollo from "../src/modules/rollos/rollo.model.js";
 import Retazo from "../src/modules/retazos/retazo.model.js";
-import { materialesDeTarifa, tarifaCompatibleConMaterial, tarifasCompatiblesConContexto } from "../src/modules/preciosVenta/materialTarifa.utils.js";
-import { tarifaCompatibleConMaterial as compatibleVista } from "../../Front/src/utils/preciosVenta.js";
+import { materialesDeTarifa, tarifaCompatibleConMaterial, tarifaCompatibleConPartes, tarifasCompatiblesConContexto } from "../src/modules/preciosVenta/materialTarifa.utils.js";
+import { tarifaCompatibleConMaterial as compatibleVista, tarifaCompatibleConPartes as partesVista } from "../../Front/src/utils/preciosVenta.js";
 import { seleccionarTarifaVenta } from "../../Front/src/utils/preciosVenta.js";
 
 const fila = (codigo, precios, modalidad = "FIJO") => ({ codigo, precios, modalidad, activo: true, requiereRevision: false, revision: 0, grupo: codigo, descripcion: "SUV", materiales: codigo === "PPF" ? ["PPF"] : ["PELICULA:700"], condiciones: precios.map(() => "Transferencia") });
@@ -62,6 +62,24 @@ test("filtra Black Ceramic, I3 y película por material y micraje", () => {
   assert.equal(tarifaCompatibleConMaterial(pelicula, "PELICULA", "300 MICRAS"), false);
   const personalizada = { hoja: "OTRA", grupo: "Mi tarifa", materiales: ["BLACK CERAMIC"] };
   assert.equal(tarifaCompatibleConMaterial(personalizada, "BLACK CERAMIC"), true);
+});
+
+test("filtra las tarifas por pieza según las partes seleccionadas del vehículo", () => {
+  const tarifas = [
+    { modalidad: "FIJO", descripcion: "AUTOMOVIL" },
+    { modalidad: "PORCENTAJE", descripcion: "PANORAMICO" },
+    { modalidad: "PORCENTAJE", descripcion: "VENTANA DELANTERA UNIDAD" },
+    { modalidad: "PORCENTAJE", descripcion: "VENTANA TRASERA UNIDAD" },
+    { modalidad: "PORCENTAJE", descripcion: "PARABRISAS Y LUNETA" },
+    { modalidad: "PORCENTAJE", descripcion: "LA U" },
+  ];
+  const compatibles = (partes) => tarifas.filter((tarifa) => tarifaCompatibleConPartes(tarifa, partes)).map((tarifa) => tarifa.descripcion);
+  assert.deepEqual(compatibles(["PANORAMICO"]), ["AUTOMOVIL", "PANORAMICO"]);
+  assert.deepEqual(compatibles(["DELANTERAS"]), ["AUTOMOVIL", "VENTANA DELANTERA UNIDAD"]);
+  assert.deepEqual(compatibles(["PANORAMICO", "LUNETA"]), ["AUTOMOVIL", "PANORAMICO", "PARABRISAS Y LUNETA"]);
+  assert.deepEqual(compatibles(["U"]), ["AUTOMOVIL", "VENTANA DELANTERA UNIDAD", "VENTANA TRASERA UNIDAD", "LA U"]);
+  assert.deepEqual(compatibles(["COMPLETO"]), ["AUTOMOVIL"]);
+  for (const tarifa of tarifas) assert.equal(partesVista(tarifa, ["LUNETA"]), tarifaCompatibleConPartes(tarifa, ["LUNETA"]));
 });
 
 test("una edición de datos conserva el precio histórico y un nuevo servicio requiere tarifa", async () => {

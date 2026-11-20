@@ -4,7 +4,7 @@ import Accesorio from "../accesorios/accesorio.model.js";
 import ComboPpf from "../combosPpf/comboPpf.model.js";
 import Rollo from "../rollos/rollo.model.js";
 import Retazo from "../retazos/retazo.model.js";
-import { tarifaCompatibleConMaterial, tarifasCompatiblesConContexto } from "./materialTarifa.utils.js";
+import { tarifaCompatibleConMaterial, tarifaCompatibleConPartes, tarifasCompatiblesConContexto } from "./materialTarifa.utils.js";
 
 const campos = {
   polarizados: ["material", "porcentaje", "partes"],
@@ -151,6 +151,10 @@ export async function aplicarPreciosAsesoria(data, anterior) {
             const tarifa = lista.find((fila) => fila.codigo === codigo);
             return tarifa && !tarifaCompatibleConMaterial(tarifa, material, item.porcentaje);
           })) throw new Error("La tarifa no corresponde al material o micraje seleccionado.");
+          if (grupo === "polarizados" && codigos.some((codigo) => {
+            const tarifa = lista.find((fila) => fila.codigo === codigo);
+            return tarifa?.modalidad === "PORCENTAJE" && !tarifaCompatibleConPartes(tarifa, item.partes);
+          })) throw new Error("La tarifa por pieza no corresponde a la parte del vehículo seleccionada.");
           const tipoMoto = data.vehiculo?.tipo === "MOTO";
           const tarifasVehiculo = codigos.map((codigo) => lista.find((fila) => fila.codigo === codigo)).filter(tarifaEsVehiculo);
           if (tarifasVehiculo.some((tarifa) => tarifaEsMoto(tarifa) !== tipoMoto)) {

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { calcularTarifasVenta, normalizarMaterial, seleccionarTarifaVenta, tarifaCompatibleConMaterial, tarifasCompatiblesConContexto } from "../../utils/preciosVenta";
+import { calcularTarifasVenta, normalizarMaterial, seleccionarTarifaVenta, tarifaCompatibleConMaterial, tarifaCompatibleConPartes, tarifasCompatiblesConContexto } from "../../utils/preciosVenta";
 
 const campo = "w-full rounded-lg border border-slate-300 bg-white p-2 text-sm";
 const cop = (valor) => "$ " + Number(valor || 0).toLocaleString("es-CO");
 
-export default function PrecioServicio({ lista, selecciones = [], valor, onChange, familia, material, clasificacion, categoria = "", detalle = "", tipoVehiculo = "CARRO", cargando, registrado = false }) {
+export default function PrecioServicio({ lista, selecciones = [], valor, onChange, familia, material, clasificacion, partes = [], categoria = "", detalle = "", tipoVehiculo = "CARRO", cargando, registrado = false }) {
   const [buscar, setBuscar] = useState("");
   const [vehiculo, setVehiculo] = useState("");
   const porMaterial = ["POLARIZADO", "PPF"].includes(familia);
@@ -24,7 +24,8 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
   const categorias = [...new Set(compatibles.filter((fila) => esVehiculo(fila) && correspondeTipo(fila)).map((fila) => fila.descripcion))];
   const guardada = lista.find((fila) => fila.codigo === (selecciones[0]?.baseCodigo || selecciones[0]?.codigo));
   const categoriaVehiculo = vehiculo || (guardada && esVehiculo(guardada) ? guardada.descripcion : "");
-  const opciones = compatibles.filter((fila) => !porMaterial || !esVehiculo(fila) || (correspondeTipo(fila) && fila.descripcion === categoriaVehiculo));
+  const opciones = compatibles.filter((fila) => (!porMaterial || !esVehiculo(fila) || (correspondeTipo(fila) && fila.descripcion === categoriaVehiculo))
+    && (familia !== "POLARIZADO" || tarifaCompatibleConPartes(fila, partes)));
   const faltaCategoria = porMaterial && categorias.length > 0 && !categoriaVehiculo;
   const bases = opciones.filter((fila) => fila.modalidad === "FIJO" && esVehiculo(fila));
   const basesVigentes = bases.filter((fila) => !fila.requiereRevision);
@@ -56,6 +57,7 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
     {registrado && !selecciones.length && <p className="text-xs text-slate-600">Valor registrado en esta orden. Selecciona una tarifa si necesitas cambiarlo.</p>}
     {porMaterial && !contexto && <p className="text-xs text-slate-600">Selecciona primero el material a instalar.</p>}
     {porMaterial && contexto && <p className="text-xs font-semibold text-blue-800">Tarifas de {material}{clasificacion ? ` · ${clasificacion}` : ""}</p>}
+    {familia === "POLARIZADO" && partes.length > 0 && <p className="text-xs font-semibold text-emerald-800">Aplicación seleccionada: {partes.join(", ")}</p>}
     {porMaterial && categorias.length > 0 && <label className="block text-xs font-semibold">Tipo de vehículo
       <select value={categoriaVehiculo} onChange={(e) => {
         setVehiculo(e.target.value);

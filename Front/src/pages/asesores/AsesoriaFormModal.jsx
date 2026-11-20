@@ -982,7 +982,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
                 </div>
               </div>
               {!form.garantia.esGarantia && <div className="md:col-span-3">
-                <PrecioServicio lista={preciosVenta} selecciones={item.tarifasVenta} valor={item.valor} familia="POLARIZADO" material={item.material} clasificacion={item.porcentaje} key={item.materialClave} cargando={cargandoPrecios} registrado={Boolean(asesoria)} onChange={(tarifas) => asignarTarifas("polarizados", index, tarifas)} />
+                <PrecioServicio lista={preciosVenta} selecciones={item.tarifasVenta} valor={item.valor} familia="POLARIZADO" material={item.material} clasificacion={item.porcentaje} partes={item.partes} key={`${item.materialClave}-${item.partes.join("|")}`} cargando={cargandoPrecios} registrado={Boolean(asesoria)} onChange={(tarifas) => asignarTarifas("polarizados", index, tarifas)} />
               </div>}
             </ServiceRow>
           ))}

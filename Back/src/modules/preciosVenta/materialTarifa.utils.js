@@ -36,6 +36,30 @@ export function tarifaCompatibleConMaterial(fila, material, clasificacion = "") 
     || (Boolean(nombre) && !nombre.startsWith("CLEAR PLEX") && nombre !== "PPF" && materiales.includes("POLARIZADO"));
 }
 
+export function tarifaCompatibleConPartes(fila, partes = []) {
+  if (fila.modalidad !== "PORCENTAJE") return true;
+  const seleccionadas = new Set((partes || []).map(normalizarMaterial));
+  if (!seleccionadas.size) return true;
+  if (seleccionadas.has("COMPLETO")) return false;
+
+  const descripcion = normalizarMaterial(fila.descripcion);
+  const tiene = (...valores) => valores.some((valor) => descripcion.includes(valor));
+  const incluye = (parte) => seleccionadas.has(parte) || seleccionadas.has("U") && ["DELANTERAS", "TRASERAS", "LUNETA", "FIJOS", "CUSTODIAS"].includes(parte);
+
+  if (tiene("LA U")) return seleccionadas.has("U");
+  if (tiene("PARABRISAS Y 2 VENTANAS DEL", "PARABRISAS Y DOS VENTANAS DEL")) return incluye("PANORAMICO") && incluye("DELANTERAS");
+  if (tiene("PARABRISAS Y LUNETA")) return incluye("PANORAMICO") && incluye("LUNETA");
+  if (tiene("LATERALES")) return seleccionadas.has("U") || incluye("DELANTERAS") && incluye("TRASERAS");
+  if (tiene("VENTANA DELANTERA")) return incluye("DELANTERAS");
+  if (tiene("VENTANA TRASERA")) return incluye("TRASERAS");
+  if (tiene("CUSTODIA")) return incluye("CUSTODIAS");
+  if (tiene("PANORAMICO", "PARABRISAS")) return incluye("PANORAMICO");
+  if (tiene("LUNETA")) return incluye("LUNETA");
+  if (tiene("SUNROOF", "SUN ROOF", "TECHO PANORAMICO")) return incluye("SUNROOF");
+  if (tiene("FIJO")) return incluye("FIJOS");
+  return false;
+}
+
 const palabrasGenericas = new Set([
   "SERVICIO", "SERVICIOS", "GENERAL", "GENERALES", "INSTALACION", "INSTALACIONES",
   "APLICACION", "COMPLETO", "COMPLETA", "VEHICULO", "AUTOMOVIL", "CAMIONETA",
