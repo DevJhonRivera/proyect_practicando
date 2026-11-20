@@ -60,13 +60,14 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
 
   return <div className="space-y-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="text-xs font-bold uppercase text-slate-600">Tarifa de Administración</p>
+      <p className="text-xs font-bold uppercase text-slate-600">Valor calculado</p>
       <p className="text-lg font-bold text-blue-800">{calculo ? cop(calculo.total) : !selecciones.length && Number(valor) > 0 ? cop(valor) : "Por calcular"}</p>
     </div>
     {registrado && !selecciones.length && <p className="text-xs text-slate-600">Valor registrado en esta orden. Selecciona una tarifa si necesitas cambiarlo.</p>}
     {porMaterial && !contexto && <p className="text-xs text-slate-600">Selecciona primero el material a instalar.</p>}
-    {porMaterial && contexto && <p className="text-xs font-semibold text-blue-800">Tarifas de {material}{clasificacion ? ` · ${clasificacion}` : ""}</p>}
-    {familia === "POLARIZADO" && partes.length > 0 && <p className="text-xs font-semibold text-emerald-800">Aplicación seleccionada: {partes.join(", ")}</p>}
+    {porMaterial && contexto && <p className="text-xs font-semibold text-blue-800">
+      {material}{clasificacion ? ` · ${clasificacion}` : ""}{familia === "POLARIZADO" && partes.length > 0 ? ` · ${partes.join(", ")}` : ""}
+    </p>}
     {porMaterial && categorias.length > 0 && <label className="block text-xs font-semibold">Tipo de vehículo
       <select value={categoriaVehiculo} onChange={(e) => {
         setVehiculo(e.target.value);
@@ -80,7 +81,7 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
     {porMaterial && contexto && tipoVehiculo === "MOTO" && !categorias.length && !cargando && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">Administración debe crear una tarifa PPF cuya descripción incluya MOTO. No se usará el precio de un carro para esta cotización.</p>}
     {!porMaterial && !compatibles.length && !cargando && <p role="alert" className="text-xs text-amber-800">No hay tarifas vigentes para esta categoría. Administración debe crear o clasificar el precio correspondiente.</p>}
     {(completasPendientes || (categoriaVehiculo && bases.length > 0 && !basesVigentes.length)) && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Los precios completos de {material} están pendientes de revisión en Administración. Es necesario definirlos para cotizar el vehículo o calcular sus piezas.</p>}
-    <input aria-label="Buscar tarifa de venta" placeholder="Buscar vehículo, material o aplicación…" value={buscar} onChange={(e) => setBuscar(e.target.value)} className={campo} />
+    {opciones.length > 6 && <input aria-label="Buscar tarifa de venta" placeholder="Buscar vehículo, material o aplicación…" value={buscar} onChange={(e) => setBuscar(e.target.value)} className={campo} />}
     {selecciones.map((seleccion, indice) => {
       const fila = lista.find((item) => item.codigo === seleccion.codigo);
       const base = lista.find((item) => item.codigo === seleccion.baseCodigo);
@@ -91,18 +92,23 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
           </select>
         </label>
         {fila && <>
-          <label className="block text-xs font-semibold">{fila.modalidad === "PORCENTAJE" ? "Porcentaje y condición de la pieza" : "Nivel y condición comercial"}<select value={seleccion.nivel} onChange={(e) => cambiar(indice, { nivel: Number(e.target.value) })} className={campo}>{niveles(fila, { mostrarNivel: fila.modalidad !== "PORCENTAJE" })}</select></label>
+          <label className="block text-xs font-semibold">{fila.modalidad === "PORCENTAJE" ? "Condición y porcentaje" : "Nivel y condición comercial"}<select value={seleccion.nivel} onChange={(e) => cambiar(indice, { nivel: Number(e.target.value) })} className={campo}>{niveles(fila, { mostrarNivel: fila.modalidad !== "PORCENTAJE" })}</select></label>
           {fila.notas && <p className="whitespace-pre-wrap text-xs text-amber-800">{fila.notas}</p>}
           {fila.modalidad === "PORCENTAJE" && <>
             {!basesVigentes.length && <p className="text-xs text-amber-800">Falta un precio completo vigente para el vehículo seleccionado. Administración debe revisar la tarifa base.</p>}
-            <label className="block text-xs font-semibold">Precio completo que sirve como base
-              <select value={seleccion.baseCodigo || ""} onChange={(e) => {
-                const elegida = seleccionar(e.target.value);
-                cambiar(indice, { baseCodigo: elegida.codigo, baseNivel: elegida.nivel, baseRevision: elegida.revision });
-              }} className={campo}><option value="">Selecciona el precio completo…</option>{opcionesTarifa(bases, seleccion.baseCodigo)}</select>
-            </label>
-            {base && <label className="block text-xs font-semibold">Precio completo y condición de referencia<select value={seleccion.baseNivel} onChange={(e) => cambiar(indice, { baseNivel: Number(e.target.value) })} className={campo}>{niveles(base, { mostrarNivel: false })}</select></label>}
-            {base && calculo && <div className="rounded-lg bg-blue-50 p-2.5 text-xs text-blue-900"><p className="font-bold">Cálculo de esta pieza</p><p className="mt-1">Precio completo {cop(base.precios[seleccion.baseNivel])} × {fila.precios[seleccion.nivel]} % × {seleccion.cantidad ?? 1} pieza(s) = <strong>{cop(Math.round(base.precios[seleccion.baseNivel] * fila.precios[seleccion.nivel] / 100) * (seleccion.cantidad ?? 1))}</strong></p></div>}
+            <details className="rounded-lg border border-slate-200 bg-slate-50 p-2.5" open={!seleccion.baseCodigo}>
+              <summary className="cursor-pointer text-xs font-bold text-slate-600">Ver detalle del cálculo</summary>
+              <div className="mt-3 space-y-2">
+                <label className="block text-xs font-semibold">Precio completo usado como base
+                  <select value={seleccion.baseCodigo || ""} onChange={(e) => {
+                    const elegida = seleccionar(e.target.value);
+                    cambiar(indice, { baseCodigo: elegida.codigo, baseNivel: elegida.nivel, baseRevision: elegida.revision });
+                  }} className={campo}><option value="">Selecciona el precio completo…</option>{opcionesTarifa(bases, seleccion.baseCodigo)}</select>
+                </label>
+                {base && <label className="block text-xs font-semibold">Condición del precio base<select value={seleccion.baseNivel} onChange={(e) => cambiar(indice, { baseNivel: Number(e.target.value) })} className={campo}>{niveles(base, { mostrarNivel: false })}</select></label>}
+                {base && calculo && <p className="rounded-lg bg-blue-50 p-2.5 text-xs text-blue-900">{cop(base.precios[seleccion.baseNivel])} × {fila.precios[seleccion.nivel]} % × {seleccion.cantidad ?? 1} = <strong>{cop(Math.round(base.precios[seleccion.baseNivel] * fila.precios[seleccion.nivel] / 100) * (seleccion.cantidad ?? 1))}</strong></p>}
+              </div>
+            </details>
           </>}
         </>}
         <div className="flex items-end justify-between gap-3">
