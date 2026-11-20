@@ -40,13 +40,44 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
   }
   const cambiar = (indice, cambios) => onChange(selecciones.map((fila, posicion) => posicion === indice ? { ...fila, ...cambios } : fila));
   const seleccionar = (codigo) => seleccionarTarifaVenta(codigo, lista, basesVigentes);
+  const aplicacionEspecifica = (aplicaciones) => {
+    if (familia !== "POLARIZADO" || !partes.length) return aplicaciones.length === 1 ? aplicaciones[0] : null;
+    const seleccionadas = new Set(partes.map(normalizarMaterial));
+    const buscarDescripcion = (validar) => {
+      const coincidencias = aplicaciones.filter((fila) => validar(normalizarMaterial(fila.descripcion)));
+      return coincidencias.length === 1 ? coincidencias[0] : null;
+    };
+
+    if (seleccionadas.has("U")) return buscarDescripcion((texto) => /\bLA U\b/.test(texto));
+    if (seleccionadas.has("PANORAMICO") && seleccionadas.has("DELANTERAS")) {
+      const combinada = buscarDescripcion((texto) => texto.includes("PARABRISAS Y 2 VENTANAS DEL") || texto.includes("PARABRISAS Y DOS VENTANAS DEL"));
+      if (combinada) return combinada;
+    }
+    if (seleccionadas.has("PANORAMICO") && seleccionadas.has("LUNETA")) {
+      const combinada = buscarDescripcion((texto) => texto.includes("PARABRISAS Y LUNETA"));
+      if (combinada) return combinada;
+    }
+    if (seleccionadas.size !== 1) return aplicaciones.length === 1 ? aplicaciones[0] : null;
+
+    const [parte] = seleccionadas;
+    const reglas = {
+      PANORAMICO: (texto) => (texto.includes("PANORAMICO") || texto.includes("PARABRISAS")) && !texto.includes(" Y "),
+      DELANTERAS: (texto) => texto.includes("VENTANA DELANTERA") && !texto.includes("PARABRISAS"),
+      TRASERAS: (texto) => texto.includes("VENTANA TRASERA"),
+      LUNETA: (texto) => texto.includes("LUNETA") && !texto.includes(" Y "),
+      FIJOS: (texto) => texto.includes("FIJO"),
+      CUSTODIAS: (texto) => texto.includes("CUSTODIA"),
+      SUNROOF: (texto) => texto.includes("SUNROOF") || texto.includes("SUN ROOF") || texto.includes("TECHO PANORAMICO"),
+    };
+    return reglas[parte] ? buscarDescripcion(reglas[parte]) : aplicaciones.length === 1 ? aplicaciones[0] : null;
+  };
   const seleccionarParaVehiculo = (descripcion) => {
     const basesDisponibles = compatibles.filter((fila) => esVehiculo(fila)
       && correspondeTipo(fila) && fila.descripcion === descripcion && !fila.requiereRevision);
     const aplicaciones = compatibles.filter((fila) => fila.modalidad === "PORCENTAJE"
       && !fila.requiereRevision
       && (familia !== "POLARIZADO" || tarifaCompatibleConPartes(fila, partes)));
-    const elegida = aplicaciones.length === 1 ? aplicaciones[0] : basesDisponibles.length === 1 ? basesDisponibles[0] : null;
+    const elegida = aplicacionEspecifica(aplicaciones) || (basesDisponibles.length === 1 ? basesDisponibles[0] : null);
     return elegida ? [{ ...seleccionarTarifaVenta(elegida.codigo, lista, basesDisponibles), cantidad: 1 }] : [];
   };
   const niveles = (fila, { mostrarNivel = true } = {}) => (fila?.precios || []).map((precio, indice) => precio == null ? null : <option key={indice} value={indice}>
