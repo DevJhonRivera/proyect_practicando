@@ -8,7 +8,7 @@ import ComboPpf from "../src/modules/combosPpf/comboPpf.model.js";
 import Rollo from "../src/modules/rollos/rollo.model.js";
 import Retazo from "../src/modules/retazos/retazo.model.js";
 import { materialesDeTarifa, tarifaCompatibleConMaterial, tarifaCompatibleConPartes, tarifasCompatiblesConContexto } from "../src/modules/preciosVenta/materialTarifa.utils.js";
-import { tarifaCompatibleConMaterial as compatibleVista, tarifaCompatibleConPartes as partesVista } from "../../Front/src/utils/preciosVenta.js";
+import { tarifaCompatibleConMaterial as compatibleVista, tarifaCompatibleConPartes as partesVista, tarifaPredeterminadaPolarizado, tarifasAplicacionPolarizado } from "../../Front/src/utils/preciosVenta.js";
 import { seleccionarTarifaVenta } from "../../Front/src/utils/preciosVenta.js";
 
 const fila = (codigo, precios, modalidad = "FIJO") => ({ codigo, precios, modalidad, activo: true, requiereRevision: false, revision: 0, grupo: codigo, descripcion: "SUV", materiales: codigo === "PPF" ? ["PPF"] : ["PELICULA:700"], condiciones: precios.map(() => "Transferencia") });
@@ -80,6 +80,40 @@ test("filtra las tarifas por pieza según las partes seleccionadas del vehículo
   assert.deepEqual(compatibles(["U"]), ["AUTOMOVIL", "VENTANA DELANTERA UNIDAD", "VENTANA TRASERA UNIDAD", "LA U"]);
   assert.deepEqual(compatibles(["COMPLETO"]), ["AUTOMOVIL"]);
   for (const tarifa of tarifas) assert.equal(partesVista(tarifa, ["LUNETA"]), tarifaCompatibleConPartes(tarifa, ["LUNETA"]));
+});
+
+test("elige la tarifa específica de cada parte y evita usar el precio completo como pieza", () => {
+  const tarifas = [
+    { codigo: "panoramico", modalidad: "PORCENTAJE", descripcion: "PANORAMICO" },
+    { codigo: "luneta", modalidad: "PORCENTAJE", descripcion: "LUNETA" },
+    { codigo: "delanteras", modalidad: "PORCENTAJE", descripcion: "VENTANA DELANTERA UNIDAD" },
+    { codigo: "traseras", modalidad: "PORCENTAJE", descripcion: "VENTANA TRASERA UNIDAD" },
+    { codigo: "custodia-grande", modalidad: "PORCENTAJE", descripcion: "CUSTODIA GRANDE" },
+    { codigo: "custodia-pequena", modalidad: "PORCENTAJE", descripcion: "CUSTODIA PEQUEÑA" },
+    { codigo: "fijo", modalidad: "PORCENTAJE", descripcion: "FIJO UNIDAD" },
+    { codigo: "laterales", modalidad: "PORCENTAJE", descripcion: "LATERALES CON/SIN CUSTODIA" },
+    { codigo: "u", modalidad: "PORCENTAJE", descripcion: "LA U" },
+    { codigo: "pano-del", modalidad: "PORCENTAJE", descripcion: "PARABRISAS Y 2 VENTANAS DEL" },
+    { codigo: "pano-luneta", modalidad: "PORCENTAJE", descripcion: "PARABRISAS Y LUNETA" },
+    { codigo: "sun-sencillo", modalidad: "FIJO", grupo: "POLARIZADO SUNROOF", descripcion: "SENCILLO" },
+    { codigo: "sun-doble", modalidad: "FIJO", grupo: "POLARIZADO SUNROOF", descripcion: "DOBLE" },
+  ];
+  const elegir = (partes) => tarifaPredeterminadaPolarizado(tarifasAplicacionPolarizado(tarifas, partes), partes)?.codigo;
+
+  assert.equal(elegir(["PANORAMICO"]), "panoramico");
+  assert.equal(elegir(["LUNETA"]), "luneta");
+  assert.equal(elegir(["DELANTERAS"]), "delanteras");
+  assert.equal(elegir(["TRASERAS"]), "traseras");
+  assert.equal(elegir(["FIJOS"]), "fijo");
+  assert.equal(elegir(["U"]), "u");
+  assert.deepEqual(tarifasAplicacionPolarizado(tarifas, ["U"]).map((item) => item.codigo), ["u"]);
+  assert.equal(elegir(["PANORAMICO", "DELANTERAS"]), "pano-del");
+  assert.deepEqual(tarifasAplicacionPolarizado(tarifas, ["PANORAMICO", "DELANTERAS"]).map((item) => item.codigo), ["pano-del"]);
+  assert.equal(elegir(["PANORAMICO", "LUNETA"]), "pano-luneta");
+  assert.equal(elegir(["CUSTODIAS"]), undefined, "debe pedir elegir entre custodia grande y pequeña");
+  assert.equal(elegir(["SUNROOF"]), undefined, "debe pedir elegir el tamaño del sunroof");
+  assert.deepEqual(tarifasAplicacionPolarizado(tarifas, ["COMPLETO"]), []);
+  assert.deepEqual(tarifasAplicacionPolarizado([], ["FIJOS"]), []);
 });
 
 test("una edición de datos conserva el precio histórico y un nuevo servicio requiere tarifa", async () => {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { calcularTarifasVenta, normalizarMaterial, seleccionarTarifaVenta, tarifaCompatibleConMaterial, tarifaCompatibleConPartes, tarifasCompatiblesConContexto } from "../../utils/preciosVenta";
+import { calcularTarifasVenta, normalizarMaterial, seleccionarTarifaVenta, tarifaCompatibleConMaterial, tarifaPredeterminadaPolarizado, tarifasAplicacionPolarizado, tarifasCompatiblesConContexto } from "../../utils/preciosVenta";
 
 const campo = "w-full rounded-lg border border-slate-300 bg-white p-2 text-sm";
 const cop = (valor) => "$ " + Number(valor || 0).toLocaleString("es-CO");
@@ -24,8 +24,16 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
   const categorias = [...new Set(compatibles.filter((fila) => esVehiculo(fila) && correspondeTipo(fila)).map((fila) => fila.descripcion))];
   const guardada = lista.find((fila) => fila.codigo === (selecciones[0]?.baseCodigo || selecciones[0]?.codigo));
   const categoriaVehiculo = vehiculo || (guardada && esVehiculo(guardada) ? guardada.descripcion : "");
+  const aplicacionesPolarizado = familia === "POLARIZADO"
+    ? tarifasAplicacionPolarizado(compatibles.filter((fila) => !esVehiculo(fila)), partes)
+    : [];
+  const codigosAplicacion = new Set(aplicacionesPolarizado.map((fila) => fila.codigo));
   const opciones = compatibles.filter((fila) => (!porMaterial || !esVehiculo(fila) || (correspondeTipo(fila) && fila.descripcion === categoriaVehiculo))
-    && (familia !== "POLARIZADO" || tarifaCompatibleConPartes(fila, partes)));
+    && (familia !== "POLARIZADO" || esVehiculo(fila) || codigosAplicacion.has(fila.codigo)));
+  const esPolarizadoCompleto = familia === "POLARIZADO" && partes.map(normalizarMaterial).includes("COMPLETO");
+  const tarifasSeleccionables = familia === "POLARIZADO" && partes.length > 0 && !esPolarizadoCompleto
+    ? opciones.filter((fila) => !esVehiculo(fila))
+    : opciones;
   const faltaCategoria = porMaterial && categorias.length > 0 && !categoriaVehiculo;
   const bases = opciones.filter((fila) => fila.modalidad === "FIJO" && esVehiculo(fila));
   const basesVigentes = bases.filter((fila) => !fila.requiereRevision);
@@ -40,44 +48,14 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
   }
   const cambiar = (indice, cambios) => onChange(selecciones.map((fila, posicion) => posicion === indice ? { ...fila, ...cambios } : fila));
   const seleccionar = (codigo) => seleccionarTarifaVenta(codigo, lista, basesVigentes);
-  const aplicacionEspecifica = (aplicaciones) => {
-    if (familia !== "POLARIZADO" || !partes.length) return aplicaciones.length === 1 ? aplicaciones[0] : null;
-    const seleccionadas = new Set(partes.map(normalizarMaterial));
-    const buscarDescripcion = (validar) => {
-      const coincidencias = aplicaciones.filter((fila) => validar(normalizarMaterial(fila.descripcion)));
-      return coincidencias.length === 1 ? coincidencias[0] : null;
-    };
-
-    if (seleccionadas.has("U")) return buscarDescripcion((texto) => /\bLA U\b/.test(texto));
-    if (seleccionadas.has("PANORAMICO") && seleccionadas.has("DELANTERAS")) {
-      const combinada = buscarDescripcion((texto) => texto.includes("PARABRISAS Y 2 VENTANAS DEL") || texto.includes("PARABRISAS Y DOS VENTANAS DEL"));
-      if (combinada) return combinada;
-    }
-    if (seleccionadas.has("PANORAMICO") && seleccionadas.has("LUNETA")) {
-      const combinada = buscarDescripcion((texto) => texto.includes("PARABRISAS Y LUNETA"));
-      if (combinada) return combinada;
-    }
-    if (seleccionadas.size !== 1) return aplicaciones.length === 1 ? aplicaciones[0] : null;
-
-    const [parte] = seleccionadas;
-    const reglas = {
-      PANORAMICO: (texto) => (texto.includes("PANORAMICO") || texto.includes("PARABRISAS")) && !texto.includes(" Y "),
-      DELANTERAS: (texto) => texto.includes("VENTANA DELANTERA") && !texto.includes("PARABRISAS"),
-      TRASERAS: (texto) => texto.includes("VENTANA TRASERA"),
-      LUNETA: (texto) => texto.includes("LUNETA") && !texto.includes(" Y "),
-      FIJOS: (texto) => texto.includes("FIJO"),
-      CUSTODIAS: (texto) => texto.includes("CUSTODIA"),
-      SUNROOF: (texto) => texto.includes("SUNROOF") || texto.includes("SUN ROOF") || texto.includes("TECHO PANORAMICO"),
-    };
-    return reglas[parte] ? buscarDescripcion(reglas[parte]) : aplicaciones.length === 1 ? aplicaciones[0] : null;
-  };
   const seleccionarParaVehiculo = (descripcion) => {
     const basesDisponibles = compatibles.filter((fila) => esVehiculo(fila)
       && correspondeTipo(fila) && fila.descripcion === descripcion && !fila.requiereRevision);
-    const aplicaciones = compatibles.filter((fila) => fila.modalidad === "PORCENTAJE"
-      && !fila.requiereRevision
-      && (familia !== "POLARIZADO" || tarifaCompatibleConPartes(fila, partes)));
-    const elegida = aplicacionEspecifica(aplicaciones) || (basesDisponibles.length === 1 ? basesDisponibles[0] : null);
+    const candidatas = compatibles.filter((fila) => !esVehiculo(fila) && !fila.requiereRevision);
+    const aplicaciones = familia === "POLARIZADO" ? tarifasAplicacionPolarizado(candidatas, partes) : candidatas;
+    const especifica = familia === "POLARIZADO" ? tarifaPredeterminadaPolarizado(aplicaciones, partes) : aplicaciones.length === 1 ? aplicaciones[0] : null;
+    const esServicioCompleto = familia !== "POLARIZADO" || partes.map(normalizarMaterial).includes("COMPLETO");
+    const elegida = especifica || (esServicioCompleto && basesDisponibles.length === 1 ? basesDisponibles[0] : null);
     return elegida ? [{ ...seleccionarTarifaVenta(elegida.codigo, lista, basesDisponibles), cantidad: 1 }] : [];
   };
   const niveles = (fila, { mostrarNivel = true } = {}) => (fila?.precios || []).map((precio, indice) => precio == null ? null : <option key={indice} value={indice}>
@@ -112,14 +90,15 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
     {porMaterial && contexto && tipoVehiculo === "MOTO" && !categorias.length && !cargando && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">Administración debe crear una tarifa PPF cuya descripción incluya MOTO. No se usará el precio de un carro para esta cotización.</p>}
     {!porMaterial && !compatibles.length && !cargando && <p role="alert" className="text-xs text-amber-800">No hay tarifas vigentes para esta categoría. Administración debe crear o clasificar el precio correspondiente.</p>}
     {(completasPendientes || (categoriaVehiculo && bases.length > 0 && !basesVigentes.length)) && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Los precios completos de {material} están pendientes de revisión en Administración. Es necesario definirlos para cotizar el vehículo o calcular sus piezas.</p>}
-    {opciones.length > 6 && <input aria-label="Buscar tarifa de venta" placeholder="Buscar vehículo, material o aplicación…" value={buscar} onChange={(e) => setBuscar(e.target.value)} className={campo} />}
+    {familia === "POLARIZADO" && partes.length > 0 && categoriaVehiculo && !esPolarizadoCompleto && !tarifasSeleccionables.length && !cargando && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-xs font-semibold text-amber-900">No existe una tarifa específica vigente para esta parte y material. Administración debe crearla o activarla antes de cotizar.</p>}
+    {tarifasSeleccionables.length > 6 && <input aria-label="Buscar tarifa de venta" placeholder="Buscar vehículo, material o aplicación…" value={buscar} onChange={(e) => setBuscar(e.target.value)} className={campo} />}
     {selecciones.map((seleccion, indice) => {
       const fila = lista.find((item) => item.codigo === seleccion.codigo);
       const base = lista.find((item) => item.codigo === seleccion.baseCodigo);
       return <div key={indice} className="space-y-2 rounded-lg border border-blue-100 bg-white p-3">
         <label className="block text-xs font-semibold">Tarifa para el vehículo y la aplicación
           <select value={seleccion.codigo} disabled={cargando || faltaCategoria} onChange={(e) => cambiar(indice, seleccionar(e.target.value))} className={campo}>
-            <option value="">Selecciona una tarifa…</option>{opcionesTarifa(opciones, seleccion.codigo)}
+            <option value="">Selecciona una tarifa…</option>{opcionesTarifa(tarifasSeleccionables, seleccion.codigo)}
           </select>
         </label>
         {fila && <>
@@ -149,7 +128,7 @@ export default function PrecioServicio({ lista, selecciones = [], valor, onChang
       </div>;
     })}
     {error && <p role="alert" className="text-xs text-amber-800">{error}</p>}
-    <button type="button" disabled={cargando || !opciones.length || faltaCategoria || selecciones.length >= 50} onClick={() => onChange([...selecciones, { codigo: "", nivel: 0, cantidad: 1 }])} className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-blue-800 ring-1 ring-blue-200 disabled:opacity-50">
+    <button type="button" disabled={cargando || !tarifasSeleccionables.length || faltaCategoria || selecciones.length >= 50} onClick={() => onChange([...selecciones, { codigo: "", nivel: 0, cantidad: 1 }])} className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-blue-800 ring-1 ring-blue-200 disabled:opacity-50">
       {cargando ? "Cargando tarifas…" : selecciones.length ? "+ Agregar otra pieza o tarifa" : "Seleccionar tarifa de venta"}
     </button>
   </div>;

@@ -36,6 +36,62 @@ export function tarifaCompatibleConPartes(fila, partes = []) {
   return false;
 }
 
+const textoTarifa = (fila) => normalizarMaterial(`${fila.grupo || ""} ${fila.descripcion || ""}`);
+
+export function tarifasAplicacionPolarizado(tarifas = [], partes = []) {
+  const seleccionadas = new Set((partes || []).map(normalizarMaterial));
+  if (!seleccionadas.size) return tarifas;
+  if (seleccionadas.has("COMPLETO")) return [];
+
+  const compatibles = tarifas.filter((fila) => {
+    if (fila.modalidad === "PORCENTAJE") return tarifaCompatibleConPartes(fila, partes);
+    const texto = textoTarifa(fila);
+    if (seleccionadas.has("SUNROOF")) return texto.includes("SUNROOF") || texto.includes("SUN ROOF");
+    if (seleccionadas.has("PANORAMICO") && seleccionadas.has("LUNETA")) return texto.includes("PARABRISAS Y LUNETA") || texto.includes("PANORAMICO + LUNETA");
+    if (seleccionadas.has("PANORAMICO") && seleccionadas.has("DELANTERAS")) return texto.includes("PARABRISAS Y 2 VENTANAS DEL") || texto.includes("PARABRISAS Y DOS VENTANAS DEL");
+    if (seleccionadas.size !== 1) return false;
+    const [parte] = seleccionadas;
+    if (parte === "PANORAMICO") return (texto.includes("PANORAMICO") || texto.includes("PARABRISAS")) && !texto.includes(" LUNETA") && !texto.includes("VENTANAS DEL");
+    if (parte === "LUNETA") return texto.includes("LUNETA") && !texto.includes("PARABRISAS") && !texto.includes("PANORAMICO +");
+    return false;
+  });
+
+  const combinada = tarifaPredeterminadaPolarizado(compatibles, partes);
+  const requiereCombinada = seleccionadas.has("U") || seleccionadas.size > 1;
+  return requiereCombinada && combinada ? compatibles.filter((fila) => fila.codigo === combinada.codigo) : compatibles;
+}
+
+export function tarifaPredeterminadaPolarizado(tarifas = [], partes = []) {
+  const seleccionadas = new Set((partes || []).map(normalizarMaterial));
+  const buscarUnica = (validar) => {
+    const coincidencias = tarifas.filter((fila) => validar(textoTarifa(fila)));
+    return coincidencias.length === 1 ? coincidencias[0] : null;
+  };
+
+  if (seleccionadas.has("U")) return buscarUnica((texto) => /\bLA U\b/.test(texto));
+  if (seleccionadas.has("PANORAMICO") && seleccionadas.has("DELANTERAS")) {
+    const combinada = buscarUnica((texto) => texto.includes("PARABRISAS Y 2 VENTANAS DEL") || texto.includes("PARABRISAS Y DOS VENTANAS DEL"));
+    if (combinada) return combinada;
+  }
+  if (seleccionadas.has("PANORAMICO") && seleccionadas.has("LUNETA")) {
+    const combinada = buscarUnica((texto) => texto.includes("PARABRISAS Y LUNETA") || texto.includes("PANORAMICO + LUNETA"));
+    if (combinada) return combinada;
+  }
+  if (seleccionadas.size !== 1) return tarifas.length === 1 ? tarifas[0] : null;
+
+  const [parte] = seleccionadas;
+  const reglas = {
+    PANORAMICO: (texto) => (texto.includes("PANORAMICO") || texto.includes("PARABRISAS")) && !texto.includes(" Y ") && !texto.includes(" + "),
+    DELANTERAS: (texto) => texto.includes("VENTANA DELANTERA") && !texto.includes("PARABRISAS"),
+    TRASERAS: (texto) => texto.includes("VENTANA TRASERA"),
+    LUNETA: (texto) => texto.includes("LUNETA") && !texto.includes(" Y ") && !texto.includes(" + "),
+    FIJOS: (texto) => /\bFIJOS?\b/.test(texto),
+    CUSTODIAS: (texto) => texto.includes("CUSTODIA"),
+    SUNROOF: (texto) => texto.includes("SUNROOF") || texto.includes("SUN ROOF") || texto.includes("TECHO PANORAMICO"),
+  };
+  return reglas[parte] ? buscarUnica(reglas[parte]) : tarifas.length === 1 ? tarifas[0] : null;
+}
+
 const palabrasGenericas = new Set([
   "SERVICIO", "SERVICIOS", "GENERAL", "GENERALES", "INSTALACION", "INSTALACIONES",
   "APLICACION", "COMPLETO", "COMPLETA", "VEHICULO", "AUTOMOVIL", "CAMIONETA",
