@@ -177,8 +177,8 @@ const prepararFormulario = (asesoria) => {
 };
 
 function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
-  const nuevoPolarizadoRef = useRef(null);
-  const enfocarNuevoPolarizadoRef = useRef(false);
+  const nuevasFilasRef = useRef({});
+  const grupoPorEnfocarRef = useRef("");
   const [form, setForm] = useState(() => prepararFormulario(asesoria));
   const [buscando, setBuscando] = useState(false);
   const [clientesSugeridos, setClientesSugeridos] = useState([]);
@@ -199,18 +199,19 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   const [errorPrecios, setErrorPrecios] = useState("");
   const [combosPpf, setCombosPpf] = useState([]);
   useEffect(() => {
-    if (!enfocarNuevoPolarizadoRef.current) return undefined;
+    const grupo = grupoPorEnfocarRef.current;
+    if (!grupo) return undefined;
 
-    enfocarNuevoPolarizadoRef.current = false;
+    grupoPorEnfocarRef.current = "";
     const frame = window.requestAnimationFrame(() => {
-      const fila = nuevoPolarizadoRef.current;
+      const fila = nuevasFilasRef.current[grupo];
       if (!fila) return;
       fila.scrollIntoView({ behavior: "smooth", block: "start" });
-      fila.querySelector("select")?.focus({ preventScroll: true });
+      fila.querySelector("select, input, textarea")?.focus({ preventScroll: true });
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [form.polarizados.length]);
+  }, [form.polarizados.length, form.ppf.length, form.serviciosAdicionales.length, form.accesorios.length]);
 
   useEffect(() => {
     getCombosPpf().then(({ data }) => setCombosPpf(data.data || [])).catch(() => setCombosPpf([]));
@@ -427,9 +428,9 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
 
   const agregarItem = (grupo, item) =>
     setForm((actual) => ({ ...actual, [grupo]: [...actual[grupo], item] }));
-  const agregarMaterialPolarizado = () => {
-    enfocarNuevoPolarizadoRef.current = true;
-    agregarItem("polarizados", { material: "", porcentaje: "", materialClave: "", partes: [], valor: "" });
+  const agregarItemYEnfocar = (grupo, item) => {
+    grupoPorEnfocarRef.current = grupo;
+    agregarItem(grupo, item);
   };
   const editarItem = (grupo, index, campo, valor) =>
     setForm((actual) => ({
@@ -959,12 +960,12 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="Polarizado y película de seguridad"
             button="Agregar material"
-            onAdd={agregarMaterialPolarizado}
+            onAdd={() => agregarItemYEnfocar("polarizados", { material: "", porcentaje: "", materialClave: "", partes: [], valor: "" })}
           />
           {form.polarizados.map((item, index) => (
             <ServiceRow
               key={`polarizado-${index}`}
-              rowRef={index === form.polarizados.length - 1 ? nuevoPolarizadoRef : undefined}
+              rowRef={index === form.polarizados.length - 1 ? (fila) => { nuevasFilasRef.current.polarizados = fila; } : undefined}
               onRemove={() => quitarItem("polarizados", index)}
             >
               <div className="md:col-span-3">
@@ -1014,10 +1015,10 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="PPF"
             button="Agregar PPF"
-            onAdd={() => agregarItem("ppf", { referencia: "", aplicacion: "EXTERIOR", piezas: [], valor: "", cotizacionModo: "PIEZAS", medidasPiezas: [], margenTecnicoCm: 0, dificultad: "MEDIA" })}
+            onAdd={() => agregarItemYEnfocar("ppf", { referencia: "", aplicacion: "EXTERIOR", piezas: [], valor: "", cotizacionModo: "PIEZAS", medidasPiezas: [], margenTecnicoCm: 0, dificultad: "MEDIA" })}
           />
           {form.ppf.map((item, index) => (
-            <ServiceRow key={`ppf-${index}`} onRemove={() => quitarItem("ppf", index)}>
+            <ServiceRow key={`ppf-${index}`} rowRef={index === form.ppf.length - 1 ? (fila) => { nuevasFilasRef.current.ppf = fila; } : undefined} onRemove={() => quitarItem("ppf", index)}>
               <Field label="Material PPF disponible">
                 <select value={item.referencia} disabled={cargandoMateriales} onChange={(e) => seleccionarPpf(index, e.target.value)} className="w-full rounded-xl border bg-white p-3 disabled:bg-slate-100">
                   <option value="">{cargandoMateriales ? "Cargando PPF..." : "Seleccione PPF..."}</option>
@@ -1090,12 +1091,12 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="Servicios del catálogo"
             button="Agregar servicio"
-            onAdd={() => agregarItem("serviciosAdicionales", { tipo: "", detalle: "", valor: "", catalogoId: "" })}
+            onAdd={() => agregarItemYEnfocar("serviciosAdicionales", { tipo: "", detalle: "", valor: "", catalogoId: "" })}
           />
           <p className="text-sm text-slate-600">Detailing, instalaciones, aseguradas y vinilo del catálogo compartido con mano de obra. Selecciona la tarifa definida por Administración para cada servicio.</p>
           {errorCatalogoServicios && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">No se pudo cargar el catálogo de servicios. Cierra y vuelve a abrir el formulario para consultar las opciones.</p>}
           {form.serviciosAdicionales.map((item, index) => (
-            <ServiceRow key={`adicional-${index}`} onRemove={() => quitarItem("serviciosAdicionales", index)}>
+            <ServiceRow key={`adicional-${index}`} rowRef={index === form.serviciosAdicionales.length - 1 ? (fila) => { nuevasFilasRef.current.serviciosAdicionales = fila; } : undefined} onRemove={() => quitarItem("serviciosAdicionales", index)}>
               <div className="md:col-span-3"><Field label="Servicio del catálogo">
                 <select
                   value={item.catalogoId || catalogoServicios.find((opcion) => opcion.categoria === item.tipo && opcion.nombre === item.detalle)?._id || ""}
@@ -1122,11 +1123,11 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="Accesorios del vehículo"
             button="Agregar accesorio"
-            onAdd={() => agregarItem("accesorios", { accesorioId: "", cantidad: "1", precioUnitario: "" })}
+            onAdd={() => agregarItemYEnfocar("accesorios", { accesorioId: "", cantidad: "1", precioUnitario: "" })}
           />
           {form.accesorios.map((item, index) => {
             const producto = catalogoAccesorios.find((opcion) => opcion._id === item.accesorioId);
-            return <ServiceRow key={`accesorio-${index}`} onRemove={() => quitarItem("accesorios", index)}>
+            return <ServiceRow key={`accesorio-${index}`} rowRef={index === form.accesorios.length - 1 ? (fila) => { nuevasFilasRef.current.accesorios = fila; } : undefined} onRemove={() => quitarItem("accesorios", index)}>
               <div className="md:col-span-3"><Field label="Accesorio"><select value={item.accesorioId} onChange={(e) => seleccionarAccesorio(index, e.target.value)} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione producto...</option>{catalogoAccesorios.map((opcion) => { const usado = form.accesorios.some((actual, posicion) => posicion !== index && actual.accesorioId === opcion._id); return <option key={opcion._id} value={opcion._id} disabled={usado}>{opcion.nombre} · {opcion.marca}{opcion.referencia ? ` · ${opcion.referencia}` : ""} · {opcion.stock > 0 ? `${opcion.stock} disponibles` : "AGOTADO · SE SOLICITARÁ"}</option>; })}</select>{producto?.stock <= 0 && item.accesorioId && <span className="mt-1 block text-xs font-semibold text-amber-700">Puede incluirlo. Inventario y Administración recibirán una alerta para pedirlo.</span>}</Field></div>
               <Field label="Cantidad"><input value={item.cantidad} inputMode="numeric" onChange={(e) => editarItem("accesorios", index, "cantidad", soloDigitos(e.target.value).slice(0, 3))} className="w-full rounded-xl border p-3"/><span className="mt-1 block text-xs text-slate-500">Máximo disponible: {producto?.stock || 0}</span></Field>
               {!form.garantia.esGarantia && <div className="md:col-span-2"><PrecioServicio lista={preciosVenta} selecciones={item.tarifasVenta} valor={item.precioUnitario} familia="ACCESORIO" categoria={producto?.categoria || ""} detalle={`${producto?.nombre || ""} ${producto?.marca || ""} ${producto?.referencia || ""}`} cargando={cargandoPrecios} registrado={Boolean(asesoria)} onChange={(tarifas) => asignarTarifas("accesorios", index, tarifas)} /><p className="mt-1 text-xs font-semibold text-blue-700">Subtotal del accesorio: $ {Number(Number(item.cantidad || 0) * Number(item.precioUnitario || 0)).toLocaleString("es-CO")}</p></div>}
