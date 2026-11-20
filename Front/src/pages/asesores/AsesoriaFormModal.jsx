@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ClipboardCheck, Plus, Save, Trash2 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -177,6 +177,8 @@ const prepararFormulario = (asesoria) => {
 };
 
 function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
+  const nuevoPolarizadoRef = useRef(null);
+  const enfocarNuevoPolarizadoRef = useRef(false);
   const [form, setForm] = useState(() => prepararFormulario(asesoria));
   const [buscando, setBuscando] = useState(false);
   const [clientesSugeridos, setClientesSugeridos] = useState([]);
@@ -196,6 +198,20 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
   const [cargandoPrecios, setCargandoPrecios] = useState(true);
   const [errorPrecios, setErrorPrecios] = useState("");
   const [combosPpf, setCombosPpf] = useState([]);
+  useEffect(() => {
+    if (!enfocarNuevoPolarizadoRef.current) return undefined;
+
+    enfocarNuevoPolarizadoRef.current = false;
+    const frame = window.requestAnimationFrame(() => {
+      const fila = nuevoPolarizadoRef.current;
+      if (!fila) return;
+      fila.scrollIntoView({ behavior: "smooth", block: "start" });
+      fila.querySelector("select")?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [form.polarizados.length]);
+
   useEffect(() => {
     getCombosPpf().then(({ data }) => setCombosPpf(data.data || [])).catch(() => setCombosPpf([]));
   }, []);
@@ -411,6 +427,10 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
 
   const agregarItem = (grupo, item) =>
     setForm((actual) => ({ ...actual, [grupo]: [...actual[grupo], item] }));
+  const agregarMaterialPolarizado = () => {
+    enfocarNuevoPolarizadoRef.current = true;
+    agregarItem("polarizados", { material: "", porcentaje: "", materialClave: "", partes: [], valor: "" });
+  };
   const editarItem = (grupo, index, campo, valor) =>
     setForm((actual) => ({
       ...actual,
@@ -939,10 +959,14 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="Polarizado y película de seguridad"
             button="Agregar material"
-            onAdd={() => agregarItem("polarizados", { material: "", porcentaje: "", materialClave: "", partes: [], valor: "" })}
+            onAdd={agregarMaterialPolarizado}
           />
           {form.polarizados.map((item, index) => (
-            <ServiceRow key={`polarizado-${index}`} onRemove={() => quitarItem("polarizados", index)}>
+            <ServiceRow
+              key={`polarizado-${index}`}
+              rowRef={index === form.polarizados.length - 1 ? nuevoPolarizadoRef : undefined}
+              onRemove={() => quitarItem("polarizados", index)}
+            >
               <div className="md:col-span-3">
                 <Field label="Material y clasificación disponible">
                   <select
@@ -1211,8 +1235,8 @@ function ServiceHeader({ title, button, onAdd }) {
   return <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-2 pt-2"><h4 className="font-bold text-slate-800">{title}</h4><button type="button" onClick={onAdd} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white"><Plus size={16} />{button}</button></div>;
 }
 
-function ServiceRow({ children, onRemove }) {
-  return <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_1fr_auto]">{children}<button type="button" onClick={onRemove} title="Quitar" className="flex h-11 w-11 items-center justify-center self-end rounded-lg text-red-600 hover:bg-red-50"><Trash2 size={18} /></button></div>;
+function ServiceRow({ children, onRemove, rowRef }) {
+  return <div ref={rowRef} className="scroll-mt-4 grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_1fr_auto]">{children}<button type="button" onClick={onRemove} title="Quitar" className="flex h-11 w-11 items-center justify-center self-end rounded-lg text-red-600 hover:bg-red-50"><Trash2 size={18} /></button></div>;
 }
 
 export default AsesoriaFormModal;
