@@ -383,6 +383,9 @@ const prepararDatosAsesoria = (data) => {
     instalador: mayusculas(data.garantia?.instalador),
     instaladorId: mongoose.Types.ObjectId.isValid(data.garantia?.instaladorId) ? data.garantia.instaladorId : null,
     ordenOrigenId: mongoose.Types.ObjectId.isValid(data.garantia?.ordenOrigenId) ? data.garantia.ordenOrigenId : null,
+    origenExterno: Boolean(data.garantia?.origenExterno),
+    fechaOrigenExterno: texto(data.garantia?.fechaOrigenExterno),
+    detalleOrigenExterno: mayusculas(data.garantia?.detalleOrigenExterno),
     costoMaterial: Math.max(Number(data.garantia?.costoMaterial || 0), 0),
     estado: data.garantia?.esGarantia ? "PENDIENTE" : "NO_APLICA",
     responsable: "POR_DEFINIR",
@@ -442,6 +445,9 @@ const prepararDatosAsesoria = (data) => {
   if (garantia.esGarantia && !garantia.motivo) {
     throw new Error("Indique el motivo de la garantia");
   }
+  if (garantia.esGarantia && garantia.origenExterno && (!garantia.fechaOrigenExterno || garantia.detalleOrigenExterno.length < 10)) {
+    throw new Error("Indique la fecha aproximada y describa el servicio anterior al sistema");
+  }
   if (garantia.esGarantia && garantia.tipo === "GARANTIA_INSTALADOR" && !garantia.instaladorId) {
     throw new Error("Seleccione el instalador responsable de la garantia");
   }
@@ -493,6 +499,11 @@ const prepararDatosAsesoria = (data) => {
 export const crearBorradorAsesoria = async (data, user) => {
   const datosAsesoria = prepararDatosAsesoria(await aplicarPreciosAsesoria(data));
   if (datosAsesoria.garantia.esGarantia) {
+    if (datosAsesoria.garantia.origenExterno) {
+      datosAsesoria.garantia.ordenOrigenId = null;
+      datosAsesoria.garantia.codigoOrdenOrigen = "ANTERIOR AL SISTEMA";
+      datosAsesoria.garantia.fechaOrdenOrigen = datosAsesoria.garantia.fechaOrigenExterno;
+    } else {
     if (!datosAsesoria.garantia.ordenOrigenId) throw new Error("Seleccione el servicio original de la garantía");
     const filtroOrigen = {
       "cliente.cedula": datosAsesoria.cliente.cedula,
@@ -526,10 +537,11 @@ export const crearBorradorAsesoria = async (data, user) => {
         throw new Error("El instalador responsable no participó en el servicio original seleccionado");
       }
     }
+    }
   }
   const accesorios = await prepararAccesorios(datosAsesoria.accesoriosEntrada);
   delete datosAsesoria.accesoriosEntrada;
-  if (datosAsesoria.garantia.esGarantia) {
+  if (datosAsesoria.garantia.esGarantia && !datosAsesoria.garantia.origenExterno) {
     accesorios.forEach((item) => {
       item.precioUnitario = 0;
       item.valor = 0;

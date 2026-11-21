@@ -160,6 +160,9 @@ const asesoriaSchema = new mongoose.Schema(
       ordenOrigenId: { type: mongoose.Schema.Types.ObjectId, ref: "Asesoria", default: null },
       codigoOrdenOrigen: { type: String, default: "", trim: true, uppercase: true },
       fechaOrdenOrigen: { type: Date, default: null },
+      origenExterno: { type: Boolean, default: false },
+      fechaOrigenExterno: { type: String, default: "" },
+      detalleOrigenExterno: { type: String, default: "", trim: true, uppercase: true },
       costoMaterial: { type: Number, default: 0, min: 0 },
       estado: {
         type: String,

@@ -19,6 +19,9 @@ export const datosDocumento = (orden, tipo, incluirGarantia = true) => {
     codigoOrdenOrigen: o.garantia.codigoOrdenOrigen || "",
     fechaOrdenOrigen: o.garantia.fechaOrdenOrigen ? new Date(o.garantia.fechaOrdenOrigen).toISOString() : null,
     ordenOrigenId: o.garantia.ordenOrigenId ? String(o.garantia.ordenOrigenId) : null,
+    origenExterno: Boolean(o.garantia.origenExterno),
+    fechaOrigenExterno: o.garantia.fechaOrigenExterno || "",
+    detalleOrigenExterno: o.garantia.detalleOrigenExterno || "",
   };
   if (tipo !== "COTIZACION") Object.assign(datos, { recepcion: o.recepcion, seguroVehiculo: { estado: o.seguroVehiculo?.estado || "SIN_CONFIRMAR" } });
   // Empty new fields must not invalidate signatures issued before photos existed.
