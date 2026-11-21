@@ -448,7 +448,7 @@ const prepararDatosAsesoria = (data) => {
   if (garantia.esGarantia && garantia.origenExterno && (!garantia.fechaOrigenExterno || garantia.detalleOrigenExterno.length < 10)) {
     throw new Error("Indique la fecha aproximada y describa el servicio anterior al sistema");
   }
-  if (garantia.esGarantia && garantia.tipo === "GARANTIA_INSTALADOR" && !garantia.instaladorId) {
+  if (garantia.esGarantia && !garantia.origenExterno && garantia.tipo === "GARANTIA_INSTALADOR" && !garantia.instaladorId) {
     throw new Error("Seleccione el instalador responsable de la garantia");
   }
 
@@ -1056,6 +1056,11 @@ export const revisarGarantiaAsesoria = async (id, data, user) => {
     if (!mongoose.Types.ObjectId.isValid(instaladorId)) throw new Error("Seleccione el instalador responsable");
     instaladorGarantia = await User.findOne({ _id: instaladorId, rol: "INSTALADOR", suspendido: { $ne: true } }).select("nombre").lean();
     if (!instaladorGarantia) throw new Error("El instalador seleccionado no esta disponible");
+    if (!asesoria.garantia.origenExterno && asesoria.garantia.ordenOrigenId) {
+      const origen = await Asesoria.findById(asesoria.garantia.ordenOrigenId).select("coordinacion.asignaciones.instaladorId").lean();
+      const participo = (origen?.coordinacion?.asignaciones || []).some((item) => String(item.instaladorId || "") === String(instaladorId));
+      if (!participo) throw new Error("El instalador seleccionado no participó en el servicio original");
+    }
   }
   if (decision === "RECHAZAR" && texto(data.observacion).length < 5) {
     throw new Error("Indique el motivo del rechazo");
