@@ -19,6 +19,7 @@ import { obtenerUsuarioActual } from "../../utils/permisos";
 import ExcelButton from "../../components/ui/ExcelButton";
 import { getMedidasVehiculos } from "../../api/medidasVehiculos.api";
 import NovedadAsesoriaModal from "../asesores/NovedadAsesoriaModal";
+import { reviewGarantiaAsesoria } from "../../api/asesores.api";
 
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const fechaInput = (fecha) => {
@@ -69,6 +70,7 @@ const nombresInstaladoresUnificados = (items = []) => {
 };
 
 const etapasActivas = new Set([
+  "PENDIENTE_GARANTIA",
   "PENDIENTE_COORDINACION", "PENDIENTE_APROBACION_CORTE", "PENDIENTE_INVENTARIO",
   "EN_PROCESO", "MATERIAL_LISTO", "EN_INSTALACION", "PENDIENTE_CALIDAD", "REPROCESO", "PENDIENTE_PAGO",
 ]);
@@ -306,6 +308,47 @@ function CoordinacionPage() {
     }
   };
 
+  const revisarGarantiaHistorica = async (orden, decision) => {
+    const aprobar = decision === "APROBAR";
+    let responsable = "EMPRESA";
+    let instaladorId = "";
+    let instalador = "";
+    let observacion = "";
+
+    if (aprobar) {
+      const seleccion = await Swal.fire({
+        icon: "question",
+        title: "Validar garantía anterior al sistema",
+        text: "Confirma que el material y las partes declaradas corresponden al trabajo anterior.",
+        input: "select",
+        inputOptions: { EMPRESA: "Responde la empresa", INSTALADOR: "Responde el instalador", PROVEEDOR: "Responde el proveedor" },
+        showCancelButton: true,
+        confirmButtonText: "Continuar",
+      });
+      if (!seleccion.isConfirmed) return;
+      responsable = seleccion.value;
+      if (responsable === "INSTALADOR") {
+        const opciones = Object.fromEntries(instaladores.map((item) => [item._id, item.nombre]));
+        const seleccionInstalador = await Swal.fire({ title: "Instalador responsable", input: "select", inputOptions: opciones, inputPlaceholder: "Seleccione instalador", showCancelButton: true, inputValidator: (value) => !value ? "Seleccione el instalador" : undefined });
+        if (!seleccionInstalador.isConfirmed) return;
+        instaladorId = seleccionInstalador.value;
+        instalador = instaladores.find((item) => item._id === instaladorId)?.nombre || "";
+      }
+    } else {
+      const rechazo = await Swal.fire({ icon: "warning", title: "Rechazar garantía", input: "textarea", inputLabel: "Motivo técnico", showCancelButton: true, confirmButtonText: "Rechazar", inputValidator: (value) => value.trim().length < 5 ? "Describa el motivo" : undefined });
+      if (!rechazo.isConfirmed) return;
+      observacion = rechazo.value;
+    }
+
+    try {
+      await reviewGarantiaAsesoria(orden._id, { decision, responsable, instaladorId, instalador, observacion });
+      await cargar();
+      Swal.fire({ icon: "success", title: aprobar ? "Garantía validada" : "Garantía rechazada", timer: 1600, showConfirmButton: false });
+    } catch (error) {
+      Swal.fire({ icon: "error", title: "No fue posible revisar la garantía", text: error.response?.data?.message || "Intente nuevamente." });
+    }
+  };
+
   const cambiarTrabajo = async (orden, asignacion, estado) => {
     if (actualizandoTrabajoId) return;
     setActualizandoTrabajoId(asignacion._id);
@@ -416,7 +459,7 @@ function CoordinacionPage() {
 
       {visiblesOrdenadas.length === 0 ? <div className="rounded-2xl border bg-white p-10 text-center text-slate-500">No hay trabajos pendientes para este perfil.</div> : (
         <div className="grid gap-4 xl:grid-cols-2">
-          {visiblesOrdenadas.map((orden) => <OrdenCard key={orden._id} orden={orden} destacada={String(orden._id) === asesoriaObjetivo} usuario={usuario} enviandoVentas={String(orden._id) === enviandoVentasId} onPrepare={() => setSeleccionada(orden)} onReview={revisar} onWork={cambiarTrabajo} actualizandoTrabajoId={actualizandoTrabajoId} onSales={enviarVentas} onReport={() => setReportandoRecorte(orden)} onChanged={cargar} />)}
+          {visiblesOrdenadas.map((orden) => <OrdenCard key={orden._id} orden={orden} destacada={String(orden._id) === asesoriaObjetivo} usuario={usuario} enviandoVentas={String(orden._id) === enviandoVentasId} onPrepare={() => setSeleccionada(orden)} onReview={revisar} onReviewWarranty={revisarGarantiaHistorica} onWork={cambiarTrabajo} actualizandoTrabajoId={actualizandoTrabajoId} onSales={enviarVentas} onReport={() => setReportandoRecorte(orden)} onChanged={cargar} />)}
         </div>
       )}
 
@@ -694,7 +737,7 @@ function SelectorPartes({ partes, value, onChange }) {
   </fieldset>;
 }
 
-function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onReview, onWork, actualizandoTrabajoId, onSales, onReport, onChanged }) {
+function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onReview, onReviewWarranty, onWork, actualizandoTrabajoId, onSales, onReport, onChanged }) {
   const etapa = orden.flujo?.etapa || "PENDIENTE_COORDINACION";
   const asignaciones = orden.coordinacion?.asignaciones || [];
   const propias = usuario?.rol === "INSTALADOR" ? asignaciones.filter((item) => String(item.instaladorId) === String(usuario._id)) : asignaciones;
@@ -707,6 +750,7 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
   const novedadesActivas = (orden.novedades || []).filter((item) => item.estado === "PENDIENTE" || (item.estado === "APROBADA" && tiposBloqueantes.includes(item.tipo)));
   const accesoriosPendientes = (orden.accesorios || []).filter((item) => Number(item.cantidadPendiente || 0) > 0);
   const puedeProponer = ["COORDINADOR", "ADMIN", "SUPERUSUARIO"].includes(usuario?.rol) && (etapa === "PENDIENTE_COORDINACION" || orden.coordinacion?.estadoPropuesta === "RECHAZADA");
+  const puedeRevisarGarantiaHistorica = ["COORDINADOR", "ADMIN", "SUPERUSUARIO"].includes(usuario?.rol) && etapa === "PENDIENTE_GARANTIA" && orden.garantia?.origenExterno;
   const puedeRevisar = ["INVENTARIO", "ADMIN", "SUPERUSUARIO"].includes(usuario?.rol) && etapa === "PENDIENTE_APROBACION_CORTE";
   const puedeGestionarEnvio = ["COORDINADOR", "ADMIN", "SUPERUSUARIO"].includes(usuario?.rol) && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa);
   const puedeEnviar = puedeGestionarEnvio && instalacionesCompletas && novedadesActivas.length === 0 && accesoriosPendientes.length === 0;
@@ -715,7 +759,7 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
     <div className="space-y-3 p-4">
       <ControlCalidad orden={orden} usuario={usuario} onChanged={onChanged} />
       {orden.coordinacion?.observacionInventario && <p className="rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-800">Inventario: {orden.coordinacion.observacionInventario}</p>}
-      {orden.garantia?.esGarantia && <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900"><p className="font-bold">Garantía · {(orden.garantia.responsable || "POR_DEFINIR").replaceAll("_", " ")}</p>{orden.garantia.responsable === "INSTALADOR" && <p className="mt-1 text-xs">Responsable: {orden.garantia.instalador || "Sin seleccionar"} · Descuento exclusivo de material: {cop.format(orden.garantia.costoMaterial || 0)}</p>}</div>}
+      {orden.garantia?.esGarantia && <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900"><p className="font-bold">Garantía · {(orden.garantia.responsable || "POR_DEFINIR").replaceAll("_", " ")}</p>{orden.garantia.origenExterno && <p className="mt-1 text-xs font-semibold">Servicio anterior al sistema · {orden.garantia.fechaOrigenExterno || "Fecha sin registrar"} · {orden.garantia.detalleOrigenExterno}</p>}{orden.garantia.responsable === "INSTALADOR" && <p className="mt-1 text-xs">Responsable: {orden.garantia.instalador || "Sin seleccionar"} · Descuento exclusivo de material: {cop.format(orden.garantia.costoMaterial || 0)}</p>}</div>}
       {novedadesActivas.length > 0 && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-bold">Orden bloqueada por novedad</p><p className="mt-1 text-xs">{novedadesActivas.map((item) => item.tipo.replaceAll("_", " ")).join(" · ")}. Administración debe marcarla como solucionada.</p></div>}
       {accesoriosPendientes.length > 0 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><p className="font-bold">Accesorios pendientes de Inventario</p><p className="mt-1 text-xs">{accesoriosPendientes.map((item) => `${item.nombre} ${item.marca || ""}: faltan ${item.cantidadPendiente}`).join(" · ")}. La orden no puede enviarse a Ventas hasta recibirlos.</p></div>}
       {orden.coordinacion?.propuesta?.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase text-slate-500">Propuesta de corte</p>{orden.coordinacion.propuesta.map((item) => <div key={item.linea} className="border-t py-2 text-sm text-slate-700"><p><strong>{item.linea}</strong> · {item.metrosPropuestos} m · {item.anchoCm || 0} × {item.largoCm || 0} cm · {item.cantidad} pieza(s)</p>{item.observacion && <p className="mt-1 text-xs text-slate-500">{item.observacion}</p>}</div>)}</div>}
@@ -724,7 +768,7 @@ function OrdenCard({ orden, destacada, usuario, enviandoVentas, onPrepare, onRev
         <Camera size={16} /> Reportar con foto a Coordinación
       </Link>}
       {puedeGestionarEnvio && !instalacionesCompletas && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><p className="font-bold">Aún no se puede enviar a Ventas</p><p className="mt-1 text-xs">Falta completar: {instalacionesPendientes.map((item) => `${item.descripcion || item.servicio} - ${item.instaladorNombre || "sin instalador"}`).join(" · ") || "no hay instalaciones asignadas"}.</p></div>}
-      <div className="flex flex-wrap gap-2 pt-1">{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && orden.coordinacion?.calidad?.estado === "APROBADA" && <button disabled={enviandoVentas} onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">{enviandoVentas ? "Enviando a Ventas..." : "Finalizar y enviar a Ventas"}</button>}</div>
+      <div className="flex flex-wrap gap-2 pt-1">{puedeRevisarGarantiaHistorica && <><button onClick={() => onReviewWarranty(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Validar garantía</button><button onClick={() => onReviewWarranty(orden, "RECHAZAR")} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700">Rechazar garantía</button></>}{puedeProponer && <button onClick={onPrepare} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"><Ruler size={16} /> Preparar propuesta</button>}{usuario?.rol === "COORDINADOR" && ["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa) && <button onClick={onReport} className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100">Solicitar recorte</button>}{puedeRevisar && <><button onClick={() => onReview(orden, "APROBAR")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar corte</button><button onClick={() => onReview(orden, "RECHAZAR")} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button></>}{puedeEnviar && orden.coordinacion?.calidad?.estado === "APROBADA" && <button disabled={enviandoVentas} onClick={() => onSales(orden)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">{enviandoVentas ? "Enviando a Ventas..." : "Finalizar y enviar a Ventas"}</button>}</div>
     </div>
   </article>;
 }

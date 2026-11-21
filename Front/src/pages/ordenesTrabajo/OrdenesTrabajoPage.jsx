@@ -58,7 +58,9 @@ const turnoOrden = (orden, usuario) => {
     return { habilitado: rol === "INVENTARIO", responsable: "Inventario" };
   }
   if (["PENDIENTE_FIRMA_COTIZACION", "PENDIENTE_FIRMA_DIAGNOSTICO"].includes(etapa)) return { habilitado: rol === "ASESOR", responsable: "Cliente y asesor" };
-  if (etapa === "PENDIENTE_GARANTIA") return { habilitado: false, responsable: "Administración" };
+  if (etapa === "PENDIENTE_GARANTIA") return orden.garantia?.origenExterno
+    ? { habilitado: rol === "COORDINADOR", responsable: "Coordinación" }
+    : { habilitado: false, responsable: "Administración" };
   if (etapa === "PENDIENTE_COORDINACION") return { habilitado: rol === "COORDINADOR", responsable: "Coordinación" };
   if (["PENDIENTE_APROBACION_CORTE", "PENDIENTE_INVENTARIO", "EN_PROCESO"].includes(etapa)) return { habilitado: rol === "INVENTARIO", responsable: "Inventario" };
   if (["MATERIAL_LISTO", "EN_INSTALACION"].includes(etapa)) {

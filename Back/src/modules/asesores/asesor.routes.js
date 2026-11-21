@@ -64,7 +64,7 @@ router.patch(
 router.patch(
   "/servicios/:id/garantia",
   authMiddleware,
-  requireRole("ADMIN", "SUPERUSUARIO"),
+  requireRole("ADMIN", "SUPERUSUARIO", "COORDINADOR"),
   reviewGarantiaAsesoria
 );
 

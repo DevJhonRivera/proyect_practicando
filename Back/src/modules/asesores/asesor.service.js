@@ -1029,12 +1029,17 @@ export const resolverNovedadAsesoria = async (id, novedadId, data, user) => {
 };
 
 export const revisarGarantiaAsesoria = async (id, data, user) => {
-  if (!["ADMIN", "SUPERUSUARIO"].includes(user.rol)) {
-    throw new Error("Solo administracion puede revisar garantias");
-  }
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Servicio no valido");
   const asesoria = await Asesoria.findById(id);
   if (!asesoria?.garantia?.esGarantia) throw new Error("La orden no corresponde a una garantia");
+  const rolesPermitidos = asesoria.garantia.origenExterno
+    ? ["COORDINADOR", "ADMIN", "SUPERUSUARIO"]
+    : ["ADMIN", "SUPERUSUARIO"];
+  if (!rolesPermitidos.includes(user.rol)) {
+    throw new Error(asesoria.garantia.origenExterno
+      ? "Solo coordinacion puede validar esta garantia anterior al sistema"
+      : "Solo administracion puede revisar garantias con orden registrada");
+  }
   if (asesoria.garantia.estado !== "PENDIENTE") throw new Error("Esta garantia ya fue revisada");
 
   const decision = mayusculas(data.decision);

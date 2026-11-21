@@ -19,6 +19,7 @@ export const TIPO_SOLICITUD_NOVEDAD =
   "SOLICITUD_NOVEDAD";
 export const TIPO_SOLICITUD_GARANTIA =
   "SOLICITUD_GARANTIA";
+export const TIPO_GARANTIA_HISTORICA = "GARANTIA_HISTORICA";
 export const TIPO_COORDINACION_NUEVA = "COORDINACION_NUEVA";
 export const TIPO_PROPUESTA_CORTE = "PROPUESTA_CORTE";
 export const TIPO_MATERIAL_LISTO = "MATERIAL_LISTO";
@@ -62,7 +63,7 @@ export const sincronizarAlertasAccesorios = async (asesoria) => {
   await Alerta.updateMany({ clave: { $regex: `^${prefijo}` }, ...(clavesActivas.length ? { clave: { $regex: `^${prefijo}`, $nin: clavesActivas } } : {}) }, { $set: { activa: false, atendida: true } });
 };
 
-const TIPOS_COORDINACION = [TIPO_COORDINACION_NUEVA, TIPO_MATERIAL_LISTO, TIPO_INSTALACION_COMPLETA];
+const TIPOS_COORDINACION = [TIPO_COORDINACION_NUEVA, TIPO_MATERIAL_LISTO, TIPO_INSTALACION_COMPLETA, TIPO_GARANTIA_HISTORICA];
 
 const TIPOS_VENTAS = [
   TIPO_VENTA_PENDIENTE,
@@ -124,6 +125,7 @@ export const accionPredeterminada = (alerta) => {
     [TIPO_INSTALACION_COMPLETA]: conOrden("/coordinacion"),
     [TIPO_SOLICITUD_NOVEDAD]: conOrden("/asesores"),
     [TIPO_SOLICITUD_GARANTIA]: conOrden("/asesores"),
+    [TIPO_GARANTIA_HISTORICA]: conOrden("/coordinacion"),
   };
   return alerta.accionUrl || rutas[alerta.tipo] || "/alertas";
 };
@@ -465,10 +467,10 @@ export const crearAlertaSolicitudGarantia = async (asesoria) =>
   Alerta.findOneAndUpdate(
     { clave: `solicitud-garantia:${asesoria._id}` },
     {
-      tipo: TIPO_SOLICITUD_GARANTIA,
+      tipo: asesoria.garantia?.origenExterno ? TIPO_GARANTIA_HISTORICA : TIPO_SOLICITUD_GARANTIA,
       mensaje: `Revisar garantía ${asesoria.codigo} del vehículo ${asesoria.vehiculo?.placa || ""}${asesoria.garantia?.codigoOrdenOrigen ? `, originada en ${asesoria.garantia.codigoOrdenOrigen}` : ", sin orden anterior vinculada"}: ${asesoria.garantia?.motivo || "SIN MOTIVO"}.`,
       referenciaId: asesoria._id,
-      accionUrl: `/asesores?asesoria=${asesoria._id}`,
+      accionUrl: asesoria.garantia?.origenExterno ? `/coordinacion?asesoria=${asesoria._id}` : `/asesores?asesoria=${asesoria._id}`,
       atendida: false,
       activa: true,
     },
