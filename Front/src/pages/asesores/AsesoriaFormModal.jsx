@@ -669,6 +669,37 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
     setClientesSugeridos([]);
   };
 
+  const seleccionarOrigenGarantia = (ordenOrigenId) => {
+    const origen = origenesGarantia.find((item) => String(item._id) === String(ordenOrigenId));
+    setForm((actual) => ({
+      ...actual,
+      garantia: { ...actual.garantia, ordenOrigenId },
+      polarizados: (origen?.polarizados || []).map((item) => ({ ...item, valor: "", tarifasVenta: [] })),
+      ppf: (origen?.ppf || []).map((item) => ({ ...item, valor: "", tarifasVenta: [], comboPpfId: null, comboNombre: "" })),
+      serviciosAdicionales: (origen?.serviciosAdicionales || []).map((item) => ({ ...item, valor: "", tarifasVenta: [] })),
+      accesorios: (origen?.accesorios || []).map((item) => ({ accesorioId: String(item.accesorioId || ""), cantidad: String(item.cantidad || 1), precioUnitario: "", tarifasVenta: [] })),
+    }));
+  };
+
+  const partesPermitidasGarantia = (item) => {
+    if (!form.garantia.esGarantia) return new Set(PARTES_POLARIZADO.map(([parte]) => parte));
+    const original = (origenGarantiaSeleccionado?.polarizados || []).find((fila) => fila.material === item.material && fila.porcentaje === item.porcentaje);
+    const permitidas = new Set(original?.partes || []);
+    if (permitidas.has("COMPLETO")) PARTES_POLARIZADO.forEach(([parte]) => permitidas.add(parte));
+    if (permitidas.has("U")) PARTES_INCLUIDAS_EN_U.forEach((parte) => permitidas.add(parte));
+    return permitidas;
+  };
+
+  const alternarPiezaPpfGarantia = (index, pieza, detalle) => {
+    const item = form.ppf[index];
+    const estaSeleccionada = item?.piezas?.includes(pieza);
+    const original = (origenGarantiaSeleccionado?.ppf || []).find((fila) => fila.referencia === item?.referencia);
+    if (form.garantia.esGarantia && !estaSeleccionada && !(original?.piezas || []).includes(pieza)) {
+      return Swal.fire({ icon: "warning", title: "Esta pieza no pertenece al servicio original", text: "Si el cliente desea agregarla, regístrela como un servicio nuevo." });
+    }
+    alternarPiezaPpf(index, pieza, detalle);
+  };
+
   const cambiarTipoRecepcion = (esGarantia) => {
     const restaurarPrecio = (item, campo) => {
       if (esGarantia) return "";
@@ -748,6 +779,9 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
     if (form.garantia.esGarantia && !form.garantia.motivo.trim()) {
       return Swal.fire({ icon: "warning", title: "Indique el motivo de la garantía" });
     }
+    if (form.garantia.esGarantia && !form.garantia.ordenOrigenId) {
+      return Swal.fire({ icon: "warning", title: "Seleccione el servicio original de la garantía" });
+    }
     if (form.garantia.esGarantia && form.garantia.tipo === "GARANTIA_INSTALADOR" && !form.garantia.instaladorId) {
       return Swal.fire({ icon: "warning", title: "Seleccione el instalador responsable de la garantía" });
     }
@@ -817,7 +851,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
             </button>
           </div>
           {form.garantia.esGarantia && <div className="grid gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 md:grid-cols-3">
-            <div className="md:col-span-3"><Field label="Servicio anterior al que corresponde la garantía"><select value={form.garantia.ordenOrigenId || ""} onChange={(e) => setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, ordenOrigenId: e.target.value } }))} disabled={cargandoOrigenes || !origenesGarantia.length} className="w-full rounded-xl border bg-white p-3"><option value="">{cargandoOrigenes ? "Buscando servicios de esta placa..." : origenesGarantia.length ? "Seleccione el servicio original" : "No hay servicios finalizados para esta cédula y placa"}</option>{origenesGarantia.map((origen) => { const materiales = [...(origen.polarizados || []).map((item) => `${item.material} ${item.porcentaje}`), ...(origen.ppf || []).map((item) => `PPF ${item.referencia}`), ...(origen.serviciosAdicionales || []).map((item) => item.tipo)].join(" · "); return <option key={origen._id} value={origen._id}>{origen.codigo} · {new Date(origen.createdAt).toLocaleDateString("es-CO")} · {materiales || "Servicio registrado"}</option>; })}</select><p className="mt-1 text-xs text-violet-700">La cédula identifica al cliente y la placa identifica el carro. Si esta placa tuvo varios trabajos, elija exactamente el que presenta la garantía.</p></Field></div>
+            <div className="md:col-span-3"><Field label="Servicio anterior al que corresponde la garantía"><select value={form.garantia.ordenOrigenId || ""} onChange={(e) => seleccionarOrigenGarantia(e.target.value)} disabled={cargandoOrigenes || !origenesGarantia.length} className="w-full rounded-xl border bg-white p-3"><option value="">{cargandoOrigenes ? "Buscando servicios de esta placa..." : origenesGarantia.length ? "Seleccione el servicio original" : "No hay servicios finalizados para esta cédula y placa"}</option>{origenesGarantia.map((origen) => { const materiales = [...(origen.polarizados || []).map((item) => `${item.material} ${item.porcentaje}`), ...(origen.ppf || []).map((item) => `PPF ${item.referencia}`), ...(origen.serviciosAdicionales || []).map((item) => item.tipo)].join(" · "); return <option key={origen._id} value={origen._id}>{origen.codigo} · {new Date(origen.createdAt).toLocaleDateString("es-CO")} · {materiales || "Servicio registrado"}</option>; })}</select><p className="mt-1 text-xs text-violet-700">Al elegirlo se cargará el alcance original. Quite únicamente las partes que no presentan garantía. Cualquier mejora de material debe registrarse como un servicio nuevo.</p></Field></div>
             <Field label="Responsable propuesto">
               <select value={form.garantia.tipo} onChange={(e) => setForm((actual) => ({ ...actual, garantia: { ...actual.garantia, tipo: e.target.value, instalador: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instalador : "", instaladorId: e.target.value === "GARANTIA_INSTALADOR" ? actual.garantia.instaladorId : "" } }))} className="w-full rounded-xl border bg-white p-3">
                 <option value="GARANTIA_EMPRESA">Garantía empresa</option>
@@ -960,6 +994,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="Polarizado y película de seguridad"
             button="Agregar material"
+            disabled={form.garantia.esGarantia}
             onAdd={() => agregarItemYEnfocar("polarizados", { material: "", porcentaje: "", materialClave: "", partes: [], valor: "" })}
           />
           {form.polarizados.map((item, index) => (
@@ -972,7 +1007,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
                 <Field label="Material y clasificación disponible">
                   <select
                     value={item.materialClave || ""}
-                    disabled={cargandoMateriales}
+                    disabled={cargandoMateriales || form.garantia.esGarantia}
                     onChange={(e) => seleccionarMaterial(index, e.target.value)}
                     className="w-full rounded-xl border bg-white p-3 disabled:bg-slate-100"
                   >
@@ -993,12 +1028,14 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
                 <div className="flex flex-wrap gap-2">
                   {PARTES_POLARIZADO.map(([valor, etiqueta]) => {
                     const activa = item.partes.includes(valor);
+                    const permitida = partesPermitidasGarantia(item).has(valor);
                     return (
                       <button
                         key={valor}
                         type="button"
+                        disabled={form.garantia.esGarantia && !permitida}
                         onClick={() => alternarPartePolarizado(index, valor)}
-                        className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${activa ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50"}`}
+                        className={`rounded-lg border px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-35 ${activa ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50"}`}
                       >
                         {etiqueta}
                       </button>
@@ -1015,12 +1052,13 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="PPF"
             button="Agregar PPF"
+            disabled={form.garantia.esGarantia}
             onAdd={() => agregarItemYEnfocar("ppf", { referencia: "", aplicacion: "EXTERIOR", piezas: [], valor: "", cotizacionModo: "PIEZAS", medidasPiezas: [], margenTecnicoCm: 0, dificultad: "MEDIA" })}
           />
           {form.ppf.map((item, index) => (
             <ServiceRow key={`ppf-${index}`} rowRef={index === form.ppf.length - 1 ? (fila) => { nuevasFilasRef.current.ppf = fila; } : undefined} onRemove={() => quitarItem("ppf", index)}>
               <Field label="Material PPF disponible">
-                <select value={item.referencia} disabled={cargandoMateriales} onChange={(e) => seleccionarPpf(index, e.target.value)} className="w-full rounded-xl border bg-white p-3 disabled:bg-slate-100">
+                <select value={item.referencia} disabled={cargandoMateriales || form.garantia.esGarantia} onChange={(e) => seleccionarPpf(index, e.target.value)} className="w-full rounded-xl border bg-white p-3 disabled:bg-slate-100">
                   <option value="">{cargandoMateriales ? "Cargando PPF..." : "Seleccione PPF..."}</option>
                   {opcionesPpf.map((opcion) => {
                     const yaAgregado = form.ppf.some((ppf, posicion) => posicion !== index && ppf.referencia === opcion.referencia);
@@ -1057,7 +1095,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
                 {cargandoPiezas ? (
                   <p className="text-sm text-blue-600">Cargando piezas registradas...</p>
                 ) : (
-                  <SelectorPiezasPpf key={`${item.aplicacion}-${form.vehiculo.tipo}`} aplicacion={item.aplicacion} tipoVehiculo={form.vehiculo.tipo} catalogo={piezasPpf} precios={preciosVenta} estandar={item.cotizacionModo === "PIEZAS"} seleccionadas={item.piezas} onToggle={(pieza, detalle) => alternarPiezaPpf(index, pieza, detalle)} />
+                  <SelectorPiezasPpf key={`${item.aplicacion}-${form.vehiculo.tipo}`} aplicacion={item.aplicacion} tipoVehiculo={form.vehiculo.tipo} catalogo={piezasPpf} precios={preciosVenta} estandar={item.cotizacionModo === "PIEZAS"} seleccionadas={item.piezas} onToggle={(pieza, detalle) => alternarPiezaPpfGarantia(index, pieza, detalle)} />
                 )}
               </div>
               {!form.garantia.esGarantia && item.cotizacionModo === "PIEZAS" && <div className="md:col-span-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
@@ -1091,6 +1129,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="Servicios del catálogo"
             button="Agregar servicio"
+            disabled={form.garantia.esGarantia}
             onAdd={() => agregarItemYEnfocar("serviciosAdicionales", { tipo: "", detalle: "", valor: "", catalogoId: "" })}
           />
           <p className="text-sm text-slate-600">Detailing, instalaciones, aseguradas y vinilo del catálogo compartido con mano de obra. Selecciona la tarifa definida por Administración para cada servicio.</p>
@@ -1100,6 +1139,7 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
               <div className="md:col-span-3"><Field label="Servicio del catálogo">
                 <select
                   value={item.catalogoId || catalogoServicios.find((opcion) => opcion.categoria === item.tipo && opcion.nombre === item.detalle)?._id || ""}
+                  disabled={form.garantia.esGarantia}
                   onChange={(e) => {
                     const servicio = catalogoServicios.find((opcion) => opcion._id === e.target.value);
                     setForm((actual) => ({ ...actual, serviciosAdicionales: actual.serviciosAdicionales.map((fila, posicion) => posicion === index ? { ...fila, catalogoId: servicio?._id || "", tipo: servicio?.categoria || "", detalle: servicio?.nombre || "", valor: "", tarifasVenta: [] } : fila) }));
@@ -1123,12 +1163,13 @@ function AsesoriaFormModal({ onClose, onSaved, asesoria = null }) {
           <ServiceHeader
             title="Accesorios del vehículo"
             button="Agregar accesorio"
+            disabled={form.garantia.esGarantia}
             onAdd={() => agregarItemYEnfocar("accesorios", { accesorioId: "", cantidad: "1", precioUnitario: "" })}
           />
           {form.accesorios.map((item, index) => {
             const producto = catalogoAccesorios.find((opcion) => opcion._id === item.accesorioId);
             return <ServiceRow key={`accesorio-${index}`} rowRef={index === form.accesorios.length - 1 ? (fila) => { nuevasFilasRef.current.accesorios = fila; } : undefined} onRemove={() => quitarItem("accesorios", index)}>
-              <div className="md:col-span-3"><Field label="Accesorio"><select value={item.accesorioId} onChange={(e) => seleccionarAccesorio(index, e.target.value)} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione producto...</option>{catalogoAccesorios.map((opcion) => { const usado = form.accesorios.some((actual, posicion) => posicion !== index && actual.accesorioId === opcion._id); return <option key={opcion._id} value={opcion._id} disabled={usado}>{opcion.nombre} · {opcion.marca}{opcion.referencia ? ` · ${opcion.referencia}` : ""} · {opcion.stock > 0 ? `${opcion.stock} disponibles` : "AGOTADO · SE SOLICITARÁ"}</option>; })}</select>{producto?.stock <= 0 && item.accesorioId && <span className="mt-1 block text-xs font-semibold text-amber-700">Puede incluirlo. Inventario y Administración recibirán una alerta para pedirlo.</span>}</Field></div>
+              <div className="md:col-span-3"><Field label="Accesorio"><select value={item.accesorioId} disabled={form.garantia.esGarantia} onChange={(e) => seleccionarAccesorio(index, e.target.value)} className="w-full rounded-xl border bg-white p-3"><option value="">Seleccione producto...</option>{catalogoAccesorios.map((opcion) => { const usado = form.accesorios.some((actual, posicion) => posicion !== index && actual.accesorioId === opcion._id); return <option key={opcion._id} value={opcion._id} disabled={usado}>{opcion.nombre} · {opcion.marca}{opcion.referencia ? ` · ${opcion.referencia}` : ""} · {opcion.stock > 0 ? `${opcion.stock} disponibles` : "AGOTADO · SE SOLICITARÁ"}</option>; })}</select>{producto?.stock <= 0 && item.accesorioId && <span className="mt-1 block text-xs font-semibold text-amber-700">Puede incluirlo. Inventario y Administración recibirán una alerta para pedirlo.</span>}</Field></div>
               <Field label="Cantidad"><input value={item.cantidad} inputMode="numeric" onChange={(e) => editarItem("accesorios", index, "cantidad", soloDigitos(e.target.value).slice(0, 3))} className="w-full rounded-xl border p-3"/><span className="mt-1 block text-xs text-slate-500">Máximo disponible: {producto?.stock || 0}</span></Field>
               {!form.garantia.esGarantia && <div className="md:col-span-2"><PrecioServicio lista={preciosVenta} selecciones={item.tarifasVenta} valor={item.precioUnitario} familia="ACCESORIO" categoria={producto?.categoria || ""} detalle={`${producto?.nombre || ""} ${producto?.marca || ""} ${producto?.referencia || ""}`} cargando={cargandoPrecios} registrado={Boolean(asesoria)} onChange={(tarifas) => asignarTarifas("accesorios", index, tarifas)} /><p className="mt-1 text-xs font-semibold text-blue-700">Subtotal del accesorio: $ {Number(Number(item.cantidad || 0) * Number(item.precioUnitario || 0)).toLocaleString("es-CO")}</p></div>}
             </ServiceRow>;
@@ -1232,8 +1273,8 @@ function Inspection({ label, checked, onChange, children }) {
   );
 }
 
-function ServiceHeader({ title, button, onAdd }) {
-  return <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-2 pt-2"><h4 className="font-bold text-slate-800">{title}</h4><button type="button" onClick={onAdd} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white"><Plus size={16} />{button}</button></div>;
+function ServiceHeader({ title, button, onAdd, disabled = false }) {
+  return <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-2 pt-2"><h4 className="font-bold text-slate-800">{title}</h4><button type="button" disabled={disabled} onClick={onAdd} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-35"><Plus size={16} />{disabled ? "Cargado desde el servicio original" : button}</button></div>;
 }
 
 function ServiceRow({ children, onRemove, rowRef }) {

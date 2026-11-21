@@ -49,6 +49,48 @@ const normalizarPartesPolarizado = (partes = []) => {
   return normalizadas;
 };
 
+const expandirPartesGarantia = (partes = []) => {
+  const normalizadas = new Set(partes.map(mayusculas));
+  if (normalizadas.has("COMPLETO")) return new Set(PARTES_POLARIZADO);
+  if (normalizadas.has("U")) PARTES_U.forEach((parte) => normalizadas.add(parte));
+  return normalizadas;
+};
+
+export const validarAlcanceGarantia = (garantia, origen) => {
+  const errorMejora = "La garantía solo puede repetir materiales, partes y trabajos del servicio original. Registre cualquier mejora o material diferente como un servicio nuevo vinculado a esta garantía.";
+  const polarizadosOrigen = origen.polarizados || [];
+  for (const item of garantia.polarizados || []) {
+    const partesSolicitadas = expandirPartesGarantia(item.partes);
+    const valido = polarizadosOrigen.some((original) => {
+      if (mayusculas(original.material) !== mayusculas(item.material) || mayusculas(original.porcentaje) !== mayusculas(item.porcentaje)) return false;
+      const permitidas = expandirPartesGarantia(original.partes);
+      return [...partesSolicitadas].every((parte) => permitidas.has(parte));
+    });
+    if (!valido) throw new Error(errorMejora);
+  }
+
+  const ppfOrigen = origen.ppf || [];
+  for (const item of garantia.ppf || []) {
+    const valido = ppfOrigen.some((original) => {
+      if (mayusculas(original.referencia) !== mayusculas(item.referencia)) return false;
+      const piezas = new Set((original.piezas || []).map(mayusculas));
+      return (item.piezas || []).every((pieza) => piezas.has(mayusculas(pieza)));
+    });
+    if (!valido) throw new Error(errorMejora);
+  }
+
+  for (const item of garantia.serviciosAdicionales || []) {
+    const valido = (origen.serviciosAdicionales || []).some((original) =>
+      mayusculas(original.tipo) === mayusculas(item.tipo) && mayusculas(original.detalle) === mayusculas(item.detalle));
+    if (!valido) throw new Error(errorMejora);
+  }
+
+  for (const item of garantia.accesoriosEntrada || []) {
+    const original = (origen.accesorios || []).find((registro) => String(registro.accesorioId) === String(item.accesorioId));
+    if (!original || Number(item.cantidad || 0) > Number(original.cantidad || 0)) throw new Error(errorMejora);
+  }
+};
+
 const agruparPpfPorReferencia = (items = []) => {
   const grupos = new Map();
 
@@ -451,6 +493,7 @@ const prepararDatosAsesoria = (data) => {
 export const crearBorradorAsesoria = async (data, user) => {
   const datosAsesoria = prepararDatosAsesoria(await aplicarPreciosAsesoria(data));
   if (datosAsesoria.garantia.esGarantia) {
+    if (!datosAsesoria.garantia.ordenOrigenId) throw new Error("Seleccione el servicio original de la garantía");
     const filtroOrigen = {
       "cliente.cedula": datosAsesoria.cliente.cedula,
       "vehiculo.placa": datosAsesoria.vehiculo.placa,
@@ -461,11 +504,12 @@ export const crearBorradorAsesoria = async (data, user) => {
       filtroOrigen._id = datosAsesoria.garantia.ordenOrigenId;
     }
     const ordenOrigen = await Asesoria.findOne(filtroOrigen)
-      .sort({ createdAt: -1 }).select("codigo createdAt coordinacion.asignaciones.instaladorId").lean();
+      .sort({ createdAt: -1 }).select("codigo createdAt polarizados ppf serviciosAdicionales accesorios coordinacion.asignaciones.instaladorId").lean();
     if (datosAsesoria.garantia.ordenOrigenId && !ordenOrigen) {
       throw new Error("El servicio original seleccionado no corresponde a este cliente y vehículo");
     }
     if (ordenOrigen) {
+      validarAlcanceGarantia(datosAsesoria, ordenOrigen);
       datosAsesoria.garantia.ordenOrigenId = ordenOrigen._id;
       datosAsesoria.garantia.codigoOrdenOrigen = ordenOrigen.codigo;
       datosAsesoria.garantia.fechaOrdenOrigen = ordenOrigen.createdAt;
@@ -562,6 +606,17 @@ export const actualizarAsesoria = async (id, data, user) => {
   if (actual.estado === "CANCELADA" || actual.autorizaciones?.bloqueoCliente) throw new Error("Gestione la respuesta del cliente antes de editar");
 
   const datosAsesoria = prepararDatosAsesoria(await aplicarPreciosAsesoria(data, actual));
+  if (datosAsesoria.garantia.esGarantia) {
+    const ordenOrigen = await Asesoria.findOne({
+      _id: datosAsesoria.garantia.ordenOrigenId,
+      "cliente.cedula": datosAsesoria.cliente.cedula,
+      "vehiculo.placa": datosAsesoria.vehiculo.placa,
+      "garantia.esGarantia": { $ne: true },
+      "flujo.etapa": "FINALIZADA",
+    }).select("polarizados ppf serviciosAdicionales accesorios").lean();
+    if (!ordenOrigen) throw new Error("Seleccione el servicio original válido de esta garantía");
+    validarAlcanceGarantia(datosAsesoria, ordenOrigen);
+  }
   datosAsesoria.recepcion.fotos = (actual.recepcion?.fotos || []).map((foto) => foto.toObject ? foto.toObject() : foto);
   const accesorios = await prepararAccesorios(datosAsesoria.accesoriosEntrada, actual.accesorios || []);
   delete datosAsesoria.accesoriosEntrada;
@@ -1142,7 +1197,7 @@ export const listarOrigenesGarantia = async ({ cedula, placa }) => {
   })
     .sort({ createdAt: -1 })
     .limit(20)
-    .select("codigo createdAt polarizados ppf serviciosAdicionales coordinacion.asignaciones.instaladorId coordinacion.asignaciones.instaladorNombre")
+    .select("codigo createdAt polarizados ppf serviciosAdicionales accesorios coordinacion.asignaciones.instaladorId coordinacion.asignaciones.instaladorNombre")
     .lean();
 };
 
